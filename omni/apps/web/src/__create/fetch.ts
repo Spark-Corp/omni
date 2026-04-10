@@ -50,7 +50,7 @@ const isSecondPartyUrl = (url: string) => {
     url.startsWith('https://www.create.xyz') ||
     url.startsWith('https://api.create.xyz/') ||
     url.startsWith('https://www.createanything.com') ||
-    url.startsWith('https://api.omni.com/') ||
+    url.startsWith('https://api.createanything.com')
   );
 };
 

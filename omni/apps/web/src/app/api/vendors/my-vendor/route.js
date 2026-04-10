@@ -8,7 +8,19 @@ export async function GET() {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userId = session.user.id;
+    const authUserId = session.user.id;
+
+    // Get or create user in users table
+    let userResult = await sql`
+      SELECT id FROM users WHERE id = ${authUserId}::uuid
+    `;
+
+    if (userResult.length === 0) {
+      // No user in users table yet, so no vendor exists
+      return Response.json({ vendor: null });
+    }
+
+    const userId = userResult[0].id;
 
     // Get vendor for this user
     const vendorResult = await sql`

@@ -31,8 +31,8 @@ const DeviceErrorBoundary = ({
       isOpen
       description={
         sentLogs
-          ? 'It looks like an error occurred while trying to use your app. This error has been reported to the AI agent and should be visible to the AI soon. If it is not present please see omni.com/docs for help'
-          : 'It looks like an error occurred while trying to use your app. Please see omni.com/docs for help'
+          ? 'It looks like an error occurred while trying to use your app. This error has been reported to the AI agent and should be visible to the AI soon. If it is not present please see anything.com/docs for help'
+          : 'It looks like an error occurred while trying to use your app. Please see anything.com/docs for help'
       }
     >
       <View style={{ flexDirection: 'row', gap: 8 }}>
