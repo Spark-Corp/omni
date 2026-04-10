@@ -42,7 +42,7 @@ export async function POST(request) {
     console.error("Message:", error.message);
     console.error("Stack:", error.stack);
     return Response.json(
-      { error: "Failed to fetch nearby vendors", details: error.message },
+      { error: "Internal server error" }
       { status: 500 },
     );
   }

@@ -1,9 +1,9 @@
 import sql from "@/app/api/utils/sql";
-import { auth } from "@/auth";
+import { authClient } from "@/lib/auth";
 
 export async function POST(request) {
   try {
-    const session = await auth();
+    const session = await authClient.getSession();
     if (!session || !session.user?.id) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }

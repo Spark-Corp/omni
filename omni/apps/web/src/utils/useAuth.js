@@ -1,67 +1,39 @@
 import { useCallback } from 'react';
-import { signIn, signOut } from "@auth/create/react";
-
-function isDevIframe() {
-  try {
-    return typeof window !== 'undefined' && window.self !== window.top;
-  } catch { return true; }
-}
-
-function devSocialShim(provider, callbackUrl) {
-  const params = new URLSearchParams({ provider });
-  if (callbackUrl) params.set('callbackUrl', callbackUrl);
-  window.location.href = '/__create/social-dev-shim?' + params;
-}
+import { useNavigate } from 'react-router';
+import { getAuthClient } from '@/lib/auth-client';
 
 function useAuth() {
-  const callbackUrl = typeof window !== 'undefined'
-    ? new URLSearchParams(window.location.search).get('callbackUrl')
-    : null;
+  const navigate = useNavigate();
 
-  const signInWithCredentials = useCallback((options) => {
-    return signIn("credentials-signin", {
-      ...options,
-      callbackUrl: callbackUrl ?? options.callbackUrl
-    });
-  }, [callbackUrl])
+  const signIn = useCallback(async () => {
+    // Navigate to Neon Auth page
+    navigate('/auth');
+  }, [navigate]);
 
-  const signUpWithCredentials = useCallback((options) => {
-    return signIn("credentials-signup", {
-      ...options,
-      callbackUrl: callbackUrl ?? options.callbackUrl
-    });
-  }, [callbackUrl])
+  const signUp = useCallback(async () => {
+    // Navigate to Neon Auth page (handles both signin/signup)
+    navigate('/auth');
+  }, [navigate]);
 
-  const signInWithGoogle = useCallback((options) => {
-    const cb = callbackUrl ?? options?.callbackUrl;
-    if (isDevIframe()) return devSocialShim("google", cb);
-    return signIn("google", { ...options, callbackUrl: cb });
-  }, [callbackUrl]);
-  const signInWithFacebook = useCallback((options) => {
-    const cb = options?.callbackUrl;
-    if (isDevIframe()) return devSocialShim("facebook", cb);
-    return signIn("facebook", options);
+  const signOut = useCallback(async () => {
+    const authClient = await getAuthClient();
+    await authClient.signOut();
+    navigate('/');
+  }, [navigate]);
+
+  const getSession = useCallback(async () => {
+    const authClient = await getAuthClient();
+    const session = await authClient.getSession();
+    return session;
   }, []);
-  const signInWithTwitter = useCallback((options) => {
-    const cb = options?.callbackUrl;
-    if (isDevIframe()) return devSocialShim("twitter", cb);
-    return signIn("twitter", options);
-  }, []);
-  const signInWithApple = useCallback((options) => {
-    const cb = callbackUrl ?? options?.callbackUrl;
-    if (isDevIframe()) return devSocialShim("apple", cb);
-    return signIn("apple", { ...options, callbackUrl: cb });
-  }, [callbackUrl]);
 
   return {
-    signInWithCredentials,
-    signUpWithCredentials,
-    signInWithGoogle,
-    signInWithFacebook,
-    signInWithTwitter,
-    signInWithApple,
+    signIn,
+    signUp,
     signOut,
-  }
+    getSession,
+    getAuthClient,
+  };
 }
 
 export default useAuth;

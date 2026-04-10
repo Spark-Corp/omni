@@ -66,7 +66,7 @@ export default function VendorProductsPage() {
       setFormData({ name: "", category: "", price: "", unit: "unité" });
     } catch (err) {
       console.error(err);
-      alert("Erreur lors de la sauvegarde du produit");
+      toast("Erreur lors de la sauvegarde du produit");
     } finally {
       setLoading(false);
     }
@@ -84,7 +84,7 @@ export default function VendorProductsPage() {
   };
 
   const handleDelete = async (productId) => {
-    if (!confirm("Voulez-vous vraiment supprimer ce produit ?")) return;
+    toast.warning(" Suppression en cours...)
 
     setLoading(true);
     try {
@@ -97,7 +97,7 @@ export default function VendorProductsPage() {
       await loadVendorData();
     } catch (err) {
       console.error(err);
-      alert("Erreur lors de la suppression");
+      toast("Erreur lors de la suppression");
     } finally {
       setLoading(false);
     }
@@ -120,7 +120,7 @@ export default function VendorProductsPage() {
       await loadVendorData();
     } catch (err) {
       console.error(err);
-      alert("Erreur lors de la mise à jour");
+      toast("Erreur lors de la mise à jour");
     } finally {
       setLoading(false);
     }

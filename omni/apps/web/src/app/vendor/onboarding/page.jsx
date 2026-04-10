@@ -130,7 +130,7 @@ export default function VendorOnboardingPage() {
           <p className="text-gray-600 mb-4">
             Veuillez vous connecter pour continuer
           </p>
-          <a href="/account/signin?callbackUrl=/vendor/onboarding">
+          <a href="/auth?callbackUrl=/vendor/onboarding">
             <button className="bg-emerald-600 text-white px-6 py-3 rounded-lg font-semibold">
               Se connecter
             </button>

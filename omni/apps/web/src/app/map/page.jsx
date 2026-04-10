@@ -6,6 +6,8 @@ import ImageSearch from "@/components/ImageSearch";
 import ChatModal from "@/components/ChatModal";
 
 export default function MapPage() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authChecking, setAuthChecking] = useState(true);
   const [userLocation, setUserLocation] = useState(null);
   const [vendors, setVendors] = useState([]);
   const [selectedVendor, setSelectedVendor] = useState(null);
@@ -23,17 +25,52 @@ export default function MapPage() {
   const vendorMarkers = useRef([]);
   const [mapReady, setMapReady] = useState(false);
   const [mapLibLoaded, setMapLibLoaded] = useState(false);
+  const [locationError, setLocationError] = useState(null);
+  const [locationLoading, setLocationLoading] = useState(true);
+  const [isOffline, setIsOffline] = useState(false);
+  const [cachedVendors, setCachedVendors] = useState([]);
+  const [mapLoading, setMapLoading] = useState(true);
+  const [searchLoading, setSearchLoading] = useState(false);
 
-  // Get user location
+  // Auth check
   useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch("/api/auth/session");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.user) {
+            setIsAuthenticated(true);
+          } else {
+            window.location.href = "/auth";
+          }
+        } else {
+          window.location.href = "/auth";
+        }
+      } catch (error) {
+        console.error("Auth check failed:", error);
+        window.location.href = "/auth";
+      } finally {
+        setAuthChecking(false);
+      }
+    };
+    checkAuth();
+  }, []);
+
+  // Retry location function
+  const retryLocation = () => {
+    setLocationLoading(true);
+    setLocationError(null);
+    
     let timeoutId;
     
     const setDefaultLocation = () => {
-      console.log('[Map] Using default location');
+      console.log('[Map] Using fallback location: Lagos');
       setUserLocation({ lat: 6.1319, lon: 1.2228 });
+      setLocationError('Using fallback: Lagos');
+      setLocationLoading(false);
     };
     
-    // Set fallback after 3 seconds if geolocation hangs
     timeoutId = setTimeout(setDefaultLocation, 3000);
     
     if (navigator.geolocation) {
@@ -45,22 +82,50 @@ export default function MapPage() {
             lat: position.coords.latitude,
             lon: position.coords.longitude,
           });
+          setLocationError(null);
+          setLocationLoading(false);
         },
         (error) => {
           clearTimeout(timeoutId);
-          console.error("Error getting location:", error);
+          console.error('Error getting location:', error);
+          setLocationError('Location unavailable - Using fallback: Lagos');
           setDefaultLocation();
         },
         { timeout: 5000, maximumAge: 60000 }
       );
     } else {
       clearTimeout(timeoutId);
+      setLocationError('Geolocation not supported - Using fallback: Lagos');
       setDefaultLocation();
     }
     
     return () => clearTimeout(timeoutId);
+  };
+
+  // Get user location
+  useEffect(() => {
+    retryLocation();
   }, []);
 
+  // Offline detection
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => {
+      setIsOffline(true);
+      if (vendors.length > 0) {
+        setCachedVendors(vendors);
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    setIsOffline(!navigator.onLine);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [vendors]);
   // Load MapLibre GL and Three.js libraries
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -214,6 +279,7 @@ export default function MapPage() {
       map.current.on("load", () => {
         console.log("Map loaded successfully");
         setMapReady(true);
+        setMapLoading(false);
         
         if (window.THREE && map.current) {
           initSolarSystem();
@@ -394,16 +460,48 @@ export default function MapPage() {
     }
   }, [userLocation]);
 
-  // Update vendor markers when vendors change
+  // Update vendor markers when vendors change - with viewport clustering/filtering
   useEffect(() => {
     if (!map.current || !mapReady || !window.maplibregl) return;
+
+    // Get current map bounds for viewport filtering
+    let visibleVendors = vendors;
+    if (map.current.getBounds) {
+      const bounds = map.current.getBounds();
+      const currentZoom = map.current.getZoom();
+      
+      // At high zoom (15+), show all markers in view
+      // At low zoom, filter to show only clustered markers by viewport
+      if (currentZoom < 12 && vendors.length > 20) {
+        // Filter vendors to those within viewport bounds + buffer
+        visibleVendors = vendors.filter(vendor => {
+          if (!vendor.lon || !vendor.lat) return false;
+          const lng = Number(vendor.lon);
+          const lat = Number(vendor.lat);
+          return bounds.contains([lng, lat]);
+        });
+        
+        // If no vendors in view, show nearest ones
+        if (visibleVendors.length === 0) {
+          const center = map.current.getCenter();
+          visibleVendors = [...vendors]
+            .sort((a, b) => {
+              const distA = Math.sqrt(Math.pow(a.lat - center.lat, 2) + Math.pow(a.lon - center.lng, 2));
+              const distB = Math.sqrt(Math.pow(b.lat - center.lat, 2) + Math.pow(b.lon - center.lng, 2));
+              return distA - distB;
+            })
+            .slice(0, 15);
+        }
+        console.log('[Map] Viewport filtered vendors:', visibleVendors.length, 'of', vendors.length);
+      }
+    }
 
     // Remove old markers
     vendorMarkers.current.forEach((marker) => marker.remove());
     vendorMarkers.current = [];
 
     // Add new markers with premium styling
-    vendors.forEach((vendor) => {
+    visibleVendors.forEach((vendor) => {
       const el = document.createElement("div");
       el.className = "vendor-marker";
       el.style.width = "36px";
@@ -452,6 +550,12 @@ export default function MapPage() {
   }, [vendors, mapReady]);
 
   const loadNearbyVendors = async () => {
+    // If offline, use cached vendors
+    if (isOffline && cachedVendors.length > 0) {
+      console.log('[Map] Using cached vendors (offline)');
+      setVendors(cachedVendors);
+      return;
+    }
     if (!userLocation) return;
 
     setLoading(true);
@@ -530,7 +634,7 @@ export default function MapPage() {
       !("webkitSpeechRecognition" in window) &&
       !("SpeechRecognition" in window)
     ) {
-      alert("La recherche vocale n'est pas supportée sur ce navigateur");
+      toast("La recherche vocale n'est pas supportée sur ce navigateur");
       return;
     }
 
@@ -548,7 +652,7 @@ export default function MapPage() {
 
     recognition.onerror = (event) => {
       console.error("Speech recognition error:", event.error);
-      alert("Erreur de reconnaissance vocale");
+      toast("Erreur de reconnaissance vocale");
     };
 
     recognition.start();
@@ -613,7 +717,7 @@ export default function MapPage() {
       setChatRequest(data.request);
     } catch (err) {
       console.error(err);
-      alert("Erreur lors de l'envoi de la demande");
+      toast("Erreur lors de l'envoi de la demande");
     }
   };
 
@@ -664,7 +768,7 @@ export default function MapPage() {
         // Show route info
         const distanceKm = (route.distance / 1000).toFixed(1);
         const durationMin = Math.round(route.duration / 60);
-        alert(`Distance: ${distanceKm} km\nDurée à pied: ${durationMin} min`);
+        toast(`Distance: ${distanceKm} km\nDurée à pied: ${durationMin} min`);
       }
     } catch (err) {
       console.error(err);
@@ -680,12 +784,14 @@ export default function MapPage() {
     setShowVendorChat(true);
   };
 
-  if (!userLocation) {
+  if (authChecking || !userLocation) {
     return (
       <div className="h-screen flex items-center justify-center bg-neutral-950">
         <div className="text-center">
           <div className="w-12 h-12 border-2 border-white/20 border-t-white rounded-full animate-spin mx-auto mb-6" />
-          <p className="text-white/60 text-sm font-light tracking-wide">Localisation...</p>
+          <p className="text-white/60 text-sm font-light tracking-wide">
+            {authChecking ? "Vérification..." : "Localisation..."}
+          </p>
         </div>
       </div>
     );
@@ -693,9 +799,21 @@ export default function MapPage() {
 
   return (
     <div className="h-screen w-full relative bg-neutral-950 overflow-hidden">
-      {/* Loading overlay */}
-      {!mapReady && (
+      {/* Map Loading Skeleton */}
+      {mapLoading && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-neutral-950">
+          <div className="text-center">
+            <div className="w-20 h-20 mx-auto mb-6 relative">
+              <div className="absolute inset-0 border border-white/10 rounded-full" />
+              <div className="absolute inset-0 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+            </div>
+            <p className="text-white/60 text-sm font-light tracking-wide">Chargement de la carte...</p>
+          </div>
+        </div>
+      )}
+
+      {!mapReady && !mapLoading && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-neutral-950">
           <div className="text-center">
             <div className="w-12 h-12 border-2 border-white/20 border-t-white rounded-full animate-spin mx-auto mb-6" />
             <p className="text-white/60 text-sm font-light tracking-wide">Chargement...</p>
@@ -791,6 +909,14 @@ export default function MapPage() {
           <circle cx="12" cy="12" r="4" fill="currentColor" />
         </svg>
       </button>
+
+      {/* Offline Banner */}
+      {isOffline && cachedVendors.length > 0 && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 bg-amber-500/90 backdrop-blur-md text-white px-4 py-2 rounded-full text-xs font-light shadow-xl flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-white/60 animate-pulse" />
+          <span>Mode hors ligne - Affichage des r?sultats en cache</span>
+        </div>
+      )}
 
       {/* Error Toast - Premium */}
       {error && (

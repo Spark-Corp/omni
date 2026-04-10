@@ -55,7 +55,7 @@ export default function VendorRequestsPage() {
       await loadRequests();
     } catch (err) {
       console.error(err);
-      alert("Erreur lors de la réponse");
+      toast("Erreur lors de la réponse");
     } finally {
       setLoading(false);
     }

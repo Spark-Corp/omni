@@ -51,7 +51,7 @@ export async function POST(request) {
   } catch (error) {
     console.error("Error searching vendors:", error);
     return Response.json(
-      { error: "Failed to search vendors" },
+      { error: "Internal server error" },
       { status: 500 },
     );
   }

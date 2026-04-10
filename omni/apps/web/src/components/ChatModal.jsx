@@ -68,7 +68,7 @@ export default function ChatModal({
       loadMessages();
     } catch (err) {
       console.error(err);
-      alert("Erreur lors de l'envoi du message");
+      toast("Erreur lors de l'envoi du message");
     } finally {
       setLoading(false);
     }

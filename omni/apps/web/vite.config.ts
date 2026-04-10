@@ -39,14 +39,17 @@ export default defineConfig({
       serverEntryPoint: './__create/index.ts',
       runtime: 'node',
     }),
+    reactRouter(),
     babel({
-      include: ['src/**/*.{js,jsx,ts,tsx}'], // or RegExp: /src\/.*\.[tj]sx?$/
-      exclude: /node_modules/, // skip everything else
+      include: ['src/**/*.{js,jsx,ts,tsx}'],
+      exclude: /node_modules/,
       babelConfig: {
-        babelrc: false, // don’t merge other Babel files
+        babelrc: false,
         configFile: false,
-        plugins: ['styled-jsx/babel'],
+        plugins: [['styled-jsx/babel', { sourceMaps: true }]],
+        sourceMaps: true,
       },
+      apply: 'build',
     }),
     restart({
       restart: [
@@ -61,7 +64,6 @@ export default defineConfig({
     consoleToParent(),
     loadFontsFromTailwindSource(),
     addRenderIds(),
-    reactRouter(),
     tsconfigPaths(),
     aliases(),
     layoutWrapperPlugin(),
@@ -82,6 +84,7 @@ export default defineConfig({
     allowedHosts: true,
     host: '0.0.0.0',
     port: 4000,
+    strictPort: true,
     hmr: {
       overlay: false,
     },

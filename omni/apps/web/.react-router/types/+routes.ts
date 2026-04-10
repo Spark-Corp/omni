@@ -14,16 +14,10 @@ type Pages = {
   "/": {
     params: {};
   };
-  "/account/logout": {
+  "/account": {
     params: {};
   };
-  "/account/signin": {
-    params: {};
-  };
-  "/account/signup": {
-    params: {};
-  };
-  "/auth/signin": {
+  "/auth": {
     params: {};
   };
   "/map": {
@@ -47,9 +41,6 @@ type Pages = {
   "/vendor/requests": {
     params: {};
   };
-  "/__create/social-dev-shim": {
-    params: {};
-  };
   "/*": {
     params: {
       "*": string;
@@ -60,27 +51,19 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/account/logout" | "/account/signin" | "/account/signup" | "/auth/signin" | "/map" | "/vendor" | "/vendor/dashboard" | "/vendor/messages" | "/vendor/onboarding" | "/vendor/products" | "/vendor/requests" | "/__create/social-dev-shim" | "/*";
+    page: "/" | "/account" | "/auth" | "/map" | "/vendor" | "/vendor/dashboard" | "/vendor/messages" | "/vendor/onboarding" | "/vendor/products" | "/vendor/requests" | "/*";
   };
   "./page.jsx": {
     id: "page";
     page: "/";
   };
-  "./account/logout/page.jsx": {
-    id: "account/logout/page";
-    page: "/account/logout";
+  "./account/page.jsx": {
+    id: "account/page";
+    page: "/account";
   };
-  "./account/signin/page.jsx": {
-    id: "account/signin/page";
-    page: "/account/signin";
-  };
-  "./account/signup/page.jsx": {
-    id: "account/signup/page";
-    page: "/account/signup";
-  };
-  "./auth/signin/page.jsx": {
-    id: "auth/signin/page";
-    page: "/auth/signin";
+  "./auth/page.jsx": {
+    id: "auth/page";
+    page: "/auth";
   };
   "./map/page.jsx": {
     id: "map/page";
@@ -110,10 +93,6 @@ type RouteFiles = {
     id: "vendor/requests/page";
     page: "/vendor/requests";
   };
-  "./__create/social-dev-shim/page.jsx": {
-    id: "__create/social-dev-shim/page";
-    page: "/__create/social-dev-shim";
-  };
   "./__create/not-found.tsx": {
     id: "__create/not-found";
     page: "/" | "/*";
@@ -123,10 +102,8 @@ type RouteFiles = {
 type RouteModules = {
   "root": typeof import("./src/app/root.tsx");
   "page": typeof import("./src/app/./page.jsx");
-  "account/logout/page": typeof import("./src/app/./account/logout/page.jsx");
-  "account/signin/page": typeof import("./src/app/./account/signin/page.jsx");
-  "account/signup/page": typeof import("./src/app/./account/signup/page.jsx");
-  "auth/signin/page": typeof import("./src/app/./auth/signin/page.jsx");
+  "account/page": typeof import("./src/app/./account/page.jsx");
+  "auth/page": typeof import("./src/app/./auth/page.jsx");
   "map/page": typeof import("./src/app/./map/page.jsx");
   "vendor/page": typeof import("./src/app/./vendor/page.jsx");
   "vendor/dashboard/page": typeof import("./src/app/./vendor/dashboard/page.jsx");
@@ -134,6 +111,5 @@ type RouteModules = {
   "vendor/onboarding/page": typeof import("./src/app/./vendor/onboarding/page.jsx");
   "vendor/products/page": typeof import("./src/app/./vendor/products/page.jsx");
   "vendor/requests/page": typeof import("./src/app/./vendor/requests/page.jsx");
-  "__create/social-dev-shim/page": typeof import("./src/app/./__create/social-dev-shim/page.jsx");
   "__create/not-found": typeof import("./src/app/./__create/not-found.tsx");
 };

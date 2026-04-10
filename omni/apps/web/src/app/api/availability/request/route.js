@@ -31,7 +31,7 @@ export async function POST(request) {
   } catch (error) {
     console.error("Error creating availability request:", error);
     return Response.json(
-      { error: "Failed to create availability request", details: error.message },
+      { error: "Internal server error",  },
       { status: 500 },
     );
   }

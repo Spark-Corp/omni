@@ -58,7 +58,7 @@ export default function VendorDashboardPage() {
       setVendor({ ...vendor, is_online: data.vendor.is_online });
     } catch (err) {
       console.error(err);
-      alert("Erreur lors du changement de statut");
+      toast("Erreur lors du changement de statut");
     } finally {
       setToggling(false);
     }
@@ -77,7 +77,7 @@ export default function VendorDashboardPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
         <div className="text-center">
           <p className="text-gray-600 mb-4">Veuillez vous connecter</p>
-          <a href="/account/signin?callbackUrl=/vendor/dashboard">
+          <a href="/auth?callbackUrl=/vendor/dashboard">
             <button className="bg-emerald-600 text-white px-6 py-3 rounded-lg font-semibold">
               Se connecter
             </button>
@@ -119,7 +119,7 @@ export default function VendorDashboardPage() {
               </h1>
               <p className="text-gray-600">{vendor.category}</p>
             </div>
-            <a href="/account/logout">
+            <a href="/auth">
               <button className="text-gray-600 hover:text-gray-900">
                 Déconnexion
               </button>
