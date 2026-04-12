@@ -1,5 +1,6 @@
 import sql from "@/app/api/utils/sql";
 import { auth } from "@/auth";
+import { setRLSUser } from "@/lib/rls";
 
 export async function POST(request) {
   try {
@@ -7,6 +8,9 @@ export async function POST(request) {
     if (!session || !session.user?.id) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    // Set RLS context for this request
+    await setRLSUser(session.user.id);
 
     const body = await request.json();
     const { name, category, description, lat, lon, products } = body;
@@ -20,8 +24,8 @@ export async function POST(request) {
 
     const authUserId = session.user.id;
 
-    // Update auth_users role to seller
-    await sql`UPDATE auth_users SET role = 'seller' WHERE id = ${authUserId}`;
+    // RLS will enforce that user_id matches current_user_id
+    // Insert will only succeed if RLS policy allows it
 
     // Get or create user in users table
     let userResult = await sql`
