@@ -156,12 +156,27 @@ Just SEARCH + VISIBILITY.
 
 | Layer | Technology |
 |-------|-------------|
-| **Frontend** | React + Vite + PWA |
-| **Maps** | MapLibre GL (free, no Mapbox) |
+| **Frontend** | Next.js 15 (App Router) |
+| **Maps** | MapLibre GL + Three.js |
 | **Database** | Neon PostgreSQL + PostGIS |
-| **Auth** | Phone OTP (Africa's Talking) |
-| **Real-time** | WebSocket |
+| **Auth** | Neon Auth (Better Auth) |
+| **Real-time** | Server Actions + SSE |
 | **Hosting** | Vercel (free tier) |
+
+### Project Structure
+
+```
+omni/apps/nextjs/
+├── app/
+│   ├── (auth)/          # Sign in, Sign up
+│   ├── (main)/          # Map view
+│   ├── api/auth/        # Neon Auth API
+│   ├── api/vendors/     # Vendor CRUD
+│   └── vendor/           # Dashboard pages
+├── components/          # Shared UI
+├── hooks/               # useAuth, useRealtime
+└── lib/                 # auth.ts, sql.ts
+```
 
 ### Core Tables
 
