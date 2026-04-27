@@ -3,6 +3,10 @@
 @tailwind utilities;
 
 @layer base {
+  html, body, #root {
+    @apply h-full w-full;
+  }
+  
   input, textarea, select, button {
     @apply outline-none focus:outline-none;
   }

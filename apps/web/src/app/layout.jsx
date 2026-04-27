@@ -14,6 +14,19 @@ const queryClient = new QueryClient({
 export const metadata = {
   title: "Omni - Commerce de Proximité",
   description: "La carte vivante du commerce de proximité en Afrique",
+  manifest: "/manifest.json",
+  themeColor: "#10b981",
+  viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Omni"
+  },
+  icons: {
+    apple: [
+      { url: "/icon-192.png", sizes: "192x192" }
+    ]
+  }
 };
 
 export default function RootLayout({ children }) {

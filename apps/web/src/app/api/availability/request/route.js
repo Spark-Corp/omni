@@ -1,9 +1,7 @@
 import sql from "@/app/api/utils/sql";
-import { auth } from "@/auth";
 
 export async function POST(request) {
   try {
-    const session = await auth();
     const body = await request.json();
     const { vendorId, productId, quantity } = body;
 
@@ -14,35 +12,13 @@ export async function POST(request) {
       );
     }
 
-    // Get or create buyer user
-    let buyerId;
-
-    if (session && session.user?.email) {
-      // Try to find existing user
-      const existingUser = await sql`
-        SELECT id FROM users WHERE phone = ${session.user.email}
-      `;
-
-      if (existingUser.length > 0) {
-        buyerId = existingUser[0].id;
-      } else {
-        // Create new user
-        const newUser = await sql`
-          INSERT INTO users (phone, role, lang_preference)
-          VALUES (${session.user.email}, 'buyer', 'fr')
-          RETURNING id
-        `;
-        buyerId = newUser[0].id;
-      }
-    } else {
-      // Create guest user
-      const guestUser = await sql`
-        INSERT INTO users (phone, role, lang_preference)
-        VALUES (${"guest_" + Date.now()}, 'buyer', 'fr')
-        RETURNING id
-      `;
-      buyerId = guestUser[0].id;
-    }
+    // Create guest user for now
+    const guestUser = await sql`
+      INSERT INTO users (phone, role, lang_preference)
+      VALUES (${"guest_" + Date.now()}, 'buyer', 'fr')
+      RETURNING id
+    `;
+    const buyerId = guestUser[0].id;
 
     // Create availability request
     const result = await sql`
@@ -55,7 +31,7 @@ export async function POST(request) {
   } catch (error) {
     console.error("Error creating availability request:", error);
     return Response.json(
-      { error: "Failed to create availability request" },
+      { error: "Failed to create availability request", details: error.message },
       { status: 500 },
     );
   }
