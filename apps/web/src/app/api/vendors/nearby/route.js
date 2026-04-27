@@ -1,6 +1,8 @@
 import sql from "@/app/api/utils/sql";
 
 export async function POST(request) {
+  console.log('[API] DATABASE_URL present?', !!process.env.DATABASE_URL);
+  console.log('[API] DATABASE_URL length:', process.env.DATABASE_URL?.length || 0);
   try {
     const body = await request.json();
     const { lat, lon, radius = 10000 } = body;
@@ -24,7 +26,7 @@ export async function POST(request) {
         ST_Distance(v.location, ST_SetSRID(ST_Point($1, $2), 4326)::geography) as distance,
         COUNT(p.id) as product_count
       FROM vendors v
-      LEFT JOIN products p ON p.vendor_id = v.id AND p.is_available = true
+      LEFT JOIN products p ON p.vendor_id = v.id
       WHERE v.is_online = true
         AND ST_DWithin(v.location, ST_SetSRID(ST_Point($1, $2), 4326)::geography, $3)
       GROUP BY v.id, v.name, v.category, v.description, v.location
@@ -36,9 +38,11 @@ export async function POST(request) {
 
     return Response.json({ vendors });
   } catch (error) {
-    console.error("Error fetching nearby vendors:", error);
+    console.error("Error fetching nearby vendors:");
+    console.error("Message:", error.message);
+    console.error("Stack:", error.stack);
     return Response.json(
-      { error: "Failed to fetch nearby vendors" },
+      { error: "Failed to fetch nearby vendors", details: error.message },
       { status: 500 },
     );
   }

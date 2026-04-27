@@ -94,3 +94,6 @@ ios/Pods/Flipper-RSocket
 # Temporary files
 *.tmp
 *.temp
+
+# Git worktrees
+.worktrees/

@@ -44,7 +44,10 @@ async function findRouteFiles(dir: string): Promise<string[]> {
 
 // Helper function to transform file path to Hono route path
 function getHonoPath(routeFile: string): { name: string; pattern: string }[] {
-  const relativePath = routeFile.replace(__dirname, '');
+  // Normalize Windows backslashes to forward slashes for consistent processing
+  const normalizedPath = routeFile.replace(/\\/g, '/');
+  const normalizedDirname = __dirname.replace(/\\/g, '/');
+  const relativePath = normalizedPath.replace(normalizedDirname, '');
   const parts = relativePath.split('/').filter(Boolean);
   const routeParts = parts.slice(0, -1); // Remove 'route.js'
   if (routeParts.length === 0) {
@@ -65,6 +68,9 @@ function getHonoPath(routeFile: string): { name: string; pattern: string }[] {
 
 // Import and register all routes
 async function registerRoutes() {
+  console.log('[RouteBuilder] Starting route registration...');
+  console.log('[RouteBuilder] __dirname:', __dirname);
+  
   const routeFiles = (
     await findRouteFiles(__dirname).catch((error) => {
       console.error('Error finding route files:', error);
@@ -76,24 +82,42 @@ async function registerRoutes() {
       return b.length - a.length;
     });
 
+  console.log(`[RouteBuilder] Found ${routeFiles.length} route files:`, routeFiles);
+
   // Clear existing routes
   api.routes = [];
 
   for (const routeFile of routeFiles) {
     try {
-      const route = await import(/* @vite-ignore */ `${routeFile}?update=${Date.now()}`);
+      // Normalize Windows paths and convert to file:// URL for proper module resolution
+      // Windows paths need file:///C:/ format (3 slashes before drive letter)
+      const normalizedPath = routeFile.replace(/\\/g, '/');
+      const fileUrl = normalizedPath.startsWith('/') 
+        ? `file://${normalizedPath}` 
+        : `file:///${normalizedPath}`;
+      console.log(`[RouteBuilder] Importing: ${fileUrl}`);
+      const route = await import(/* @vite-ignore */ `${fileUrl}?update=${Date.now()}`);
+      console.log(`[RouteBuilder] Successfully imported: ${routeFile}`, Object.keys(route));
 
       const methods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
+      let registeredMethods = [];
       for (const method of methods) {
         try {
           if (route[method]) {
             const parts = getHonoPath(routeFile);
             const honoPath = `/${parts.map(({ pattern }) => pattern).join('/')}`;
+            console.log(`[RouteBuilder] Registering ${method} ${honoPath}`);
             const handler: Handler = async (c) => {
               const params = c.req.param();
               if (import.meta.env.DEV) {
+                // Normalize Windows paths and convert to file:// URL for proper module resolution
+                // Windows paths need file:///C:/ format (3 slashes before drive letter)
+                const normalizedPath = routeFile.replace(/\\/g, '/');
+                const fileUrl = normalizedPath.startsWith('/') 
+                  ? `file://${normalizedPath}` 
+                  : `file:///${normalizedPath}`;
                 const updatedRoute = await import(
-                  /* @vite-ignore */ `${routeFile}?update=${Date.now()}`
+                  /* @vite-ignore */ `${fileUrl}?update=${Date.now()}`
                 );
                 return await updatedRoute[method](c.req.raw, { params });
               }
@@ -103,18 +127,23 @@ async function registerRoutes() {
             switch (methodLowercase) {
               case 'get':
                 api.get(honoPath, handler);
+                registeredMethods.push('GET');
                 break;
               case 'post':
                 api.post(honoPath, handler);
+                registeredMethods.push('POST');
                 break;
               case 'put':
                 api.put(honoPath, handler);
+                registeredMethods.push('PUT');
                 break;
               case 'delete':
                 api.delete(honoPath, handler);
+                registeredMethods.push('DELETE');
                 break;
               case 'patch':
                 api.patch(honoPath, handler);
+                registeredMethods.push('PATCH');
                 break;
               default:
                 console.warn(`Unsupported method: ${method}`);
@@ -125,10 +154,14 @@ async function registerRoutes() {
           console.error(`Error registering route ${routeFile} for method ${method}:`, error);
         }
       }
+      console.log(`[RouteBuilder] Registered methods for ${routeFile}:`, registeredMethods);
     } catch (error) {
       console.error(`Error importing route file ${routeFile}:`, error);
     }
   }
+  
+  console.log(`[RouteBuilder] Route registration complete. Total routes: ${api.routes.length}`);
+  console.log('[RouteBuilder] Registered paths:', api.routes.map(r => `${r.method} ${r.path}`));
 }
 
 // Initial route registration

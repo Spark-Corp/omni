@@ -18,10 +18,31 @@ export async function POST(request) {
       );
     }
 
-    const userId = session.user.id;
+    const authUserId = session.user.id;
 
     // Update auth_users role to seller
-    await sql`UPDATE auth_users SET role = 'seller' WHERE id = ${userId}`;
+    await sql`UPDATE auth_users SET role = 'seller' WHERE id = ${authUserId}`;
+
+    // Get or create user in users table
+    let userResult = await sql`
+      SELECT id FROM users WHERE id = ${authUserId}::uuid
+    `;
+
+    if (userResult.length === 0) {
+      // Create user in users table (matching auth_users id as UUID)
+      userResult = await sql`
+        INSERT INTO users (id, phone, role, lang_preference)
+        VALUES (
+          ${authUserId}::uuid,
+          '',
+          'seller',
+          'fr'
+        )
+        RETURNING id
+      `;
+    }
+
+    const userId = userResult[0].id;
 
     // Create vendor
     const vendorResult = await sql`

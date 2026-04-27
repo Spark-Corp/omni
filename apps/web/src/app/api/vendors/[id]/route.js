@@ -13,8 +13,7 @@ export async function GET(request, { params }) {
         v.description,
         ST_Y(v.location::geometry) as lat,
         ST_X(v.location::geometry) as lon,
-        v.is_online,
-        v.last_seen
+        v.is_online
       FROM vendors v
       WHERE v.id = $1
     `;
@@ -23,13 +22,13 @@ export async function GET(request, { params }) {
       SELECT 
         id,
         name,
-        category,
+        description,
         price,
+        currency,
         unit,
-        photo_url,
-        is_available
+        image_url
       FROM products
-      WHERE vendor_id = $1 AND is_available = true
+      WHERE vendor_id = $1
       ORDER BY name
     `;
 

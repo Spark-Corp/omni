@@ -5,7 +5,7 @@ import { SplashScreen } from 'expo-router/build/exports';
 import { DevSettings, LogBox, Platform, View } from 'react-native';
 import { isErrorLike, serializeError } from 'serialize-error';
 import { reportErrorToRemote } from './report-error-to-remote';
-import { errorFixEmitter, ErrorFixEvents } from '@omni/app/utils';
+import { errorFixEmitter, ErrorFixEvents } from '@anythingai/app/utils';
 
 type ErrorBoundaryState = {
   hasError: boolean;
@@ -20,7 +20,7 @@ const DeviceErrorBoundary = ({
   sentLogs: boolean;
   error: unknown | null;
 }) => {
-  const isOmniApp = process.env.EXPO_PUBLIC_IS_OMNI_APP === 'true';
+  const isAnythingApp = process.env.EXPO_PUBLIC_IS_ANYTHING_APP === 'true';
   useEffect(() => {
     SplashScreen.hideAsync().catch(() => { });
   }, []);
@@ -47,18 +47,18 @@ const DeviceErrorBoundary = ({
     <SharedErrorBoundary
       isOpen
       description={
-        sentLogs && !isOmniApp
-          ? 'It looks like an error occurred while trying to use your app. This error has been reported to the AI agent and should be visible to the AI soon. If it is not present please see omni.com/docs for help'
-          : 'It looks like an error occurred while trying to use your app. Please see omni.com/docs for help'
+        sentLogs && !isAnythingApp
+          ? 'It looks like an error occurred while trying to use your app. This error has been reported to the AI agent and should be visible to the AI soon. If it is not present please see anything.com/docs for help'
+          : 'It looks like an error occurred while trying to use your app. Please see anything.com/docs for help'
       }
     >
       <View style={{ flexDirection: 'row', gap: 8 }}>
-        {isOmniApp && (
+        {isAnythingApp && (
           <Button color="primary" onPress={handleFixClick}>
             Try to fix
           </Button>
         )}
-        {!isOmniApp && (
+        {!isAnythingApp && (
           <Button color="primary" onPress={handleReload}>
             Restart app
           </Button>
