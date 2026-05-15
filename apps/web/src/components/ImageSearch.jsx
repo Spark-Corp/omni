@@ -14,7 +14,7 @@ export default function ImageSearch({ onSearchQuery }) {
     try {
       // For now, show a helpful message
       // In production, this could use Google Cloud Vision or similar API
-      alert(
+      toast(
         "🚧 Recherche par image arrive bientôt!\n\n" +
           "Pour l'instant, utilisez:\n" +
           "• Recherche texte pour trouver des produits\n" +
@@ -59,7 +59,7 @@ export default function ImageSearch({ onSearchQuery }) {
         onChange={handleImageUpload}
         className="hidden"
       />
-      <style jsx global>{`
+      <style>{`
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
