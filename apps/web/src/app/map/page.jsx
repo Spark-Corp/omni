@@ -20,8 +20,6 @@ export default function MapPage() {
   const [quantity, setQuantity] = useState(1);
   const [chatRequest, setChatRequest] = useState(null);
   const [showVendorChat, setShowVendorChat] = useState(false);
-  const [showStreetView, setShowStreetView] = useState(false);
-  const [streetViewPosition, setStreetViewPosition] = useState(null);
   const [hasVendor, setHasVendor] = useState(false);
   const mapContainer = useRef(null);
   const map = useRef(null);
@@ -574,9 +572,15 @@ export default function MapPage() {
 
   const requestAvailability = async (productId) => {
     try {
+      const storedUser = localStorage.getItem("omni_user");
+      const userId = storedUser ? JSON.parse(storedUser).id : null;
+
       const response = await fetch("/api/availability/request", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...(userId ? { 'x-user-id': userId } : {}),
+        },
         body: JSON.stringify({
           vendorId: selectedVendor.id,
           productId,
@@ -601,7 +605,6 @@ export default function MapPage() {
     
     setLoading(true);
     try {
-      // Use OSRM free routing API (Open Source Routing Machine)
       const response = await fetch(
         `https://router.project-osrm.org/route/v1/foot/${userLocation.lon},${userLocation.lat};${selectedVendor.lon},${selectedVendor.lat}?overview=full&geometries=geojson`
       );
@@ -611,45 +614,33 @@ export default function MapPage() {
       const data = await response.json();
       const route = data.routes[0];
       
-      // Add route to map
       if (map.current) {
-        // Remove existing route layer if any
         if (map.current.getSource('route')) {
           map.current.removeLayer('route-layer');
           map.current.removeSource('route');
         }
         
-        // Add route source
         map.current.addSource('route', {
           type: 'geojson',
-          data: {
-            type: 'Feature',
-            geometry: route.geometry
-          }
+          data: { type: 'Feature', geometry: route.geometry }
         });
         
-        // Add route layer
         map.current.addLayer({
           id: 'route-layer',
           type: 'line',
           source: 'route',
-          paint: {
-            'line-color': '#10b981',
-            'line-width': 4,
-            'line-opacity': 0.8
-          }
+          paint: { 'line-color': '#10b981', 'line-width': 4, 'line-opacity': 0.8 }
         });
         
-        // Show route info
         const distanceKm = (route.distance / 1000).toFixed(1);
         const durationMin = Math.round(route.duration / 60);
-        toast(`Distance: ${distanceKm} km\nDurée à pied: ${durationMin} min`);
+        toast(`Itinéraire: ${distanceKm} km · ${durationMin} min à pied`);
+        
+        setSelectedVendor(null);
       }
     } catch (err) {
       console.error(err);
-      // Fallback to Google Maps if OSRM fails
-      const url = `https://www.google.com/maps/dir/?api=1&destination=${selectedVendor.lat},${selectedVendor.lon}`;
-      window.open(url, '_blank');
+      toast("Itinéraire non disponible pour le moment");
     } finally {
       setLoading(false);
     }
@@ -809,36 +800,7 @@ export default function MapPage() {
         <Navigation size={20} className="text-white/70 group-hover:text-white transition-colors" />
       </button>
 
-      {/* Street View Button */}
-      <button
-        onClick={() => {
-          if (map.current) {
-            const center = map.current.getCenter();
-            setStreetViewPosition({
-              lat: center.lat,
-              lon: center.lng
-            });
-            setShowStreetView(true);
-          }
-        }}
-        className="absolute bottom-24 right-6 z-20 w-12 h-12 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center hover:bg-black/60 transition-all duration-300 group"
-        title="Street View"
-      >
-        <svg 
-          width="20" 
-          height="20" 
-          viewBox="0 0 24 24" 
-          fill="none" 
-          stroke="currentColor" 
-          strokeWidth="2"
-          className="text-white/70 group-hover:text-white transition-colors"
-        >
-          <circle cx="12" cy="12" r="10" />
-          <circle cx="12" cy="12" r="4" fill="currentColor" />
-        </svg>
-      </button>
-
-      {/* Offline Banner */}
+      {/* Loading Overlay - Premium */}
       {isOffline && cachedVendors.length > 0 && (
         <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 bg-amber-500/90 backdrop-blur-md text-white px-4 py-2 rounded-full text-xs font-light shadow-xl flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-white/60 animate-pulse" />
@@ -846,7 +808,15 @@ export default function MapPage() {
         </div>
       )}
 
-      {/* Error Toast - Premium */}
+      {/* Offline Banner */}
+      {isOffline && cachedVendors.length > 0 && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 bg-amber-500/90 backdrop-blur-md text-white px-4 py-2 rounded-full text-xs font-light shadow-xl flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-white/60 animate-pulse" />
+          <span>Mode hors ligne - Affichage des r&eacute;sultats en cache</span>
+        </div>
+      )}
+
+      {/* Error Toast */}
       {error && (
         <div className="absolute top-24 left-1/2 -translate-x-1/2 z-20 bg-red-500/90 backdrop-blur-md text-white px-4 py-2 rounded-full text-sm font-light shadow-xl">
           {error}
@@ -918,26 +888,43 @@ export default function MapPage() {
               {selectedVendor.products?.map((product) => (
                 <div
                   key={product.id}
-                  className="bg-white/[0.03] rounded-xl p-4 border border-white/[0.06] hover:border-white/10 transition-all"
+                  className="bg-white/[0.03] rounded-xl border border-white/[0.06] hover:border-white/10 transition-all overflow-hidden"
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-white text-sm font-medium">{product.name}</h4>
-                      {product.description && (
-                        <p className="text-white/30 text-xs mt-0.5 truncate">{product.description}</p>
-                      )}
+                  <div className="p-4">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          {product.image_url && (
+                            <img src={product.image_url} alt={product.name} className="w-10 h-10 rounded-lg object-cover shrink-0" />
+                          )}
+                          <div>
+                            <h4 className="text-white text-sm font-medium">{product.name}</h4>
+                            {product.description && (
+                              <p className="text-white/30 text-xs mt-0.5 truncate">{product.description}</p>
+                            )}
+                          </div>
+                        </div>
+                        {!product.image_url && (
+                          <>
+                            <h4 className="text-white text-sm font-medium">{product.name}</h4>
+                            {product.description && (
+                              <p className="text-white/30 text-xs mt-0.5 truncate">{product.description}</p>
+                            )}
+                          </>
+                        )}
+                      </div>
+                      <div className="text-right shrink-0 ml-3">
+                        <p className="text-emerald-400 font-semibold text-sm">{product.price?.toLocaleString()} <span className="text-xs font-normal text-emerald-400/60">{product.currency || 'FCFA'}</span></p>
+                        <p className="text-white/20 text-xs mt-0.5">/{product.unit || 'pièce'}</p>
+                      </div>
                     </div>
-                    <div className="text-right shrink-0 ml-3">
-                      <p className="text-emerald-400 font-semibold text-sm">{product.price?.toLocaleString()} <span className="text-xs font-normal text-emerald-400/60">{product.currency || 'FCFA'}</span></p>
-                      <p className="text-white/20 text-xs mt-0.5">/{product.unit || 'pièce'}</p>
-                    </div>
+                    <button
+                      onClick={() => requestAvailability(product.id)}
+                      className="w-full py-2.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400/90 hover:text-emerald-400 text-sm font-medium transition-all border border-emerald-500/10 hover:border-emerald-500/20"
+                    >
+                      Vérifier la disponibilité
+                    </button>
                   </div>
-                  <button
-                    onClick={() => requestAvailability(product.id)}
-                    className="w-full py-2.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400/90 hover:text-emerald-400 text-sm font-medium transition-all border border-emerald-500/10 hover:border-emerald-500/20"
-                  >
-                    Vérifier la disponibilité
-                  </button>
                 </div>
               ))}
             </div>
@@ -968,66 +955,6 @@ export default function MapPage() {
           vendorId={selectedVendor.id}
           onClose={() => setShowVendorChat(false)}
         />
-      )}
-
-      {/* Street View Modal - Mapillary */}
-      {showStreetView && streetViewPosition && (
-        <div className="absolute inset-0 z-50 bg-neutral-950">
-          <div className="h-full flex flex-col">
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 bg-neutral-900/80 backdrop-blur-md">
-              <h3 className="text-white font-light">Street View</h3>
-              <button
-                onClick={() => setShowStreetView(false)}
-                className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
-              >
-                <X size={20} className="text-white/70" />
-              </button>
-            </div>
-            
-            {/* Mapillary Viewer - Direct link approach */}
-            <div className="flex-1 relative flex items-center justify-center">
-              <div className="text-center">
-                <p className="text-white/60 mb-4">Ouvrir Street View à cette position :</p>
-                <p className="text-white/40 text-sm mb-6">
-                  {streetViewPosition.lat.toFixed(6)}, {streetViewPosition.lon.toFixed(6)}
-                </p>
-                <a
-                  href={`https://www.mapillary.com/app/?lat=${streetViewPosition.lat}&lng=${streetViewPosition.lon}&z=17&mapStyle=OpenStreetMap`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-[#00BCF5] text-white rounded-lg font-medium hover:bg-[#00a8db] transition-colors"
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10" />
-                    <circle cx="12" cy="12" r="4" fill="currentColor" />
-                  </svg>
-                  Voir dans Mapillary
-                </a>
-                <p className="text-white/30 text-xs mt-4 max-w-xs mx-auto">
-                  L'embed Mapillary nécessite un compte API pour fonctionner correctement.
-                  Cliquez pour ouvrir l'application Mapillary directement.
-                </p>
-              </div>
-            </div>
-            
-            {/* Info footer */}
-            <div className="p-4 bg-neutral-900/80 backdrop-blur-md text-center">
-              <p className="text-white/50 text-sm">
-                Images fournies par Mapillary (CC BY-SA)
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Street View Hint */}
-      {!showStreetView && mapReady && (
-        <div className="absolute bottom-36 left-6 z-20 bg-black/40 backdrop-blur-md rounded-lg px-3 py-2 border border-white/10">
-          <p className="text-white/50 text-xs">
-            Bouton ◉ = Street View à la position centre carte
-          </p>
-        </div>
       )}
 
       {/* Loading Overlay - Premium */}
