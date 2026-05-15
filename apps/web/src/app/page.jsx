@@ -360,26 +360,6 @@ function ScrollDemo() {
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-[120px]" />
         </div>
 
-        {/* Phase labels */}
-        <div className="absolute top-14 sm:top-16 left-1/2 -translate-x-1/2 z-20 flex gap-2 sm:gap-3">
-          {["Découvrir", "Chercher", "Trouver", "Obtenir"].map((label, i) => (
-            <div key={i} className="flex items-center gap-1.5">
-              <div
-                className="w-2 h-2 rounded-full transition-all duration-500"
-                style={{
-                  backgroundColor: displayPhase >= i ? '#34d399' : 'rgba(255,255,255,0.15)',
-                  boxShadow: displayPhase >= i ? '0 0 6px rgba(52,211,153,0.5)' : 'none',
-                }}
-              />
-              <span
-                className="text-[10px] uppercase tracking-wider transition-all duration-500"
-                style={{ color: displayPhase >= i ? 'rgba(52,211,153,0.8)' : 'rgba(255,255,255,0.25)' }}
-              >
-                {label}
-              </span>
-            </div>
-          ))}
-        </div>
 
         <div className="relative w-full h-full max-w-7xl mx-auto px-4 sm:px-6 pt-16 sm:pt-20 flex items-start sm:items-center">
           {/* LEFT: Globe */}
