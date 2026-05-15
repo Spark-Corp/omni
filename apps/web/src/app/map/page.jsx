@@ -1,11 +1,15 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Search, MapPin, X, Navigation, Mic, Loader2, ArrowLeft, ChevronRight, Plus, Minus, MessageCircle } from "lucide-react";
+import { Search, MapPin, X, Navigation, Mic, Loader2, ArrowLeft, ChevronRight, Plus, Minus, MessageCircle, ShoppingBag, Utensils, Wrench, Truck, Shirt, Home } from "lucide-react";
 import ImageSearch from "@/components/ImageSearch";
 import ChatModal from "@/components/ChatModal";
+import NotificationBell from "@/components/NotificationBell";
+import FavoriteButton from "@/components/FavoriteButton";
 
 export default function MapPage() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authChecking, setAuthChecking] = useState(true);
   const [userLocation, setUserLocation] = useState(null);
   const [vendors, setVendors] = useState([]);
   const [selectedVendor, setSelectedVendor] = useState(null);
@@ -17,23 +21,89 @@ export default function MapPage() {
   const [showVendorChat, setShowVendorChat] = useState(false);
   const [showStreetView, setShowStreetView] = useState(false);
   const [streetViewPosition, setStreetViewPosition] = useState(null);
+  const [hasVendor, setHasVendor] = useState(false);
   const mapContainer = useRef(null);
   const map = useRef(null);
   const userMarker = useRef(null);
   const vendorMarkers = useRef([]);
   const [mapReady, setMapReady] = useState(false);
   const [mapLibLoaded, setMapLibLoaded] = useState(false);
+  const [locationError, setLocationError] = useState(null);
+  const [locationLoading, setLocationLoading] = useState(true);
+  const [isOffline, setIsOffline] = useState(false);
+  const [cachedVendors, setCachedVendors] = useState([]);
+  const [mapLoading, setMapLoading] = useState(true);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [currentZoom, setCurrentZoom] = useState(14);
 
-  // Get user location
+  // Auth check
   useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const storedUser = localStorage.getItem("omni_user");
+        if (storedUser) {
+          setIsAuthenticated(true);
+          setAuthChecking(false);
+          return;
+        }
+
+        const response = await fetch("/api/auth/session");
+        if (!response.ok) {
+          window.location.href = "/auth";
+          return;
+        }
+        const data = await response.json();
+        if (data.user) {
+          localStorage.setItem("omni_user", JSON.stringify(data.user));
+          setIsAuthenticated(true);
+        } else {
+          window.location.href = "/auth";
+        }
+      } catch (error) {
+        console.error("Auth check failed:", error);
+        window.location.href = "/auth";
+      } finally {
+        setAuthChecking(false);
+      }
+    };
+    checkAuth();
+  }, []);
+
+  // Check if user also has a vendor profile
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const checkVendor = async () => {
+      try {
+        const storedUser = localStorage.getItem("omni_user");
+        const userId = storedUser ? JSON.parse(storedUser).id : null;
+        const res = await fetch("/api/vendors/my-vendor", {
+          headers: userId ? { 'x-user-id': userId } : {},
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setHasVendor(!!data.vendor);
+        }
+      } catch (e) {
+        // Not a vendor, no problem
+      }
+    };
+    checkVendor();
+  }, [isAuthenticated]);
+
+  // Retry location function
+  const retryLocation = () => {
+    setLocationLoading(true);
+    setLocationError(null);
+    
     let timeoutId;
     
     const setDefaultLocation = () => {
-      console.log('[Map] Using default location');
+      console.log('[Map] Using fallback location: Lagos');
       setUserLocation({ lat: 6.1319, lon: 1.2228 });
+      setLocationError('Using fallback: Lagos');
+      setLocationLoading(false);
     };
     
-    // Set fallback after 3 seconds if geolocation hangs
     timeoutId = setTimeout(setDefaultLocation, 3000);
     
     if (navigator.geolocation) {
@@ -45,57 +115,71 @@ export default function MapPage() {
             lat: position.coords.latitude,
             lon: position.coords.longitude,
           });
+          setLocationError(null);
+          setLocationLoading(false);
         },
         (error) => {
           clearTimeout(timeoutId);
-          console.error("Error getting location:", error);
+          console.error('Error getting location:', error);
+          setLocationError('Location unavailable - Using fallback: Lagos');
           setDefaultLocation();
         },
         { timeout: 5000, maximumAge: 60000 }
       );
     } else {
       clearTimeout(timeoutId);
+      setLocationError('Geolocation not supported - Using fallback: Lagos');
       setDefaultLocation();
     }
     
     return () => clearTimeout(timeoutId);
+  };
+
+  // Get user location
+  useEffect(() => {
+    retryLocation();
   }, []);
 
-  // Load MapLibre GL and Three.js libraries
+  // Offline detection
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => {
+      setIsOffline(true);
+      if (vendors.length > 0) {
+        setCachedVendors(vendors);
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    setIsOffline(!navigator.onLine);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [vendors]);
+  // Load MapLibre GL
   useEffect(() => {
     if (typeof window === "undefined") return;
     
-    if (window.maplibregl && window.THREE) {
+    if (window.maplibregl) {
       setMapLibLoaded(true);
       return;
     }
 
-    // Load MapLibre GL
-    if (!window.maplibregl) {
-      const link = document.createElement("link");
-      link.rel = "stylesheet";
-      link.href = "https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.css";
-      document.head.appendChild(link);
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = "https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.css";
+    document.head.appendChild(link);
 
-      const script = document.createElement("script");
-      script.src = "https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js";
-      script.onload = () => {
-        console.log("MapLibre GL loaded");
-        if (window.THREE) setMapLibLoaded(true);
-      };
-      document.head.appendChild(script);
-    }
-
-    // Load Three.js for solar system
-    if (!window.THREE) {
-      const threeScript = document.createElement("script");
-      threeScript.src = "https://unpkg.com/three@0.160.0/build/three.min.js";
-      threeScript.onload = () => {
-        console.log("Three.js loaded");
-        if (window.maplibregl) setMapLibLoaded(true);
-      };
-      document.head.appendChild(threeScript);
-    }
+    const script = document.createElement("script");
+    script.src = "https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js";
+    script.onload = () => {
+      console.log("MapLibre GL loaded");
+      setMapLibLoaded(true);
+    };
+    document.head.appendChild(script);
   }, []);
 
   // Initialize map AFTER library is loaded AND location is available
@@ -124,8 +208,8 @@ export default function MapPage() {
         style: {
           version: 8,
           projection: { type: "globe" },
+          glyphs: 'https://fonts.openmaptiles.org/{fontstack}/{range}.pbf',
           sources: {
-            // CartoDB Dark Matter - CORS-friendly, free tiles
             carto: {
               type: "raster",
               tiles: [
@@ -187,13 +271,12 @@ export default function MapPage() {
           }
         },
         center: [userLocation.lon, userLocation.lat],
-        zoom: 0,
-        pitch: 0,
+        zoom: 14,
+        pitch: 45,
         bearing: 0,
         maxZoom: 19,
         minZoom: 0,
-        renderWorldCopies: false,
-        preserveDrawingBuffer: true
+        renderWorldCopies: false
       });
 
       map.current.addControl(new maplibregl.NavigationControl(), "top-right");
@@ -214,10 +297,12 @@ export default function MapPage() {
       map.current.on("load", () => {
         console.log("Map loaded successfully");
         setMapReady(true);
-        
-        if (window.THREE && map.current) {
-          initSolarSystem();
-        }
+        setMapLoading(false);
+        setCurrentZoom(map.current.getZoom());
+      });
+
+      map.current.on("zoom", () => {
+        setCurrentZoom(map.current.getZoom());
       });
       
       map.current.on("error", (e) => {
@@ -229,151 +314,6 @@ export default function MapPage() {
         console.warn("Missing image:", e);
       });
       
-      // Solar System with Three.js
-      const initSolarSystem = () => {
-        const canvas = map.current.getCanvas();
-        const width = canvas.width;
-        const height = canvas.height;
-        
-        // Create Three.js scene
-        const scene = new window.THREE.Scene();
-        const camera = new window.THREE.PerspectiveCamera(75, width / height, 0.1, 10000);
-        const renderer = new window.THREE.WebGLRenderer({ alpha: true, antialias: true });
-        
-        renderer.setSize(width, height);
-        renderer.setPixelRatio(window.devicePixelRatio);
-        canvas.parentElement.appendChild(renderer.domElement);
-        
-        renderer.domElement.style.position = 'absolute';
-        renderer.domElement.style.top = '0';
-        renderer.domElement.style.left = '0';
-        renderer.domElement.style.pointerEvents = 'none';
-        renderer.domElement.style.zIndex = '-1';
-        
-        // Create stars
-        const starsGeometry = new window.THREE.BufferGeometry();
-        const starsCount = 3000;
-        const posArray = new Float32Array(starsCount * 3);
-        
-        for (let i = 0; i < starsCount * 3; i++) {
-          posArray[i] = (Math.random() - 0.5) * 2000;
-        }
-        
-        starsGeometry.setAttribute('position', new window.THREE.BufferAttribute(posArray, 3));
-        const starsMaterial = new window.THREE.PointsMaterial({
-          size: 2,
-          color: 0xffffff,
-          transparent: true,
-          opacity: 0.8
-        });
-        const starsMesh = new window.THREE.Points(starsGeometry, starsMaterial);
-        scene.add(starsMesh);
-        
-        // Create Sun
-        const sunGeometry = new window.THREE.SphereGeometry(30, 32, 32);
-        const sunMaterial = new window.THREE.MeshStandardMaterial({
-          color: 0xffaa00,
-          emissive: 0xff4400,
-          emissiveIntensity: 0.5,
-          roughness: 0.4,
-          metalness: 0.1
-        });
-        const sun = new window.THREE.Mesh(sunGeometry, sunMaterial);
-        sun.position.set(-400, 200, -500);
-        scene.add(sun);
-        
-        // Sun glow effect
-        const glowGeometry = new window.THREE.SphereGeometry(40, 32, 32);
-        const glowMaterial = new window.THREE.MeshBasicMaterial({
-          color: 0xff4400,
-          transparent: true,
-          opacity: 0.3
-        });
-        const sunGlow = new window.THREE.Mesh(glowGeometry, glowMaterial);
-        sunGlow.position.copy(sun.position);
-        scene.add(sunGlow);
-        
-        // Create planets
-        const planets = [
-          { color: 0x8c7853, size: 8, distance: 100, speed: 0.02 }, // Mercury
-          { color: 0xffc649, size: 12, distance: 150, speed: 0.015 }, // Venus
-          { color: 0x6b93d6, size: 13, distance: 200, speed: 0.01 }, // Earth
-          { color: 0xc1440e, size: 10, distance: 250, speed: 0.008 }, // Mars
-        ];
-        
-        const planetMeshes = planets.map(p => {
-          const geometry = new window.THREE.SphereGeometry(p.size, 16, 16);
-          const material = new window.THREE.MeshStandardMaterial({
-            color: p.color,
-            roughness: 0.8
-          });
-          const mesh = new window.THREE.Mesh(geometry, material);
-          mesh.userData = { distance: p.distance, speed: p.speed, angle: Math.random() * Math.PI * 2 };
-          scene.add(mesh);
-          return mesh;
-        });
-        
-        // Add ambient and directional light
-        const ambientLight = new window.THREE.AmbientLight(0x404040, 0.5);
-        scene.add(ambientLight);
-        
-        const directionalLight = new window.THREE.DirectionalLight(0xffffff, 1);
-        directionalLight.position.set(-400, 200, -500);
-        scene.add(directionalLight);
-        
-        // Animation loop
-        let animationId;
-        const animate = () => {
-          animationId = requestAnimationFrame(animate);
-          
-          // Rotate stars slowly
-          starsMesh.rotation.y += 0.0002;
-          
-          // Rotate sun
-          sun.rotation.y += 0.005;
-          sunGlow.rotation.y += 0.005;
-          
-          // Orbit planets
-          planetMeshes.forEach(planet => {
-            planet.userData.angle += planet.userData.speed;
-            planet.position.x = Math.cos(planet.userData.angle) * planet.userData.distance - 200;
-            planet.position.z = Math.sin(planet.userData.angle) * planet.userData.distance - 300;
-            planet.position.y = 100;
-            planet.rotation.y += 0.02;
-          });
-          
-          renderer.render(scene, camera);
-        };
-        
-        // Start animation only when zoomed out (globe view)
-        const checkZoom = () => {
-          const zoom = map.current.getZoom();
-          if (zoom < 4) {
-            if (!animationId) animate();
-            renderer.domElement.style.opacity = '1';
-          } else {
-            if (animationId) {
-              cancelAnimationFrame(animationId);
-              animationId = null;
-            }
-            renderer.domElement.style.opacity = '0';
-          }
-        };
-        
-        map.current.on('zoom', checkZoom);
-        checkZoom();
-        
-        // Handle resize
-        const handleResize = () => {
-          const newWidth = canvas.width;
-          const newHeight = canvas.height;
-          camera.aspect = newWidth / newHeight;
-          camera.updateProjectionMatrix();
-          renderer.setSize(newWidth, newHeight);
-        };
-        
-        map.current.on('resize', handleResize);
-      };
     } catch (err) {
       console.error("Error initializing map:", err);
       setError("Erreur lors de l'initialisation de la carte");
@@ -394,16 +334,48 @@ export default function MapPage() {
     }
   }, [userLocation]);
 
-  // Update vendor markers when vendors change
+  // Update vendor markers when vendors change - with viewport clustering/filtering
   useEffect(() => {
     if (!map.current || !mapReady || !window.maplibregl) return;
+
+    // Get current map bounds for viewport filtering
+    let visibleVendors = vendors;
+    if (map.current.getBounds) {
+      const bounds = map.current.getBounds();
+      const currentZoom = map.current.getZoom();
+      
+      // At high zoom (15+), show all markers in view
+      // At low zoom, filter to show only clustered markers by viewport
+      if (currentZoom < 12 && vendors.length > 20) {
+        // Filter vendors to those within viewport bounds + buffer
+        visibleVendors = vendors.filter(vendor => {
+          if (!vendor.lon || !vendor.lat) return false;
+          const lng = Number(vendor.lon);
+          const lat = Number(vendor.lat);
+          return bounds.contains([lng, lat]);
+        });
+        
+        // If no vendors in view, show nearest ones
+        if (visibleVendors.length === 0) {
+          const center = map.current.getCenter();
+          visibleVendors = [...vendors]
+            .sort((a, b) => {
+              const distA = Math.sqrt(Math.pow(a.lat - center.lat, 2) + Math.pow(a.lon - center.lng, 2));
+              const distB = Math.sqrt(Math.pow(b.lat - center.lat, 2) + Math.pow(b.lon - center.lng, 2));
+              return distA - distB;
+            })
+            .slice(0, 15);
+        }
+        console.log('[Map] Viewport filtered vendors:', visibleVendors.length, 'of', vendors.length);
+      }
+    }
 
     // Remove old markers
     vendorMarkers.current.forEach((marker) => marker.remove());
     vendorMarkers.current = [];
 
     // Add new markers with premium styling
-    vendors.forEach((vendor) => {
+    visibleVendors.forEach((vendor) => {
       const el = document.createElement("div");
       el.className = "vendor-marker";
       el.style.width = "36px";
@@ -416,7 +388,7 @@ export default function MapPage() {
       el.style.display = "flex";
       el.style.alignItems = "center";
       el.style.justifyContent = "center";
-      el.style.transition = "transform 0.2s ease, box-shadow 0.2s ease";
+      el.style.transition = "box-shadow 0.2s ease";
       
       // Inner dot
       const dot = document.createElement("div");
@@ -427,13 +399,11 @@ export default function MapPage() {
       dot.style.boxShadow = "0 2px 4px rgba(0,0,0,0.2)";
       el.appendChild(dot);
       
-      // Hover effect
+      // Hover effect — NO transform (MapLibre owns it for positioning)
       el.addEventListener("mouseenter", () => {
-        el.style.transform = "scale(1.15)";
         el.style.boxShadow = "0 6px 20px rgba(0,0,0,0.5), 0 0 0 6px rgba(16, 185, 129, 0.3)";
       });
       el.addEventListener("mouseleave", () => {
-        el.style.transform = "scale(1)";
         el.style.boxShadow = "0 4px 12px rgba(0,0,0,0.4), 0 0 0 4px rgba(16, 185, 129, 0.2)";
       });
 
@@ -452,6 +422,12 @@ export default function MapPage() {
   }, [vendors, mapReady]);
 
   const loadNearbyVendors = async () => {
+    // If offline, use cached vendors
+    if (isOffline && cachedVendors.length > 0) {
+      console.log('[Map] Using cached vendors (offline)');
+      setVendors(cachedVendors);
+      return;
+    }
     if (!userLocation) return;
 
     setLoading(true);
@@ -530,7 +506,7 @@ export default function MapPage() {
       !("webkitSpeechRecognition" in window) &&
       !("SpeechRecognition" in window)
     ) {
-      alert("La recherche vocale n'est pas supportée sur ce navigateur");
+      toast("La recherche vocale n'est pas supportée sur ce navigateur");
       return;
     }
 
@@ -548,7 +524,7 @@ export default function MapPage() {
 
     recognition.onerror = (event) => {
       console.error("Speech recognition error:", event.error);
-      alert("Erreur de reconnaissance vocale");
+      toast("Erreur de reconnaissance vocale");
     };
 
     recognition.start();
@@ -574,11 +550,13 @@ export default function MapPage() {
         
         // Ensure valid coordinates
         if (!isNaN(lon) && !isNaN(lat) && lon >= -180 && lon <= 180 && lat >= -90 && lat <= 90) {
-          console.log('[Map] Using setCenter to:', [lon, lat]);
-          // Use setCenter + setZoom instead of easeTo for globe projection
-          map.current.setCenter([lon, lat]);
-          map.current.setZoom(16);
-          map.current.setPitch(45);
+          console.log('[Map] Flying to:', [lon, lat]);
+          map.current.flyTo({
+            center: [lon, lat],
+            zoom: 16,
+            pitch: 45,
+            duration: 1500,
+          });
         } else {
           console.error('[Map] Invalid coordinate values:', lon, lat);
         }
@@ -613,7 +591,7 @@ export default function MapPage() {
       setChatRequest(data.request);
     } catch (err) {
       console.error(err);
-      alert("Erreur lors de l'envoi de la demande");
+      toast("Erreur lors de l'envoi de la demande");
     }
   };
 
@@ -664,7 +642,7 @@ export default function MapPage() {
         // Show route info
         const distanceKm = (route.distance / 1000).toFixed(1);
         const durationMin = Math.round(route.duration / 60);
-        alert(`Distance: ${distanceKm} km\nDurée à pied: ${durationMin} min`);
+        toast(`Distance: ${distanceKm} km\nDurée à pied: ${durationMin} min`);
       }
     } catch (err) {
       console.error(err);
@@ -680,12 +658,14 @@ export default function MapPage() {
     setShowVendorChat(true);
   };
 
-  if (!userLocation) {
+  if (authChecking || !userLocation) {
     return (
       <div className="h-screen flex items-center justify-center bg-neutral-950">
         <div className="text-center">
           <div className="w-12 h-12 border-2 border-white/20 border-t-white rounded-full animate-spin mx-auto mb-6" />
-          <p className="text-white/60 text-sm font-light tracking-wide">Localisation...</p>
+          <p className="text-white/60 text-sm font-light tracking-wide">
+            {authChecking ? "Vérification..." : "Localisation..."}
+          </p>
         </div>
       </div>
     );
@@ -693,9 +673,21 @@ export default function MapPage() {
 
   return (
     <div className="h-screen w-full relative bg-neutral-950 overflow-hidden">
-      {/* Loading overlay */}
-      {!mapReady && (
+      {/* Map Loading Skeleton */}
+      {mapLoading && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-neutral-950">
+          <div className="text-center">
+            <div className="w-20 h-20 mx-auto mb-6 relative">
+              <div className="absolute inset-0 border border-white/10 rounded-full" />
+              <div className="absolute inset-0 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+            </div>
+            <p className="text-white/60 text-sm font-light tracking-wide">Chargement de la carte...</p>
+          </div>
+        </div>
+      )}
+
+      {!mapReady && !mapLoading && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-neutral-950">
           <div className="text-center">
             <div className="w-12 h-12 border-2 border-white/20 border-t-white rounded-full animate-spin mx-auto mb-6" />
             <p className="text-white/60 text-sm font-light tracking-wide">Chargement...</p>
@@ -710,16 +702,21 @@ export default function MapPage() {
         </button>
       </a>
 
-      {/* Search Bar - Floating Minimal */}
-      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20 w-full max-w-md px-4">
+      {/* Search Section */}
+      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20 w-full max-w-lg px-4">
+        <div className="text-center mb-3">
+          <p className="text-white/80 text-sm font-light tracking-wide">
+            <span className="text-emerald-400 font-medium">Omni</span> — Tout près de chez toi
+          </p>
+        </div>
         <form onSubmit={handleSearch} className="relative">
-          <div className="flex items-center bg-black/40 backdrop-blur-xl rounded-full border border-white/10 px-4 py-3 shadow-2xl shadow-black/50">
-            <Search size={18} className="text-white/50 mr-3" />
+          <div className="flex items-center bg-black/60 backdrop-blur-xl rounded-2xl border border-white/10 px-4 py-3.5 shadow-2xl shadow-black/50">
+            <Search size={18} className="text-emerald-400 mr-3" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Rechercher un produit..."
+              placeholder="Ex: patates, réparation téléphone, pain..."
               className="flex-1 bg-transparent text-white/90 placeholder-white/40 text-sm outline-none font-light"
             />
             <button
@@ -737,6 +734,54 @@ export default function MapPage() {
             />
           </div>
         </form>
+
+        {/* Quick Categories */}
+        <div className="flex gap-2 mt-3 overflow-x-auto pb-1 scrollbar-hide">
+          {[
+            { label: "Alimentation", icon: Utensils },
+            { label: "Services", icon: Wrench },
+            { label: "Artisanat", icon: ShoppingBag },
+            { label: "Mode", icon: Shirt },
+            { label: "Maison", icon: Home },
+            { label: "Transport", icon: Truck },
+          ].map((cat) => {
+            const Icon = cat.icon;
+            return (
+              <button
+                key={cat.label}
+                onClick={() => {
+                  setSearchQuery(cat.label);
+                  setTimeout(() => handleSearch(), 100);
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/15 border border-white/10 text-white/70 hover:text-white text-xs transition-all whitespace-nowrap shrink-0"
+              >
+                <Icon size={12} />
+                {cat.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Header Right */}
+      <div className="absolute top-6 right-6 z-20 flex items-center gap-3">
+        {/* Mode badge */}
+        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+          <span className="text-xs text-emerald-400 font-medium">Acheteur</span>
+        </div>
+        <NotificationBell />
+        {hasVendor && (
+          <a
+            href="/vendor/dashboard"
+            className="px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/15 border border-white/10 text-white/70 hover:text-white text-xs transition-all"
+          >
+            Ma boutique
+          </a>
+        )}
+        <a href="/user/profile" className="text-white/50 hover:text-emerald-400 text-sm transition-colors">
+          Mon compte
+        </a>
       </div>
 
       {/* Map Container */}
@@ -792,6 +837,14 @@ export default function MapPage() {
         </svg>
       </button>
 
+      {/* Offline Banner */}
+      {isOffline && cachedVendors.length > 0 && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 bg-amber-500/90 backdrop-blur-md text-white px-4 py-2 rounded-full text-xs font-light shadow-xl flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-white/60 animate-pulse" />
+          <span>Mode hors ligne - Affichage des r?sultats en cache</span>
+        </div>
+      )}
+
       {/* Error Toast - Premium */}
       {error && (
         <div className="absolute top-24 left-1/2 -translate-x-1/2 z-20 bg-red-500/90 backdrop-blur-md text-white px-4 py-2 rounded-full text-sm font-light shadow-xl">
@@ -799,68 +852,100 @@ export default function MapPage() {
         </div>
       )}
 
-      {/* Bottom Sheet - Vendor Details - Premium Dark */}
+      {/* Bottom Sheet - Vendor Details */}
       {selectedVendor && (
-        <div className="absolute bottom-0 left-0 right-0 z-30 bg-neutral-900/95 backdrop-blur-xl rounded-t-3xl border-t border-white/10 shadow-2xl max-h-[70vh] overflow-y-auto animate-slide-up">
-          <div className="p-6">
+        <div className="absolute bottom-0 left-0 right-0 z-30 bg-neutral-900/95 backdrop-blur-xl rounded-t-3xl border-t border-white/10 shadow-2xl max-h-[75vh] overflow-y-auto animate-slide-up">
+          <div className="p-5 pb-8">
             {/* Handle */}
-            <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-6" />
+            <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-5" />
 
             {/* Header */}
-            <div className="flex items-start justify-between mb-6">
-              <div>
-                <h2 className="text-xl font-light text-white mb-1">{selectedVendor.name}</h2>
-                <div className="flex items-center gap-2 text-white/50 text-sm">
-                  <span className="text-emerald-400">●</span>
-                  <span>{selectedVendor.category}</span>
-                  <span className="mx-1">·</span>
-                  <span>{selectedVendor.distance ? `${Math.round(selectedVendor.distance)}m` : "À proximité"}</span>
-                </div>
+            <div className="flex items-start gap-4 mb-6">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center shrink-0 border border-white/5">
+                <Store size={22} className="text-emerald-400" />
               </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-lg font-medium text-white truncate">{selectedVendor.name}</h2>
+                <div className="flex items-center gap-2 text-white/40 text-sm mt-0.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                  <span className="truncate">{selectedVendor.category}</span>
+                  <span className="text-white/20">·</span>
+                  <span className="shrink-0">{selectedVendor.distance ? `${Math.round(selectedVendor.distance)}m` : "À proximité"}</span>
+                </div>
+                {selectedVendor.description && (
+                  <p className="text-white/30 text-xs mt-1.5 line-clamp-2">{selectedVendor.description}</p>
+                )}
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <FavoriteButton vendorId={selectedVendor.id} />
+                <button
+                  onClick={() => setSelectedVendor(null)}
+                  className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/15 border border-white/5 flex items-center justify-center transition-colors"
+                >
+                  <X size={14} className="text-white/50" />
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="flex gap-3 mb-6">
               <button
-                onClick={() => setSelectedVendor(null)}
-                className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
+                onClick={navigateToVendor}
+                className="flex-1 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-white/80 hover:text-white text-sm font-medium transition-all flex items-center justify-center gap-2"
               >
-                <X size={16} className="text-white/70" />
+                <Navigation size={16} />
+                Itinéraire
+              </button>
+              <button
+                onClick={() => setShowVendorChat(true)}
+                className="flex-1 py-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 text-sm font-medium transition-all flex items-center justify-center gap-2"
+              >
+                <MessageCircle size={16} />
+                Contacter
               </button>
             </div>
 
+            {/* Section Title */}
+            <div className="flex items-center gap-2 mb-4">
+              <div className="h-px flex-1 bg-white/5" />
+              <span className="text-white/30 text-xs uppercase tracking-widest font-medium">Produits</span>
+              <div className="h-px flex-1 bg-white/5" />
+            </div>
+
             {/* Products */}
-            <div className="space-y-3 mb-6">
-              <h3 className="text-white/40 text-xs uppercase tracking-wider font-medium">Produits</h3>
+            <div className="space-y-2.5 mb-4">
               {selectedVendor.products?.map((product) => (
                 <div
                   key={product.id}
-                  className="bg-white/5 rounded-xl p-4 border border-white/5 hover:border-white/10 transition-colors"
+                  className="bg-white/[0.03] rounded-xl p-4 border border-white/[0.06] hover:border-white/10 transition-all"
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h4 className="text-white font-light mb-1">{product.name}</h4>
-                      <p className="text-white/40 text-sm">{product.description}</p>
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-white text-sm font-medium">{product.name}</h4>
+                      {product.description && (
+                        <p className="text-white/30 text-xs mt-0.5 truncate">{product.description}</p>
+                      )}
                     </div>
-                    <div className="text-right">
-                      <p className="text-emerald-400 font-medium">{product.price} {product.currency}</p>
-                      <p className="text-white/30 text-xs">{product.unit}</p>
+                    <div className="text-right shrink-0 ml-3">
+                      <p className="text-emerald-400 font-semibold text-sm">{product.price?.toLocaleString()} <span className="text-xs font-normal text-emerald-400/60">{product.currency || 'FCFA'}</span></p>
+                      <p className="text-white/20 text-xs mt-0.5">/{product.unit || 'pièce'}</p>
                     </div>
                   </div>
                   <button
                     onClick={() => requestAvailability(product.id)}
-                    className="mt-3 w-full py-2.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 rounded-lg text-sm font-medium transition-colors"
+                    className="w-full py-2.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400/90 hover:text-emerald-400 text-sm font-medium transition-all border border-emerald-500/10 hover:border-emerald-500/20"
                   >
-                    Vérifier disponibilité
+                    Vérifier la disponibilité
                   </button>
                 </div>
               ))}
             </div>
 
-            {/* Actions */}
-            <button
-              onClick={navigateToVendor}
-              className="w-full py-4 bg-white text-neutral-900 rounded-xl font-medium hover:bg-white/90 transition-colors flex items-center justify-center gap-2"
-            >
-              <Navigation size={18} />
-              Itinéraire
-            </button>
+            {selectedVendor.phone && (
+              <div className="flex items-center gap-2 text-white/20 text-xs justify-center pt-2">
+                <span>Contact : {selectedVendor.phone}</span>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -952,7 +1037,7 @@ export default function MapPage() {
       )}
 
       {/* Global Styles */}
-      <style jsx global>{`
+      <style>{`
         @keyframes slide-up {
           from {
             transform: translateY(100%);
@@ -969,8 +1054,12 @@ export default function MapPage() {
         .maplibregl-control-container {
           display: none !important;
         }
-        .vendor-marker:hover {
-          transform: scale(1.1);
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
         }
       `}</style>
     </div>

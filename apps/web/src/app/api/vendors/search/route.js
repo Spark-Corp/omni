@@ -12,8 +12,16 @@ export async function POST(request) {
       );
     }
 
-    // Query vendors with products matching search within radius
-    // Using PostGIS ST_DWithin for distance filtering and ST_Distance for sorting
+    // Search vendors by product name OR vendor name/category/description (for services)
+    const searchClause = search ? `
+      AND (
+        p.name ILIKE $4
+        OR v.name ILIKE $4
+        OR v.category ILIKE $4
+        OR v.description ILIKE $4
+      )
+    ` : "";
+
     const query = `
       SELECT DISTINCT ON (v.id)
         v.id,
@@ -23,22 +31,24 @@ export async function POST(request) {
         ST_Y(v.location::geometry) as lat,
         ST_X(v.location::geometry) as lon,
         ST_Distance(v.location, ST_SetSRID(ST_Point($1, $2), 4326)::geography) as distance,
-        json_agg(json_build_object(
-          'id', p.id,
-          'name', p.name,
-          'price', p.price,
-          'unit', p.unit,
-          'photo_url', p.photo_url
-        )) as products
+        COALESCE(json_agg(
+          json_build_object(
+            'id', p.id,
+            'name', p.name,
+            'price', p.price,
+            'unit', p.unit,
+            'photo_url', p.photo_url
+          )
+          ORDER BY p.name
+        ) FILTER (WHERE p.id IS NOT NULL), '[]'::json) as products
       FROM vendors v
-      JOIN products p ON p.vendor_id = v.id
+      LEFT JOIN products p ON p.vendor_id = v.id
       WHERE v.is_online = true
-        AND p.is_available = true
         AND ST_DWithin(v.location, ST_SetSRID(ST_Point($1, $2), 4326)::geography, $3)
-        ${search ? "AND p.name ILIKE $4" : ""}
+        ${searchClause}
       GROUP BY v.id, v.name, v.category, v.description, v.location
-      ORDER BY v.id, distance
-      LIMIT 3
+      ORDER BY distance
+      LIMIT 10
     `;
 
     const params = search
@@ -50,8 +60,9 @@ export async function POST(request) {
     return Response.json({ vendors });
   } catch (error) {
     console.error("Error searching vendors:", error);
+    console.error("Stack:", error?.stack);
     return Response.json(
-      { error: "Failed to search vendors" },
+      { error: "Internal server error", message: error?.message },
       { status: 500 },
     );
   }
