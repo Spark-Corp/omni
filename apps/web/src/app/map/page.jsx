@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Search, MapPin, X, Navigation, Mic, Loader2, ArrowLeft, ChevronRight, Plus, Minus, MessageCircle, ShoppingBag, Utensils, Wrench, Truck, Shirt, Home } from "lucide-react";
+import { Search, MapPin, X, Navigation, Mic, Loader2, ArrowLeft, ChevronRight, Plus, Minus, MessageCircle, ShoppingBag, Utensils, Wrench, Truck, Shirt, Home, Store } from "lucide-react";
+import { toast } from "sonner";
 import ImageSearch from "@/components/ImageSearch";
 import ChatModal from "@/components/ChatModal";
 import NotificationBell from "@/components/NotificationBell";

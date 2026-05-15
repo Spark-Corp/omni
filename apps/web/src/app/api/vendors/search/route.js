@@ -23,7 +23,7 @@ export async function POST(request) {
     ` : "";
 
     const query = `
-      SELECT DISTINCT ON (v.id)
+      SELECT
         v.id,
         v.name,
         v.category,
