@@ -189,19 +189,30 @@ function ScrollDemo() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Phases from scroll progress
-  const globePhase = Math.floor(progress * 4);
-  const searchOpacity = Math.max(0, Math.min(1, (progress - 0.15) / 0.15));
-  const typingProgress = Math.max(0, Math.min(1, (progress - 0.35) / 0.2));
-  const markersOpacity = Math.max(0, Math.min(1, (progress - 0.55) / 0.15));
-  const resultOpacity = Math.max(0, Math.min(1, (progress - 0.75) / 0.1));
-  const globeScale = 1 - progress * 0.4;
-  const globeY = -progress * 80;
+  // 4 discrete phases, each takes 25% of scroll
+  // Phase 0: hero + globe only
+  // Phase 1: search bar appears + text types
+  // Phase 2: markers pop
+  // Phase 3: result card
+  const rawPhase = progress * 4;
+  const currentPhase = Math.min(3, Math.floor(rawPhase));
+  const phaseProgress = rawPhase - currentPhase; // 0-1 within current phase
 
-  // Typing effect
+  const globePhase = Math.min(3, Math.floor(rawPhase * 1.2));
+
+  // Typing
   const searchText = "patates";
-  const typedLen = Math.floor(typingProgress * searchText.length);
+  const typedLen = currentPhase >= 1 ? Math.min(searchText.length, Math.floor(phaseProgress * searchText.length + (currentPhase > 1 ? searchText.length : 0))) : 0;
   const typed = searchText.slice(0, typedLen);
+
+  // Search opacity: phase 1
+  const searchOpacity = currentPhase >= 1 ? Math.min(1, phaseProgress * 2) : 0;
+
+  // Markers: phase 2
+  const markersProgress = currentPhase >= 2 ? Math.min(1, phaseProgress * 1.5) : 0;
+
+  // Result: phase 3
+  const resultProgress = currentPhase >= 3 ? Math.min(1, phaseProgress * 1.5) : 0;
 
   return (
     <section ref={sectionRef} className="relative" style={{ height: "500vh" }}>
@@ -211,138 +222,161 @@ function ScrollDemo() {
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-[120px]" />
         </div>
 
-        {/* Content container — everything morphs here */}
-        <div className="relative w-full h-full max-w-7xl mx-auto px-6 flex items-center justify-center">
-          {/* Globe — visible throughout, moves and shrinks */}
-          <div
-            className="absolute w-full h-full transition-all duration-75"
-            style={{
-              transform: `scale(${Math.max(0.4, globeScale)}) translateY(${globeY}px)`,
-              opacity: 1 - progress * 0.3,
-            }}
-          >
-            <Globe3D phase={globePhase} />
-          </div>
-
-          {/* Search bar overlay */}
-          <div
-            className="absolute z-10 w-full max-w-lg transition-all duration-300"
-            style={{
-              opacity: searchOpacity,
-              transform: `translateY(${(1 - searchOpacity) * 30}px)`,
-            }}
-          >
-            {/* Hero text fades out as search appears */}
-            <div className="text-center mb-6" style={{ opacity: Math.max(0, 1 - progress * 5) }}>
-              <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 backdrop-blur-md border border-white/10 mb-4 text-sm text-white/80">
-                <Sparkles size={14} className="text-emerald-400" />
-                Tu cherches un produit ou service autour de toi ?
-              </span>
-              <h1 className="text-4xl md:text-6xl font-bold leading-[1.05] mb-4">
-                <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">Omni</span>
-                <span className="text-white/90 block mt-1">Tout près de chez toi.</span>
-              </h1>
-              <p className="text-white/50 max-w-lg mx-auto">
-                Des milliers de vendeurs et fournisseurs de services existent autour de toi. <span className="text-emerald-400/80 font-medium">Omni est là pour te les montrer.</span>
-              </p>
-            </div>
-
-            {/* Search bar */}
-            <div className="flex items-center bg-black/60 backdrop-blur-xl rounded-2xl border border-white/10 px-4 py-3.5 shadow-2xl">
-              <Search size={16} className="text-emerald-400 mr-3 shrink-0" />
-              <span className="flex-1 text-white/80 text-sm font-light tracking-wide">
-                {typed}
-                <span className={`animate-pulse text-emerald-400 ${typedLen >= searchText.length ? 'opacity-0' : ''}`}>|</span>
-              </span>
-              <Mic size={14} className="text-white/30 shrink-0" />
-            </div>
-
-            {/* Status hint */}
-            <p className="text-center text-white/20 text-xs mt-3 font-light tracking-wide">
-              Scrolle pour voir la magie opérer
-            </p>
-          </div>
-
-          {/* Map demo overlay — appears as globe shrinks */}
-          <div
-            className="absolute inset-0 z-10 flex items-center justify-center transition-all duration-500"
-            style={{ opacity: markersOpacity }}
-          >
-            <div className="relative w-full h-full max-w-3xl mx-auto">
-              {/* Street grid (subtle) */}
-              <div className="absolute inset-0 opacity-[0.04]" style={{
-                backgroundImage: `linear-gradient(rgba(255,255,255,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.3) 1px, transparent 1px)`,
-                backgroundSize: '40px 40px',
-              }} />
-
-              {/* Vendor markers */}
-              {[
-                { top: '30%', left: '30%', label: 'Patates · 500 FCFA/kg', dist: '120m', delay: 0 },
-                { top: '45%', left: '60%', label: 'Patates · 400 FCFA/kg', dist: '250m', delay: 0.15 },
-                { top: '60%', left: '35%', label: 'Patates · 600 FCFA/kg', dist: '400m', delay: 0.3 },
-                { top: '25%', left: '65%', label: 'Patates · 350 FCFA/kg', dist: '500m', delay: 0.45 },
-              ].map((m, i) => (
-                <div
-                  key={i}
-                  className="absolute"
-                  style={{
-                    top: m.top, left: m.left,
-                    opacity: Math.max(0, Math.min(1, (markersOpacity - m.delay) / 0.15)),
-                    transform: `scale(${Math.max(0, Math.min(1, (markersOpacity - m.delay) / 0.15))})`,
-                    transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                  }}
-                >
-                  <div className={`w-9 h-9 rounded-full border-2 border-white/80 flex items-center justify-center shadow-lg ${i === 0 ? 'bg-emerald-500 shadow-emerald-500/40 scale-110' : 'bg-emerald-500/80'}`}>
-                    <div className="w-3 h-3 rounded-full bg-white" />
-                  </div>
-                  {i === 0 && (
-                    <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-3 py-1.5 rounded-lg bg-black/80 backdrop-blur-md border border-white/10 whitespace-nowrap"
-                      style={{ opacity: Math.max(0, Math.min(1, (markersOpacity - 0.15) / 0.1)) }}
-                    >
-                      <p className="text-[11px] text-white/90 font-medium">{m.label}</p>
-                      <p className="text-[10px] text-white/40">{m.dist}</p>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Result card */}
-          <div
-            className="absolute bottom-12 z-20 w-full max-w-md mx-auto px-6 transition-all duration-500"
-            style={{
-              opacity: resultOpacity,
-              transform: `translateY(${(1 - resultOpacity) * 40}px)`,
-            }}
-          >
-            <div className="px-5 py-4 rounded-xl bg-black/60 backdrop-blur-md border border-white/10 text-center">
-              <p className="text-sm text-white/80">
-                <span className="text-emerald-400 font-semibold">4 vendeurs</span> ont des patates près de chez toi
-              </p>
-              <motion.a href="/map"
-                whileHover={{ scale: 1.02 }}
-                className="mt-3 inline-flex items-center gap-2 px-6 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black text-sm font-semibold transition-all"
+        {/* Phase labels */}
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex gap-3">
+          {["Découvrir", "Chercher", "Trouver", "Obtenir"].map((label, i) => (
+            <div key={i} className="flex items-center gap-1.5">
+              <div
+                className="w-2 h-2 rounded-full transition-all duration-500"
+                style={{
+                  backgroundColor: currentPhase >= i ? '#34d399' : 'rgba(255,255,255,0.15)',
+                  boxShadow: currentPhase >= i ? '0 0 6px rgba(52,211,153,0.5)' : 'none',
+                }}
+              />
+              <span
+                className="text-[10px] uppercase tracking-wider transition-all duration-500"
+                style={{ color: currentPhase >= i ? 'rgba(52,211,153,0.8)' : 'rgba(255,255,255,0.25)' }}
               >
-                Voir sur la carte
-                <ArrowRight size={16} />
-              </motion.a>
+                {label}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <div className="relative w-full h-full max-w-7xl mx-auto px-6 flex items-center">
+          {/* LEFT: Globe */}
+          <div className="w-full lg:w-1/2 h-full flex items-center justify-center p-4 lg:p-8">
+            <div className="relative w-full h-full max-h-[500px]">
+              <Globe3D phase={globePhase} />
             </div>
           </div>
 
-          {/* Progress bar */}
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+          {/* RIGHT: Content */}
+          <div className="hidden lg:flex lg:w-1/2 flex-col justify-center pl-8">
+            {/* Header text — always visible */}
+            <div className="mb-8">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 mb-4">
+                <Sparkles size={12} className="text-emerald-400" />
+                <span className="text-xs text-white/70">Tu cherches un produit ou service autour de toi ?</span>
+              </div>
+              <h2 className="text-4xl md:text-5xl font-bold leading-tight">
+                <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">Omni</span>
+                <span className="text-white/90 block">Tout près de chez toi.</span>
+              </h2>
+              <p className="text-white/40 text-sm mt-3 max-w-sm">
+                Omni est là pour te montrer les vendeurs et prestataires autour de toi.
+              </p>
+            </div>
+
+            {/* Phase content */}
+            <div className="space-y-6">
+              {/* Phase 1: Search bar */}
+              <div
+                className="transition-all duration-500"
+                style={{
+                  opacity: searchOpacity,
+                  transform: `translateY(${(1 - searchOpacity) * 20}px)`,
+                }}
+              >
+                <div className="flex items-center bg-black/50 backdrop-blur-xl rounded-2xl border border-white/10 px-4 py-3.5 shadow-2xl">
+                  <Search size={16} className="text-emerald-400 mr-3 shrink-0" />
+                  <span className="flex-1 text-white/80 text-sm font-light tracking-wide">
+                    {typed}
+                    <span className={`animate-pulse text-emerald-400 ${typedLen >= searchText.length ? 'opacity-0' : ''}`}>|</span>
+                  </span>
+                  <Mic size={14} className="text-white/30 shrink-0" />
+                </div>
+              </div>
+
+              {/* Phase 2: Markers */}
+              <div
+                className="transition-all duration-500"
+                style={{
+                  opacity: markersProgress,
+                  transform: `translateY(${(1 - markersProgress) * 20}px)`,
+                }}
+              >
+                <div className="space-y-3">
+                  {[
+                    { name: "Marché de Bè", product: "Patates · 500 FCFA/kg", dist: "120m", delay: 0 },
+                    { name: "Ama Market", product: "Patates · 400 FCFA/kg", dist: "250m", delay: 0.2 },
+                    { name: "Mariam Boutique", product: "Patates · 600 FCFA/kg", dist: "400m", delay: 0.4 },
+                  ].map((m, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/5"
+                      style={{
+                        opacity: Math.max(0, Math.min(1, (markersProgress - m.delay) / 0.2)),
+                        transform: `translateX(${(1 - Math.max(0, Math.min(1, (markersProgress - m.delay) / 0.2))) * 30}px)`,
+                        transition: 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                      }}
+                    >
+                      <div className={`w-8 h-8 rounded-full border-2 border-white/70 flex items-center justify-center ${i === 0 ? 'bg-emerald-500' : 'bg-emerald-500/70'}`}>
+                        <div className="w-2.5 h-2.5 rounded-full bg-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-white/90">{m.name}</p>
+                        <p className="text-xs text-white/40">{m.product}</p>
+                      </div>
+                      <span className="text-xs text-white/30 shrink-0">{m.dist}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Phase 3: Result */}
+              <div
+                className="transition-all duration-500"
+                style={{
+                  opacity: resultProgress,
+                  transform: `translateY(${(1 - resultProgress) * 20}px)`,
+                }}
+              >
+                <div className="p-5 rounded-xl bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/20">
+                  <p className="text-base font-medium text-white/90 mb-3">
+                    <span className="text-emerald-400 font-bold">4 vendeurs</span> trouvés
+                  </p>
+                  <p className="text-sm text-white/40 mb-4">Patates disponibles autour de toi. Prix, distance, disponibilité.</p>
+                  <a href="/map"
+                    className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black text-sm font-semibold transition-all"
+                  >
+                    Voir sur la carte
+                    <ArrowRight size={16} />
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Mobile: simple overlay text */}
+          <div className="lg:hidden absolute bottom-8 left-4 right-4 z-10 pointer-events-none">
+            <div
+              className="text-center transition-all duration-500"
+              style={{ opacity: 1 - Math.min(1, progress * 3) }}
+            >
+              <p className="text-white/80 text-sm font-medium">Omni. Tout près de chez toi.</p>
+              <p className="text-white/30 text-xs mt-1">Scrolle pour voir</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Scroll hint */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2">
+          <div className="flex gap-2">
             {[0, 1, 2, 3].map(p => (
               <div
                 key={p}
                 className="w-2 h-2 rounded-full transition-all duration-500"
                 style={{
-                  backgroundColor: globePhase >= p ? '#34d399' : 'rgba(255,255,255,0.1)',
-                  transform: globePhase >= p ? 'scale(1.3)' : 'scale(1)',
+                  backgroundColor: currentPhase >= p ? '#34d399' : 'rgba(255,255,255,0.1)',
+                  transform: currentPhase >= p ? 'scale(1.3)' : 'scale(1)',
                 }}
               />
             ))}
           </div>
+          {currentPhase < 3 && (
+            <span className="text-[10px] text-white/20 animate-bounce mt-1">↓ Scrolle</span>
+          )}
         </div>
       </div>
     </section>
