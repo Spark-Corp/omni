@@ -311,7 +311,7 @@ function ScrollDemo() {
         </div>
 
         {/* Phase labels */}
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex gap-3">
+        <div className="absolute top-14 sm:top-16 left-1/2 -translate-x-1/2 z-20 flex gap-2 sm:gap-3">
           {["Découvrir", "Chercher", "Trouver", "Obtenir"].map((label, i) => (
             <div key={i} className="flex items-center gap-1.5">
               <div
@@ -331,7 +331,7 @@ function ScrollDemo() {
           ))}
         </div>
 
-        <div className="relative w-full h-full max-w-7xl mx-auto px-6 flex items-center">
+        <div className="relative w-full h-full max-w-7xl mx-auto px-4 sm:px-6 pt-12 sm:pt-0 flex items-center">
           {/* LEFT: Globe */}
           <div className="w-full lg:w-1/2 h-full flex items-center justify-center p-4 lg:p-8">
             <div className="relative w-full h-full max-h-[500px]">
