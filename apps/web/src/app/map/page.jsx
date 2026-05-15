@@ -36,6 +36,8 @@ export default function MapPage() {
   const [currentZoom, setCurrentZoom] = useState(14);
   const [routeSteps, setRouteSteps] = useState(null);
   const [showRoute, setShowRoute] = useState(false);
+  const [announcedSteps, setAnnouncedSteps] = useState(new Set());
+  const watchIdRef = useRef(null);
 
   // Auth check
   useEffect(() => {
@@ -634,13 +636,15 @@ export default function MapPage() {
           paint: { 'line-color': '#10b981', 'line-width': 4, 'line-opacity': 0.8 }
         });
         
-        // Store route steps for voice guidance
+        // Store route steps with locations for real-time voice guidance
         const steps = route.legs[0]?.steps || [];
         setRouteSteps(steps.map((s, i) => ({
           instruction: s.maneuver?.instruction || s.name,
           distance: s.distance,
           duration: s.duration,
+          location: s.maneuver?.location || null, // [lon, lat]
         })));
+        setAnnouncedSteps(new Set());
         setShowRoute(true);
         
         const distanceKm = (route.distance / 1000).toFixed(1);
@@ -655,16 +659,68 @@ export default function MapPage() {
     }
   };
 
-  const speakRoute = () => {
-    if (!routeSteps || !('speechSynthesis' in window)) return;
-    const text = routeSteps.map((s, i) =>
-      `Dans ${Math.round(s.distance)} mètres, ${s.instruction.toLowerCase()}.`
-    ).join(' ');
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = 'fr-FR';
-    utter.rate = 0.9;
-    speechSynthesis.speak(utter);
-  };
+  // Real-time voice guidance
+  useEffect(() => {
+    if (!showRoute || !routeSteps || routeSteps.length === 0) {
+      if (watchIdRef.current) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+      return;
+    }
+
+    const speak = (text) => {
+      if (!('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = 'fr-FR';
+      utter.rate = 0.9;
+      window.speechSynthesis.speak(utter);
+    };
+
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        const userLat = pos.coords.latitude;
+        const userLon = pos.coords.longitude;
+
+        setRouteSteps(prev => {
+          if (!prev) return prev;
+          const updated = [...prev];
+          let changed = false;
+
+          updated.forEach((step, i) => {
+            if (!step.location || announcedSteps.has(i)) return;
+            const [stepLon, stepLat] = step.location;
+            const R = 6371000;
+            const dLat = (stepLat - userLat) * Math.PI / 180;
+            const dLon = (stepLon - userLon) * Math.PI / 180;
+            const a = Math.sin(dLat/2)**2 + Math.cos(userLat*Math.PI/180) * Math.cos(stepLat*Math.PI/180) * Math.sin(dLon/2)**2;
+            const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+            if (dist < 40) {
+              speak(step.instruction.toLowerCase().startsWith('destination') 
+                ? `Vous êtes arrivé à destination. ${step.instruction}`
+                : `Dans ${Math.round(dist)} mètres, ${step.instruction.toLowerCase()}`
+              );
+              setAnnouncedSteps(prev => new Set([...prev, i]));
+              changed = true;
+            }
+          });
+
+          return changed ? updated : prev;
+        });
+      },
+      (err) => console.warn('Position watch error:', err),
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+    );
+
+    return () => {
+      if (watchIdRef.current) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+    };
+  }, [showRoute, routeSteps, announcedSteps]);
 
   const openVendorChat = () => {
     setShowVendorChat(true);
@@ -979,34 +1035,34 @@ export default function MapPage() {
         <div className="absolute bottom-0 left-0 right-0 z-30 bg-neutral-900/95 backdrop-blur-xl rounded-t-3xl border-t border-white/10 shadow-2xl max-h-[50vh] overflow-y-auto animate-slide-up">
           <div className="p-5 pb-8">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-white text-sm font-medium">Guide de l'itinéraire</h3>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={speakRoute}
-                  className="px-3 py-1.5 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 text-xs transition-all flex items-center gap-1.5"
-                >
-                  <Mic size={12} />
-                  Guide vocal
-                </button>
-                <button
-                  onClick={() => { setShowRoute(false); setRouteSteps(null); }}
-                  className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/15 border border-white/5 flex items-center justify-center transition-colors"
-                >
-                  <X size={14} className="text-white/50" />
-                </button>
+                <h3 className="text-white text-sm font-medium">Itinéraire</h3>
+                <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-[10px] text-emerald-400/80">Guidage vocal auto</span>
+                </div>
               </div>
+              <button
+                onClick={() => { setShowRoute(false); setRouteSteps(null); setAnnouncedSteps(new Set()); }}
+                className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/15 border border-white/5 flex items-center justify-center transition-colors"
+              >
+                <X size={14} className="text-white/50" />
+              </button>
             </div>
             <div className="space-y-2">
               {routeSteps.map((step, i) => (
                 <div key={i} className="flex items-start gap-3">
                   <div className="flex flex-col items-center mt-1">
-                    <div className={`w-2 h-2 rounded-full ${i === 0 ? 'bg-emerald-400' : 'bg-white/20'}`} />
+                    <div className={`w-2 h-2 rounded-full ${announcedSteps.has(i) ? 'bg-emerald-400' : i === 0 ? 'bg-white/40' : 'bg-white/20'}`} />
                     {i < routeSteps.length - 1 && <div className="w-px h-8 bg-white/10" />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-white/70 text-sm">{step.instruction}</p>
+                    <p className={`text-sm ${announcedSteps.has(i) ? 'text-emerald-400/60' : 'text-white/70'}`}>{step.instruction}</p>
                     <p className="text-white/30 text-xs mt-0.5">{Math.round(step.distance)}m</p>
                   </div>
+                  {announcedSteps.has(i) && (
+                    <span className="text-[10px] text-emerald-400/40 mt-1 shrink-0">✓ annoncé</span>
+                  )}
                 </div>
               ))}
             </div>
