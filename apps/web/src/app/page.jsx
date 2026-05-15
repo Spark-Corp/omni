@@ -135,32 +135,35 @@ function Globe3D({ phase = 0 }) {
     cityGroup.add(hlRing);
     scene.add(cityGroup);
 
-    // Mock vendor pins — appear when phase >= 2 (search results)
+    // Mock vendor pins — appear when phase >= 2, matching the 3 cards on the right
     const vendorsGroup = new THREE.Group();
     const mockVendorLocs = [
-      { lon: 1.2228, lat: 6.1319 },  // Marché de Bè
+      { lon: 1.2228, lat: 6.1319 },  // Marché de Bè — primary (green, big)
       { lon: 1.2240, lat: 6.1330 },  // Ama Market
       { lon: 1.2210, lat: 6.1295 },  // Mariam Boutique
-      { lon: 1.2255, lat: 6.1320 },  // Boutique Express
     ];
+    const vendorColors = [0x10b981, 0xf59e0b, 0xf59e0b];
+    const vendorSizes = [0.032, 0.022, 0.022];
     const vendorDots = [];
     mockVendorLocs.forEach((v, i) => {
       const phi = (90 - v.lat) * Math.PI / 180, theta = (v.lon + 180) * Math.PI / 180;
       const x = -Math.sin(phi) * Math.cos(theta), y = Math.cos(phi), z = Math.sin(phi) * Math.sin(theta);
-      const dot = new THREE.Mesh(new THREE.SphereGeometry(0.025, 10, 10), new THREE.MeshBasicMaterial({ color: 0xf59e0b }));
+      const dot = new THREE.Mesh(new THREE.SphereGeometry(vendorSizes[i], 10, 10), new THREE.MeshBasicMaterial({ color: vendorColors[i] }));
       dot.position.set(x * 1.02, y * 1.02, z * 1.02);
       dot.userData = { idx: i, baseScale: 1 };
       vendorsGroup.add(dot); vendorDots.push(dot);
-      const vRing = new THREE.Mesh(new THREE.RingGeometry(0.03, 0.055, 16), new THREE.MeshBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.6, side: THREE.DoubleSide }));
+      const vRing = new THREE.Mesh(new THREE.RingGeometry(0.025 + i * 0.005, 0.05 + i * 0.01, 16), new THREE.MeshBasicMaterial({ color: vendorColors[i], transparent: true, opacity: 0.6, side: THREE.DoubleSide }));
       vRing.position.set(x * 1.08, y * 1.08, z * 1.08); vRing.lookAt(0, 0, 0);
       vRing.userData = { speed: 0.01 + i * 0.002, phase: Math.random() * Math.PI * 2 };
       vendorsGroup.add(vRing);
       const gc2 = document.createElement("canvas"); gc2.width = 48; gc2.height = 48;
-      const c2 = gc2.getContext("2d"); const g2 = c2.createRadialGradient(24, 24, 0, 24, 24, 24);
-      g2.addColorStop(0, "rgba(245, 158, 11, 0.9)"); g2.addColorStop(1, "rgba(245, 158, 11, 0)");
+      const c2 = gc2.getContext("2d");
+      const g2 = c2.createRadialGradient(24, 24, 0, 24, 24, 24);
+      const col = i === 0 ? 'rgba(16, 185, 129, 0.9)' : 'rgba(245, 158, 11, 0.8)';
+      g2.addColorStop(0, col); g2.addColorStop(1, 'rgba(0,0,0,0)');
       c2.fillStyle = g2; c2.fillRect(0, 0, 48, 48);
       const vGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(gc2), transparent: true, blending: THREE.AdditiveBlending }));
-      vGlow.scale.set(0.15, 0.15, 1);
+      vGlow.scale.set(i === 0 ? 0.2 : 0.12, i === 0 ? 0.2 : 0.12, 1);
       vGlow.position.set(x * 1.02, y * 1.02, z * 1.02);
       vendorsGroup.add(vGlow);
     });
@@ -364,8 +367,10 @@ function ScrollDemo() {
         <div className="relative w-full h-full max-w-7xl mx-auto px-4 sm:px-6 pt-16 sm:pt-20 flex items-start sm:items-center">
           {/* LEFT: Globe */}
           <div className="w-full lg:w-1/2 h-full flex items-center justify-center p-4 lg:p-8">
-            <div className="relative w-full h-full max-h-[500px]">
+            <div className="relative w-full h-full min-h-0">
               <Globe3D phase={globePhase} />
+              {/* Soft radial fade at bottom so globe blends into page */}
+              <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-[#050510] via-[#050510]/80 to-transparent pointer-events-none" />
             </div>
           </div>
 
