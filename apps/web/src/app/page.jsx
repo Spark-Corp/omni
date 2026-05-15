@@ -397,13 +397,13 @@ export default function LandingPage() {
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-8"
               >
                 <Sparkles size={14} className="text-emerald-400" />
-                <span className="text-sm text-white/70">Tu sais qui vend quoi dans ton quartier ?</span>
+                <span className="text-sm text-white/70">Tu cherches un produit ou service autour de toi ?</span>
               </motion.div>
-              <h1 className="text-5xl md:text-7xl font-bold leading-[1.1] mb-6">
+              <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold leading-[1.05] mb-6 tracking-tight">
                 <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">Omni</span>
-                <span className="text-white/90 block mt-2">Tout près de chez toi.</span>
+                <span className="text-white/90 block mt-1">Tout près de chez toi.</span>
               </h1>
-              <p className="text-lg text-white/50 mb-10 max-w-lg leading-relaxed">
+              <p className="text-lg md:text-xl text-white/50 mb-10 max-w-xl leading-relaxed">
                 Des milliers de vendeurs et fournisseurs de services existent autour de toi.
                 Tu ne les connais pas, ils ne sont visibles nulle part.
                 On les cartographie pour propulser le commerce local.
@@ -479,12 +479,12 @@ export default function LandingPage() {
         <div className="max-w-5xl mx-auto text-center">
           <span className="text-emerald-400 text-sm uppercase tracking-[0.2em] font-medium">Le vrai problème</span>
           <h2 className="text-3xl md:text-5xl font-bold mt-6 mb-8 leading-tight">
-            Dans ton quartier, des gens vendent des choses.<br />
+            Autour de toi, des gens vendent des choses.<br />
             Mais tu ne sais pas qu'ils existent.
           </h2>
           <p className="text-white/40 text-lg max-w-2xl mx-auto leading-relaxed">
             Pas de boutique en ligne. Pas d'enseigne. Pas de pub.
-            Pourtant, ils sont là : du riz, du pain, des habits, un réparateur téléphone.
+            Pourtant, ils sont là, où que tu ailles : du riz, du pain, des habits, un réparateur téléphone.
             Pour les trouver, tu marches, tu demandes, tu espères.
             Notre mission : rendre visible tout ce qui existe déjà autour de toi.
           </p>
