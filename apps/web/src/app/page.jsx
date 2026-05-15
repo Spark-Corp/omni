@@ -9,7 +9,7 @@ import {
 import * as THREE from "three";
 import useAuth from "@/utils/useAuth";
 
-// --- 3D Globe ---
+// --- 3D Globe with interaction ---
 function Globe3D({ phase = 0 }) {
   const containerRef = useRef(null);
   const phaseRef = useRef(phase);
@@ -98,6 +98,12 @@ function Globe3D({ phase = 0 }) {
     starGeo.setAttribute("position", new THREE.BufferAttribute(starPos, 3));
     scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ size: 0.04, color: 0xffffff, transparent: true, opacity: 0.7 })));
 
+    // Interactive rotation group
+    const rotGroup = new THREE.Group();
+    rotGroup.add(earth); rotGroup.add(grid); rotGroup.add(atmosphere);
+    scene.add(rotGroup);
+
+    // City dots — separate group that appears after phase 2
     const cityGroup = new THREE.Group();
     const city3D = cities.map(c => {
       const phi = (90 - c.lat) * Math.PI / 180, theta = (c.lon + 180) * Math.PI / 180;
@@ -129,29 +135,90 @@ function Globe3D({ phase = 0 }) {
     cityGroup.add(hlRing);
     scene.add(cityGroup);
 
+    // Mouse interaction
+    let isDragging = false;
+    let prevX = 0, prevY = 0;
+    let autoRotate = true;
+    let interactTimeout = null;
+
+    renderer.domElement.style.cursor = 'grab';
+    renderer.domElement.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      prevX = e.clientX; prevY = e.clientY;
+      autoRotate = false;
+      renderer.domElement.style.cursor = 'grabbing';
+      clearTimeout(interactTimeout);
+    });
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      const dx = e.clientX - prevX;
+      const dy = e.clientY - prevY;
+      rotGroup.rotation.y += dx * 0.01;
+      rotGroup.rotation.x += dy * 0.005;
+      prevX = e.clientX; prevY = e.clientY;
+    });
+    window.addEventListener('mouseup', () => {
+      if (!isDragging) return;
+      isDragging = false;
+      renderer.domElement.style.cursor = 'grab';
+      interactTimeout = setTimeout(() => { autoRotate = true; }, 3000);
+    });
+    // Touch support
+    let touchId = null;
+    renderer.domElement.addEventListener('touchstart', (e) => {
+      const t = e.changedTouches[0];
+      touchId = t.identifier; prevX = t.clientX; prevY = t.clientY;
+      autoRotate = false; clearTimeout(interactTimeout);
+    }, { passive: true });
+    renderer.domElement.addEventListener('touchmove', (e) => {
+      for (const t of e.changedTouches) {
+        if (t.identifier !== touchId) continue;
+        const dx = t.clientX - prevX; const dy = t.clientY - prevY;
+        rotGroup.rotation.y += dx * 0.01;
+        rotGroup.rotation.x += dy * 0.005;
+        prevX = t.clientX; prevY = t.clientY;
+      }
+    }, { passive: true });
+    renderer.domElement.addEventListener('touchend', () => {
+      touchId = null; autoRotate = false;
+      interactTimeout = setTimeout(() => { autoRotate = true; }, 3000);
+    }, { passive: true });
+
     let animId;
     const clock = new THREE.Clock();
     const animate = () => {
       animId = requestAnimationFrame(animate);
-      const p = phaseRef.current; const dt = clock.getElapsedTime();
+      const p = phaseRef.current;
+      const dt = clock.getElapsedTime();
+
+      // Auto-rotation
+      if (autoRotate) rotGroup.rotation.y += 0.002 + Math.min(p, 2) * 0.0008;
+
+      // Camera breathe
       const breathe = 1 + Math.sin(dt * 0.5) * 0.03;
       camera.position.z = (3.2 - Math.min(p, 2) * 0.5) * breathe;
-      const rot = 0.002 + Math.min(p, 3) * 0.0008;
-      earth.rotation.y += rot; grid.rotation.y += rot * 1.1; atmosphere.rotation.y += rot * 0.8;
-      cityGroup.rotation.y += rot * 0.9;
+
+      // Atmosphere pulse
       atmoMat.uniforms.time.value = dt;
       atmoMat.uniforms.intensity.value = 0.35 + Math.min(p, 3) * 0.1 + Math.sin(dt * 0.8) * 0.05;
+
+      // City dots: hidden in phase 0, fade in at phase 1-2, full at phase 3
+      const cityTarget = Math.min(1, Math.max(0, (Math.min(p, 3) - 0.5) / 1.5));
       cityGroup.children.forEach(child => {
         if (child.type === "Mesh" && child.geometry?.type === "RingGeometry" && child !== hlRing) {
           const t = (child.userData?.phase || 0);
           child.userData.phase = t + (child.userData?.speed || 0.008);
           const s = 1 + Math.sin(t) * 0.4;
           child.scale.set(s, s, 1);
+          child.material.opacity = cityTarget * (0.3 + Math.sin(t) * 0.25);
+        }
+        if (child.type === "Points" || child.type === "Sprite" || (child.type === "Mesh" && child.geometry?.type === "SphereGeometry")) {
+          child.visible = cityTarget > 0.05;
         }
       });
       dotMeshes.forEach((d, i) => {
         const pulse = 1 + Math.sin(dt * 2 + i * 0.5) * 0.2;
-        d.scale.set(pulse, pulse, pulse);
+        d.scale.set(pulse * cityTarget, pulse * cityTarget, pulse * cityTarget);
       });
       hlDot.visible = p >= 3; hlRing.visible = p >= 3;
       if (hlRing.visible) {
@@ -161,10 +228,12 @@ function Globe3D({ phase = 0 }) {
       renderer.render(scene, camera);
     };
     animate();
+
     const onResize = () => { camera.aspect = container.clientWidth / container.clientHeight; camera.updateProjectionMatrix(); renderer.setSize(container.clientWidth, container.clientHeight); };
     window.addEventListener("resize", onResize);
     return () => { cancelAnimationFrame(animId); window.removeEventListener("resize", onResize); container.removeChild(renderer.domElement); renderer.dispose(); };
   }, []);
+
   return <div ref={containerRef} className="w-full h-full" />;
 }
 
