@@ -781,7 +781,6 @@ export default function MapPage() {
         </div>
         <form onSubmit={handleSearch} className="relative">
           <div className="flex items-center bg-black/60 backdrop-blur-xl rounded-2xl border border-white/10 px-4 py-3.5 shadow-2xl shadow-black/50">
-            <Search size={18} className="text-emerald-400 mr-3" />
             <input
               type="text"
               value={searchQuery}
