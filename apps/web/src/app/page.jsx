@@ -382,15 +382,16 @@ export default function LandingPage() {
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-8"
               >
                 <Sparkles size={14} className="text-emerald-400" />
-                <span className="text-sm text-white/70">Ils ne sont pas sur Google Maps</span>
+                <span className="text-sm text-white/70">Tu sais qui vend quoi dans ton quartier ?</span>
               </motion.div>
               <h1 className="text-5xl md:text-7xl font-bold leading-[1.1] mb-6">
                 <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">Omni</span>
                 <span className="text-white/90 block mt-2">Tout près de chez toi.</span>
               </h1>
               <p className="text-lg text-white/50 mb-10 max-w-lg leading-relaxed">
-                Des milliers de vendeurs et services autour de toi ne sont nulle part en ligne. 
-                On les cartographie un par un pour que tu trouves tout ce qu'il te faut.
+                Des milliers de vendeurs et fournisseurs de services existent autour de toi.
+                Tu ne les connais pas, ils ne sont visibles nulle part. 
+                On les cartographie pour propulser le commerce local.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 mb-12">
                 <motion.a href="/map" onClick={handleExploreClick}
@@ -419,7 +420,7 @@ export default function LandingPage() {
                 </div>
                 <div className="flex items-center gap-2 text-white/40">
                   <Smartphone size={14} />
-                  <span>Zéro inscription pour les vendeurs</span>
+                  <span>Ça marche aussi hors ligne</span>
                 </div>
               </div>
             </motion.div>
@@ -463,13 +464,14 @@ export default function LandingPage() {
         <div className="max-w-5xl mx-auto text-center">
           <span className="text-emerald-400 text-sm uppercase tracking-[0.2em] font-medium">Le vrai problème</span>
           <h2 className="text-3xl md:text-5xl font-bold mt-6 mb-8 leading-tight">
-            Dans ton quartier, il y a des vendeurs.<br />
-            Mais ils n'existent pas en ligne.
+            Dans ton quartier, des gens vendent des choses.<br />
+            Mais tu ne sais pas qu'ils existent.
           </h2>
           <p className="text-white/40 text-lg max-w-2xl mx-auto leading-relaxed">
-            Pas sur Google Maps. Pas de page Facebook. Pas de boutique en ligne. 
-            Pourtant, ils sont là, à vendre du riz, réparer des téléphones, coudre des habits. 
-            Pour les trouver, tu marches, tu demandes, tu espères. On arrête ça.
+            Pas de boutique en ligne. Pas d'enseigne. Pas de pub. 
+            Pourtant, ils sont là : du riz, du pain, des habits, un réparateur téléphone. 
+            Pour les trouver, tu marches, tu demandes, tu espères. 
+            Notre mission : rendre visible tout ce qui existe déjà autour de toi.
           </p>
         </div>
       </Section>
@@ -496,7 +498,7 @@ export default function LandingPage() {
             </motion.div>
             <motion.div initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }} viewport={{ once: true }} className="p-10">
               <p className="text-5xl md:text-6xl font-bold bg-gradient-to-br from-emerald-400 to-teal-300 bg-clip-text text-transparent">100M+</p>
-              <p className="text-white/40 mt-3">Vendeurs sans aucune présence en ligne</p>
+              <p className="text-white/40 mt-3">Vendeurs et prestataires invisibles</p>
             </motion.div>
             <motion.div initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }} viewport={{ once: true }} className="p-10">
               <p className="text-5xl md:text-6xl font-bold bg-gradient-to-br from-emerald-400 to-teal-300 bg-clip-text text-transparent">30s</p>
@@ -532,10 +534,10 @@ export default function LandingPage() {
               <Store size={28} className="text-blue-400 mb-4" />
               <h3 className="text-2xl font-bold mb-4">Je vends quelque chose</h3>
               <ul className="space-y-3 text-white/50 text-sm">
-                <li className="flex items-start gap-3"><span className="text-blue-400 mt-0.5">→</span> On cartographie mon commerce gratuitement</li>
-                <li className="flex items-start gap-3"><span className="text-blue-400 mt-0.5">→</span> Zéro contenu à créer, rien à apprendre</li>
-                <li className="flex items-start gap-3"><span className="text-blue-400 mt-0.5">→</span> On m'avertit quand quelqu'un cherche mes produits</li>
-                <li className="flex items-start gap-3"><span className="text-blue-400 mt-0.5">→</span> Je réponds OUI ou NON, c'est tout</li>
+                <li className="flex items-start gap-3"><span className="text-blue-400 mt-0.5">→</span> On fait connaître ton commerce à ceux qui cherchent près de chez toi</li>
+                <li className="flex items-start gap-3"><span className="text-blue-400 mt-0.5">→</span> Zéro contenu à créer, on s'occupe de tout</li>
+                <li className="flex items-start gap-3"><span className="text-blue-400 mt-0.5">→</span> Reçois les demandes des clients en direct</li>
+                <li className="flex items-start gap-3"><span className="text-blue-400 mt-0.5">→</span> Réponds OUI ou NON, c'est tout</li>
               </ul>
             </motion.div>
           </div>
@@ -548,9 +550,10 @@ export default function LandingPage() {
           <div className="relative p-12 md:p-16 rounded-[2.5rem] bg-gradient-to-br from-emerald-500/10 via-white/5 to-blue-500/10 border border-white/10 overflow-hidden text-center">
             <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 to-transparent opacity-50" />
             <div className="relative z-10">
-              <h2 className="text-3xl md:text-5xl font-bold mb-6">Prêt à trouver ce qu'il te faut ?</h2>
+              <h2 className="text-3xl md:text-5xl font-bold mb-6">Prêt à découvrir ce qui existe autour de toi ?</h2>
               <p className="text-white/50 mb-10 max-w-lg mx-auto">
-                Les vendeurs de ton quartier n'attendent que toi.
+                On cartographie les vendeurs et prestataires de ton quartier. 
+                Ceux qui existent mais que personne ne voit.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <a href={user ? "/map" : "/auth"}
