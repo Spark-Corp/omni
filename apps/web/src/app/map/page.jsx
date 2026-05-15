@@ -796,6 +796,12 @@ export default function MapPage() {
             >
               <Mic size={16} className="text-white/50" />
             </button>
+            <button
+              type="submit"
+              className="p-1.5 hover:bg-emerald-500/20 rounded-full transition-colors"
+            >
+              <Search size={16} className="text-emerald-400" />
+            </button>
             <ImageSearch
               onSearchQuery={(query) => {
                 setSearchQuery(query);
@@ -896,7 +902,7 @@ export default function MapPage() {
 
       {/* Error Toast */}
       {error && (
-        <div className="absolute top-24 left-1/2 -translate-x-1/2 z-20 bg-red-500/90 backdrop-blur-md text-white px-4 py-2 rounded-full text-sm font-light shadow-xl">
+        <div className="absolute top-24 left-1/2 -translate-x-1/2 z-20 bg-amber-500/80 backdrop-blur-md text-white px-4 py-2 rounded-full text-sm font-light shadow-xl">
           {error}
         </div>
       )}
