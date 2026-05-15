@@ -517,6 +517,7 @@ function ScrollDemo() {
           )}
         </div>
       </div>
+    </div>
     </section>
   );
 }
