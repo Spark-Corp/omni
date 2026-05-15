@@ -29,7 +29,7 @@ export async function POST(request) {
             'name', p.name,
             'price', p.price,
             'unit', p.unit,
-            'photo_url', p.photo_url
+            'photo_url', p.image_url
           )
           ORDER BY p.name
         ) FILTER (WHERE p.id IS NOT NULL), '[]'::json) as products
