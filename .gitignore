@@ -28,7 +28,9 @@ web-build/
 .env.local
 .env.development.local
 .env.test.local
+.env.production
 .env.production.local
+.env.staging
 
 # IDE
 .vscode/
@@ -97,3 +99,16 @@ ios/Pods/Flipper-RSocket
 
 # Git worktrees
 .worktrees/
+
+# Other apps / experiments
+apps/nextjs/
+
+# Temp files
+dofix.js
+fixscript_temp.js
+pfix.py
+upscript.cjs
+validate_temp.js
+
+# Generated route types
+.react-router/types/
