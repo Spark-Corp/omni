@@ -34,6 +34,8 @@ export default function MapPage() {
   const [mapLoading, setMapLoading] = useState(true);
   const [searchLoading, setSearchLoading] = useState(false);
   const [currentZoom, setCurrentZoom] = useState(14);
+  const [routeSteps, setRouteSteps] = useState(null);
+  const [showRoute, setShowRoute] = useState(false);
 
   // Auth check
   useEffect(() => {
@@ -606,7 +608,7 @@ export default function MapPage() {
     setLoading(true);
     try {
       const response = await fetch(
-        `https://router.project-osrm.org/route/v1/foot/${userLocation.lon},${userLocation.lat};${selectedVendor.lon},${selectedVendor.lat}?overview=full&geometries=geojson`
+        `https://router.project-osrm.org/route/v1/foot/${userLocation.lon},${userLocation.lat};${selectedVendor.lon},${selectedVendor.lat}?overview=full&steps=true&geometries=geojson`
       );
       
       if (!response.ok) throw new Error("Routing failed");
@@ -632,11 +634,18 @@ export default function MapPage() {
           paint: { 'line-color': '#10b981', 'line-width': 4, 'line-opacity': 0.8 }
         });
         
+        // Store route steps for voice guidance
+        const steps = route.legs[0]?.steps || [];
+        setRouteSteps(steps.map((s, i) => ({
+          instruction: s.maneuver?.instruction || s.name,
+          distance: s.distance,
+          duration: s.duration,
+        })));
+        setShowRoute(true);
+        
         const distanceKm = (route.distance / 1000).toFixed(1);
         const durationMin = Math.round(route.duration / 60);
         toast(`Itinéraire: ${distanceKm} km · ${durationMin} min à pied`);
-        
-        setSelectedVendor(null);
       }
     } catch (err) {
       console.error(err);
@@ -644,6 +653,17 @@ export default function MapPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const speakRoute = () => {
+    if (!routeSteps || !('speechSynthesis' in window)) return;
+    const text = routeSteps.map((s, i) =>
+      `Dans ${Math.round(s.distance)} mètres, ${s.instruction.toLowerCase()}.`
+    ).join(' ');
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = 'fr-FR';
+    utter.rate = 0.9;
+    speechSynthesis.speak(utter);
   };
 
   const openVendorChat = () => {
@@ -892,26 +912,16 @@ export default function MapPage() {
                 >
                   <div className="p-4">
                     <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          {product.image_url && (
-                            <img src={product.image_url} alt={product.name} className="w-10 h-10 rounded-lg object-cover shrink-0" />
+                      <div className="flex-1 min-w-0 flex items-start gap-3">
+                        {product.image_url ? (
+                          <img src={product.image_url} alt={product.name} className="w-12 h-12 rounded-lg object-cover shrink-0" />
+                        ) : null}
+                        <div>
+                          <h4 className="text-white text-sm font-medium">{product.name}</h4>
+                          {product.description && (
+                            <p className="text-white/30 text-xs mt-0.5 truncate">{product.description}</p>
                           )}
-                          <div>
-                            <h4 className="text-white text-sm font-medium">{product.name}</h4>
-                            {product.description && (
-                              <p className="text-white/30 text-xs mt-0.5 truncate">{product.description}</p>
-                            )}
-                          </div>
                         </div>
-                        {!product.image_url && (
-                          <>
-                            <h4 className="text-white text-sm font-medium">{product.name}</h4>
-                            {product.description && (
-                              <p className="text-white/30 text-xs mt-0.5 truncate">{product.description}</p>
-                            )}
-                          </>
-                        )}
                       </div>
                       <div className="text-right shrink-0 ml-3">
                         <p className="text-emerald-400 font-semibold text-sm">{product.price?.toLocaleString()} <span className="text-xs font-normal text-emerald-400/60">{product.currency || 'FCFA'}</span></p>
@@ -961,6 +971,46 @@ export default function MapPage() {
       {loading && (
         <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-30">
           <div className="w-12 h-12 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+        </div>
+      )}
+
+      {/* Route Guidance Panel */}
+      {showRoute && routeSteps && (
+        <div className="absolute bottom-0 left-0 right-0 z-30 bg-neutral-900/95 backdrop-blur-xl rounded-t-3xl border-t border-white/10 shadow-2xl max-h-[50vh] overflow-y-auto animate-slide-up">
+          <div className="p-5 pb-8">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-white text-sm font-medium">Guide de l'itinéraire</h3>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={speakRoute}
+                  className="px-3 py-1.5 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 text-xs transition-all flex items-center gap-1.5"
+                >
+                  <Mic size={12} />
+                  Guide vocal
+                </button>
+                <button
+                  onClick={() => { setShowRoute(false); setRouteSteps(null); }}
+                  className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/15 border border-white/5 flex items-center justify-center transition-colors"
+                >
+                  <X size={14} className="text-white/50" />
+                </button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              {routeSteps.map((step, i) => (
+                <div key={i} className="flex items-start gap-3">
+                  <div className="flex flex-col items-center mt-1">
+                    <div className={`w-2 h-2 rounded-full ${i === 0 ? 'bg-emerald-400' : 'bg-white/20'}`} />
+                    {i < routeSteps.length - 1 && <div className="w-px h-8 bg-white/10" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white/70 text-sm">{step.instruction}</p>
+                    <p className="text-white/30 text-xs mt-0.5">{Math.round(step.distance)}m</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
