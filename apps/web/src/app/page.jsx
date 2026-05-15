@@ -5,13 +5,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Globe, MapPin, ArrowRight, Sparkles, Shield, Smartphone,
   ChevronRight, Search, MessageCircle, Store, Users,
-  Eye, ShoppingBag, Navigation, Mic,
+  Eye, ShoppingBag, Navigation, Mic, Loader2,
 } from "lucide-react";
 import * as THREE from "three";
 import useAuth from "@/utils/useAuth";
 
-function Globe3D() {
+function Globe3D({ phase = 0 }) {
   const containerRef = useRef(null);
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -20,7 +22,8 @@ function Globe3D() {
     const H = container.clientHeight;
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(45, W / H, 0.1, 1000);
-    camera.position.z = 3.2;
+    const baseZ = 3.2;
+    camera.position.z = baseZ;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(W, H);
@@ -33,7 +36,6 @@ function Globe3D() {
     sun.position.set(5, 3, 5);
     scene.add(sun);
 
-    // Earth texture — canvas-drawn continents
     const texCanvas = document.createElement("canvas");
     texCanvas.width = 2048;
     texCanvas.height = 1024;
@@ -54,7 +56,6 @@ function Globe3D() {
       { x: 0.28, y: 0.60, rx: 0.03, ry: 0.08, c: "#2a4a3a" },
       { x: 0.88, y: 0.72, rx: 0.03, ry: 0.03, c: "#2a3a2a" },
     ];
-
     for (const c of continents) {
       ctx.beginPath();
       ctx.ellipse(c.x * 2048, c.y * 1024, c.rx * 2048, c.ry * 1024, 0, 0, Math.PI * 2);
@@ -68,16 +69,16 @@ function Globe3D() {
       { lon: 17.46, lat: -12.34 }, { lon: 13.20, lat: 9.18 },
       { lon: -1.69, lat: 9.40 }, { lon: 1.48, lat: 6.63 },
       { lon: 2.34, lat: 6.66 }, { lon: -0.23, lat: 14.45 },
+      { lon: -15.98, lat: 18.06 }, { lon: -17.45, lat: 14.72 },
     ];
-
     for (const city of cities) {
       const x = ((city.lon + 180) / 360) * 2048;
       const y = ((90 - city.lat) / 180) * 1024;
-      const grad = ctx.createRadialGradient(x, y, 0, x, y, 12);
-      grad.addColorStop(0, "rgba(16, 185, 129, 0.9)");
-      grad.addColorStop(0.5, "rgba(16, 185, 129, 0.3)");
-      grad.addColorStop(1, "rgba(16, 185, 129, 0)");
-      ctx.fillStyle = grad;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, 12);
+      g.addColorStop(0, "rgba(16, 185, 129, 0.9)");
+      g.addColorStop(0.5, "rgba(16, 185, 129, 0.3)");
+      g.addColorStop(1, "rgba(16, 185, 129, 0)");
+      ctx.fillStyle = g;
       ctx.fillRect(x - 12, y - 12, 24, 24);
       ctx.beginPath();
       ctx.arc(x, y, 3, 0, Math.PI * 2);
@@ -101,13 +102,13 @@ function Globe3D() {
     const grid = new THREE.Mesh(gridGeo, gridMat);
     scene.add(grid);
 
-    const atmoGeo = new THREE.SphereGeometry(1.18, 64, 64);
     const atmoMat = new THREE.ShaderMaterial({
       transparent: true, side: THREE.BackSide,
-      uniforms: { color: { value: new THREE.Color(0x10b981) } },
+      uniforms: { color: { value: new THREE.Color(0x10b981) }, intensity: { value: 0.35 } },
       vertexShader: `varying vec3 vNormal; void main() { vNormal = normalize(normalMatrix * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-      fragmentShader: `varying vec3 vNormal; uniform vec3 color; void main() { float intensity = pow(0.65 - dot(vNormal, vec3(0, 0, 1.0)), 3.5); gl_FragColor = vec4(color, intensity * 0.35); }`,
+      fragmentShader: `varying vec3 vNormal; uniform vec3 color; uniform float intensity; void main() { float i = pow(0.65 - dot(vNormal, vec3(0,0,1.0)), 3.5); gl_FragColor = vec4(color, i * intensity); }`,
     });
+    const atmoGeo = new THREE.SphereGeometry(1.18, 64, 64);
     const atmosphere = new THREE.Mesh(atmoGeo, atmoMat);
     scene.add(atmosphere);
 
@@ -118,7 +119,8 @@ function Globe3D() {
     const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({ size: 0.03, color: 0xffffff, transparent: true, opacity: 0.6 }));
     scene.add(stars);
 
-    const dotGroup = new THREE.Group();
+    // City 3D dots
+    const cityGroup = new THREE.Group();
     const city3D = cities.map(c => {
       const phi = (90 - c.lat) * Math.PI / 180;
       const theta = (c.lon + 180) * Math.PI / 180;
@@ -129,13 +131,15 @@ function Globe3D() {
       };
     });
 
-    city3D.forEach(c => {
+    const dotMeshes = [];
+    city3D.forEach((c, i) => {
       const dot = new THREE.Mesh(
         new THREE.SphereGeometry(0.015, 8, 8),
         new THREE.MeshBasicMaterial({ color: 0x34d399 })
       );
       dot.position.set(c.x * 1.01, c.y * 1.01, c.z * 1.01);
-      dotGroup.add(dot);
+      dot.userData = { baseScale: 1 };
+      cityGroup.add(dot);
 
       const ring = new THREE.Mesh(
         new THREE.RingGeometry(0.02, 0.04, 16),
@@ -144,42 +148,90 @@ function Globe3D() {
       ring.position.set(c.x * 1.05, c.y * 1.05, c.z * 1.05);
       ring.lookAt(0, 0, 0);
       ring.userData = { speed: 0.005 + Math.random() * 0.005, phase: Math.random() * Math.PI * 2 };
-      dotGroup.add(ring);
+      cityGroup.add(ring);
 
       const gc = document.createElement("canvas");
       gc.width = 32; gc.height = 32;
       const gctx = gc.getContext("2d");
-      const g = gctx.createRadialGradient(16, 16, 0, 16, 16, 16);
-      g.addColorStop(0, "rgba(52, 211, 153, 0.6)");
-      g.addColorStop(1, "rgba(52, 211, 153, 0)");
-      gctx.fillStyle = g;
+      const grad = gctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+      grad.addColorStop(0, "rgba(52, 211, 153, 0.6)");
+      grad.addColorStop(1, "rgba(52, 211, 153, 0)");
+      gctx.fillStyle = grad;
       gctx.fillRect(0, 0, 32, 32);
       const glow = new THREE.Sprite(new THREE.SpriteMaterial({
         map: new THREE.CanvasTexture(gc), transparent: true, blending: THREE.AdditiveBlending,
       }));
       glow.scale.set(0.08, 0.08, 1);
       glow.position.set(c.x * 1.02, c.y * 1.02, c.z * 1.02);
-      dotGroup.add(glow);
+      cityGroup.add(glow);
+
+      if (i < 6) dotMeshes.push(dot);
     });
-    scene.add(dotGroup);
+    scene.add(cityGroup);
+
+    // Target city (Lomé) highlight
+    const target = city3D[0];
+    const highlight = new THREE.Mesh(
+      new THREE.SphereGeometry(0.03, 12, 12),
+      new THREE.MeshBasicMaterial({ color: 0x10b981 })
+    );
+    highlight.position.set(target.x * 1.01, target.y * 1.01, target.z * 1.01);
+    highlight.visible = false;
+    cityGroup.add(highlight);
+
+    const ringBig = new THREE.Mesh(
+      new THREE.RingGeometry(0.04, 0.08, 24),
+      new THREE.MeshBasicMaterial({ color: 0x10b981, transparent: true, opacity: 0.6, side: THREE.DoubleSide })
+    );
+    ringBig.position.set(target.x * 1.08, target.y * 1.08, target.z * 1.08);
+    ringBig.lookAt(0, 0, 0);
+    ringBig.visible = false;
+    cityGroup.add(ringBig);
 
     let animId;
     const animate = () => {
       animId = requestAnimationFrame(animate);
-      earth.rotation.y += 0.0015;
-      grid.rotation.y += 0.0015;
-      atmosphere.rotation.y += 0.0012;
+      const p = phaseRef.current;
+      const zoom = p === 2 ? 1.8 : p === 1 ? 1.2 : 0;
+
+      camera.position.z = baseZ - zoom * 0.8;
+      const rotSpeed = 0.0015 + p * 0.001;
+      earth.rotation.y += rotSpeed;
+      grid.rotation.y += rotSpeed;
+      atmosphere.rotation.y += rotSpeed * 0.9;
+      cityGroup.rotation.y += rotSpeed;
       stars.rotation.y -= 0.0001;
-      dotGroup.rotation.y += 0.0015;
-      dotGroup.children.forEach(child => {
+
+      // Atmosphere glow intensifies with phase
+      atmoMat.uniforms.intensity.value = 0.35 + p * 0.15;
+
+      // Rings animation
+      cityGroup.children.forEach(child => {
         if (child.type === "Mesh" && child.geometry?.type === "RingGeometry") {
           const t = (child.userData?.phase || 0);
           child.userData.phase = t + (child.userData?.speed || 0.005);
           const s = 1 + Math.sin(t) * 0.3;
           child.scale.set(s, s, 1);
-          child.material.opacity = 0.3 + Math.sin(t) * 0.2;
+          child.material.opacity = Math.min(0.6, 0.3 + Math.sin(t) * 0.2 + p * 0.1);
         }
       });
+
+      // Dots scale up on phase 2
+      dotMeshes.forEach((d, i) => {
+        const s = p >= 2 ? 1.5 + Math.sin(Date.now() * 0.003 + i) * 0.3 : 1;
+        d.scale.set(s, s, s);
+      });
+
+      // Highlight visible on phase 3
+      highlight.visible = p >= 3;
+      ringBig.visible = p >= 3;
+      if (ringBig.visible) {
+        const t = Date.now() * 0.002;
+        const s = 1 + Math.sin(t) * 0.5;
+        ringBig.scale.set(s, s, 1);
+        ringBig.material.opacity = 0.3 + Math.sin(t) * 0.3;
+      }
+
       renderer.render(scene, camera);
     };
     animate();
@@ -196,121 +248,84 @@ function Globe3D() {
   return <div ref={containerRef} className="w-full h-full" />;
 }
 
-// Scroll-triggered map demo
-function ScrollMapDemo() {
-  const sectionRef = useRef(null);
+// Sticky globe scrollytelling section
+function HowItWorksScrolly() {
   const [phase, setPhase] = useState(0);
+  const stepRefs = [useRef(null), useRef(null), useRef(null)];
 
   useEffect(() => {
-    const el = sectionRef.current;
-    if (!el) return;
     const obs = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry.isIntersecting) return;
-        const ratio = entry.intersectionRatio;
-        // Phase 0: initial, Phase 1: search appears, Phase 2: text typed, Phase 3: markers pop
-        if (ratio > 0.1) setPhase(1);
-        if (ratio > 0.4) setPhase(2);
-        if (ratio > 0.7) setPhase(3);
+      (entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const idx = Number(entry.target.dataset.step);
+            if (!isNaN(idx)) setPhase(idx + 1);
+          }
+        });
       },
-      { threshold: [0.1, 0.4, 0.7] }
+      { threshold: 0.5 }
     );
-    obs.observe(el);
+    stepRefs.forEach(ref => { if (ref.current) obs.observe(ref.current); });
     return () => obs.disconnect();
   }, []);
 
-  const searchText = "patates";
-  const [typed, setTyped] = useState("");
-
-  useEffect(() => {
-    if (phase < 2) { setTyped(""); return; }
-    let i = 0;
-    const t = setInterval(() => {
-      i++;
-      setTyped(searchText.slice(0, i));
-      if (i >= searchText.length) clearInterval(t);
-    }, 120);
-    return () => clearInterval(t);
-  }, [phase]);
+  const steps = [
+    {
+      icon: Search,
+      title: "Tu cherches",
+      desc: "Tu veux des patates, un réparateur téléphone ou du pagne ? Tu tapes le nom dans Omni. Texte, voix ou photo, comme tu veux.",
+    },
+    {
+      icon: MapPin,
+      title: "Tu trouves",
+      desc: "La carte montre tous les vendeurs et prestataires autour de toi qui ont ce qu'il te faut. Prix, distance, disponibilité. En un clin d'œil.",
+    },
+    {
+      icon: MessageCircle,
+      title: "Tu obtiens",
+      desc: "Tu cliques, le vendeur reçoit une notification. Il répond OUI ou NON, même sans savoir lire. La carte te guide jusqu'à lui.",
+    },
+  ];
 
   return (
-    <div ref={sectionRef} className="relative h-[500px] md:h-[600px] rounded-2xl overflow-hidden border border-white/5 bg-[#050510]">
-      {/* Map background — mimics CartoDB dark tiles */}
-      <div className="absolute inset-0 bg-gradient-to-b from-[#0a1628] via-[#0d1a2e] to-[#050510]" />
-      <div className="absolute inset-0 opacity-10" style={{
-        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-      }} />
-
-      {/* Grid lines */}
-      <div className="absolute inset-0 opacity-[0.04]" style={{
-        backgroundImage: `linear-gradient(rgba(255,255,255,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.3) 1px, transparent 1px)`,
-        backgroundSize: '60px 60px',
-      }} />
-
-      {/* Search bar — animates in at phase 1 */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={phase >= 1 ? { opacity: 1, y: 0 } : {}}
-        transition={{ duration: 0.5 }}
-        className="absolute top-6 left-1/2 -translate-x-1/2 z-10 w-[90%] max-w-md"
-      >
-        <div className="flex items-center bg-black/60 backdrop-blur-xl rounded-2xl border border-white/10 px-4 py-3 shadow-2xl">
-          <Search size={16} className="text-emerald-400 mr-3" />
-          <span className="flex-1 text-white/80 text-sm font-light">
-            {typed}<span className="animate-pulse text-emerald-400">|</span>
-          </span>
-          <Mic size={14} className="text-white/30" />
+    <section className="relative py-20 md:py-32 px-6 bg-white/[0.01] border-y border-white/5">
+      <div className="max-w-6xl mx-auto">
+        <div className="text-center mb-16">
+          <span className="text-emerald-400 text-sm uppercase tracking-[0.2em] font-medium">Comment ça marche</span>
+          <h2 className="text-3xl md:text-4xl font-bold mt-4">Scrolle pour voir</h2>
         </div>
-      </motion.div>
 
-      {/* Vendor markers — appear at phase 3 */}
-      {phase >= 3 && (
-        <>
-          {[{ top: '35%', left: '30%' }, { top: '45%', left: '55%' }, { top: '60%', left: '40%' }, { top: '30%', left: '60%' }].map((pos, i) => (
-            <motion.div
-              key={i}
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: i * 0.2, type: "spring", stiffness: 200 }}
-              className="absolute z-10"
-              style={{ top: pos.top, left: pos.left }}
-            >
-              <div className={`w-8 h-8 rounded-full border-2 border-white/80 flex items-center justify-center shadow-lg ${i === 0 ? 'bg-emerald-500 shadow-emerald-500/30' : 'bg-emerald-500/80'}`}>
-                <div className="w-3 h-3 rounded-full bg-white" />
+        <div className="grid md:grid-cols-2 gap-12 items-start">
+          {/* Sticky globe — left on desktop */}
+          <div className="relative md:sticky md:top-32 h-[400px] md:h-[500px] order-2 md:order-1 rounded-2xl overflow-hidden border border-white/5 bg-[#050510]">
+            <Globe3D phase={phase} />
+            {/* Phase indicator dots */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+              {[0, 1, 2].map(p => (
+                <div key={p} className={`w-2.5 h-2.5 rounded-full transition-all duration-700 ${phase > p ? 'bg-emerald-400 scale-125' : 'bg-white/10'}`} />
+              ))}
+            </div>
+          </div>
+
+          {/* Scrolling steps — right on desktop */}
+          <div className="space-y-48 md:space-y-64 order-1 md:order-2">
+            {steps.map((step, i) => (
+              <div key={i} ref={stepRefs[i]} data-step={i}
+                className="min-h-[40vh] flex flex-col justify-center"
+              >
+                <div className="p-6 md:p-8 rounded-2xl bg-white/[0.02] border border-white/5">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center mb-5">
+                    <step.icon size={26} className="text-emerald-400" />
+                  </div>
+                  <h3 className="text-2xl md:text-3xl font-bold mb-4">{step.title}</h3>
+                  <p className="text-white/40 text-base leading-relaxed">{step.desc}</p>
+                </div>
               </div>
-              {i === 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.8 }}
-                  className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-3 py-1.5 rounded-lg bg-black/80 backdrop-blur-md border border-white/10 whitespace-nowrap"
-                >
-                  <p className="text-[11px] text-white/80">Patates · 500 FCFA/kg</p>
-                </motion.div>
-              )}
-            </motion.div>
-          ))}
-          {/* Result card */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.2 }}
-            className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 px-5 py-3 rounded-xl bg-black/60 backdrop-blur-md border border-white/10"
-          >
-            <p className="text-sm text-white/80">
-              <span className="text-emerald-400 font-semibold">4 vendeurs</span> ont des patates près de chez toi
-            </p>
-          </motion.div>
-        </>
-      )}
-
-      {/* Phase indicator */}
-      <div className="absolute bottom-6 right-6 flex gap-1.5">
-        {[1, 2, 3].map(p => (
-          <div key={p} className={`w-2 h-2 rounded-full transition-all duration-500 ${phase >= p ? 'bg-emerald-400' : 'bg-white/10'}`} />
-        ))}
+            ))}
+          </div>
+        </div>
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -390,7 +405,7 @@ export default function LandingPage() {
               </h1>
               <p className="text-lg text-white/50 mb-10 max-w-lg leading-relaxed">
                 Des milliers de vendeurs et fournisseurs de services existent autour de toi.
-                Tu ne les connais pas, ils ne sont visibles nulle part. 
+                Tu ne les connais pas, ils ne sont visibles nulle part.
                 On les cartographie pour propulser le commerce local.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 mb-12">
@@ -468,25 +483,16 @@ export default function LandingPage() {
             Mais tu ne sais pas qu'ils existent.
           </h2>
           <p className="text-white/40 text-lg max-w-2xl mx-auto leading-relaxed">
-            Pas de boutique en ligne. Pas d'enseigne. Pas de pub. 
-            Pourtant, ils sont là : du riz, du pain, des habits, un réparateur téléphone. 
-            Pour les trouver, tu marches, tu demandes, tu espères. 
+            Pas de boutique en ligne. Pas d'enseigne. Pas de pub.
+            Pourtant, ils sont là : du riz, du pain, des habits, un réparateur téléphone.
+            Pour les trouver, tu marches, tu demandes, tu espères.
             Notre mission : rendre visible tout ce qui existe déjà autour de toi.
           </p>
         </div>
       </Section>
 
-      {/* SCROLL DEMO */}
-      <Section className="py-20 px-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-10">
-            <span className="text-emerald-400 text-sm uppercase tracking-[0.2em] font-medium">Vois comment ça marche</span>
-            <h2 className="text-2xl md:text-4xl font-bold mt-4">Scrolle pour voir la démo</h2>
-          </div>
-          <ScrollMapDemo />
-          <p className="text-center text-white/30 text-sm mt-6">La barre de recherche apparaît, le texte s'écrit, les vendeurs apparaissent.</p>
-        </div>
-      </Section>
+      {/* HOW IT WORKS — Scrollytelling with sticky globe */}
+      <HowItWorksScrolly />
 
       {/* MARKET */}
       <Section className="py-28 px-6">
@@ -552,7 +558,7 @@ export default function LandingPage() {
             <div className="relative z-10">
               <h2 className="text-3xl md:text-5xl font-bold mb-6">Prêt à découvrir ce qui existe autour de toi ?</h2>
               <p className="text-white/50 mb-10 max-w-lg mx-auto">
-                On cartographie les vendeurs et prestataires de ton quartier. 
+                On cartographie les vendeurs et prestataires de ton quartier.
                 Ceux qui existent mais que personne ne voit.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
