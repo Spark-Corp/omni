@@ -189,30 +189,35 @@ function ScrollDemo() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // 4 discrete phases, each takes 25% of scroll
-  // Phase 0: hero + globe only
-  // Phase 1: search bar appears + text types
-  // Phase 2: markers pop
-  // Phase 3: result card
+  // Phases locked so each animation must finish before advancing
   const rawPhase = progress * 4;
-  const currentPhase = Math.min(3, Math.floor(rawPhase));
-  const phaseProgress = rawPhase - currentPhase; // 0-1 within current phase
+  const targetPhase = Math.min(3, Math.floor(rawPhase));
+  const [displayPhase, setDisplayPhase] = useState(0);
+
+  useEffect(() => {
+    if (targetPhase > displayPhase) {
+      const timer = setTimeout(() => setDisplayPhase(p => Math.min(p + 1, 3)), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [targetPhase, displayPhase]);
+
+  // phaseProgress: 0→1 within the locked phase
+  const phaseStart = displayPhase / 4;
+  const phaseEnd = (displayPhase + 1) / 4;
+  const phaseProgress = displayPhase < 3
+    ? Math.max(0, Math.min(1, (progress - phaseStart) / (phaseEnd - phaseStart)))
+    : 1;
 
   const globePhase = Math.min(3, Math.floor(rawPhase * 1.2));
 
   // Typing
   const searchText = "patates";
-  const typedLen = currentPhase >= 1 ? Math.min(searchText.length, Math.floor(phaseProgress * searchText.length + (currentPhase > 1 ? searchText.length : 0))) : 0;
+  const typedLen = displayPhase >= 1 ? Math.min(searchText.length, Math.floor(phaseProgress * searchText.length * 1.5)) : 0;
   const typed = searchText.slice(0, typedLen);
 
-  // Search opacity: phase 1
-  const searchOpacity = currentPhase >= 1 ? Math.min(1, phaseProgress * 2) : 0;
-
-  // Markers: phase 2
-  const markersProgress = currentPhase >= 2 ? Math.min(1, phaseProgress * 1.5) : 0;
-
-  // Result: phase 3
-  const resultProgress = currentPhase >= 3 ? Math.min(1, phaseProgress * 1.5) : 0;
+  const searchOpacity = displayPhase >= 1 ? Math.min(1, phaseProgress * 2.5) : 0;
+  const markersProgress = displayPhase >= 2 ? Math.min(1, phaseProgress * 2) : 0;
+  const resultProgress = displayPhase >= 3 ? Math.min(1, phaseProgress * 2) : 0;
 
   return (
     <section ref={sectionRef} className="relative" style={{ height: "500vh" }}>
@@ -229,13 +234,13 @@ function ScrollDemo() {
               <div
                 className="w-2 h-2 rounded-full transition-all duration-500"
                 style={{
-                  backgroundColor: currentPhase >= i ? '#34d399' : 'rgba(255,255,255,0.15)',
-                  boxShadow: currentPhase >= i ? '0 0 6px rgba(52,211,153,0.5)' : 'none',
+                  backgroundColor: displayPhase >= i ? '#34d399' : 'rgba(255,255,255,0.15)',
+                  boxShadow: displayPhase >= i ? '0 0 6px rgba(52,211,153,0.5)' : 'none',
                 }}
               />
               <span
                 className="text-[10px] uppercase tracking-wider transition-all duration-500"
-                style={{ color: currentPhase >= i ? 'rgba(52,211,153,0.8)' : 'rgba(255,255,255,0.25)' }}
+                style={{ color: displayPhase >= i ? 'rgba(52,211,153,0.8)' : 'rgba(255,255,255,0.25)' }}
               >
                 {label}
               </span>
@@ -374,7 +379,7 @@ function ScrollDemo() {
               />
             ))}
           </div>
-          {currentPhase < 3 && (
+          {displayPhase < 3 && (
             <span className="text-[10px] text-white/20 animate-bounce mt-1">↓ Scrolle</span>
           )}
         </div>
