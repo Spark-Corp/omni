@@ -133,7 +133,7 @@ function Globe3D({ phase = 0 }) {
     const hlRing = new THREE.Mesh(new THREE.RingGeometry(0.05, 0.1, 24), new THREE.MeshBasicMaterial({ color: 0x10b981, transparent: true, opacity: 0.7, side: THREE.DoubleSide }));
     hlRing.position.set(target.x * 1.1, target.y * 1.1, target.z * 1.1); hlRing.lookAt(0, 0, 0); hlRing.visible = false;
     cityGroup.add(hlRing);
-    scene.add(cityGroup);
+    rotGroup.add(cityGroup);
 
     // Mock vendor pins — appear when phase >= 2, matching the 3 cards on the right
     const vendorsGroup = new THREE.Group();
@@ -168,7 +168,7 @@ function Globe3D({ phase = 0 }) {
       vendorsGroup.add(vGlow);
     });
     vendorsGroup.visible = false;
-    scene.add(vendorsGroup);
+    rotGroup.add(vendorsGroup);
 
     // Mouse interaction
     let isDragging = false;
