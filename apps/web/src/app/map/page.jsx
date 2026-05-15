@@ -487,7 +487,9 @@ export default function MapPage() {
       });
 
       if (!response.ok) {
-        throw new Error("Search failed");
+        const errBody = await response.text();
+        console.error("[Search] API error:", errBody);
+        throw new Error(errBody || "Search failed");
       }
 
       const data = await response.json();

@@ -12,15 +12,7 @@ export async function POST(request) {
       );
     }
 
-    // Search vendors by product name OR vendor name/category/description (for services)
-    const searchClause = search ? `
-      AND (
-        p.name ILIKE $4
-        OR v.name ILIKE $4
-        OR v.category ILIKE $4
-        OR v.description ILIKE $4
-      )
-    ` : "";
+    const searchTerm = search ? `%${search}%` : "";
 
     const query = `
       SELECT
@@ -45,24 +37,26 @@ export async function POST(request) {
       LEFT JOIN products p ON p.vendor_id = v.id
       WHERE v.is_online = true
         AND ST_DWithin(v.location, ST_SetSRID(ST_Point($1, $2), 4326)::geography, $3)
-        ${searchClause}
+        ${search ? `AND (p.name ILIKE $4 OR v.name ILIKE $4 OR v.category ILIKE $4 OR v.description ILIKE $4)` : ""}
       GROUP BY v.id, v.name, v.category, v.description, v.location
       ORDER BY distance
       LIMIT 10
     `;
 
     const params = search
-      ? [lon, lat, radius, `%${search}%`]
+      ? [lon, lat, radius, searchTerm]
       : [lon, lat, radius];
 
+    console.log("[Search] query params:", params);
     const vendors = await sql(query, params);
+    console.log("[Search] results:", vendors?.length);
 
     return Response.json({ vendors });
   } catch (error) {
-    console.error("Error searching vendors:", error);
-    console.error("Stack:", error?.stack);
+    console.error("[Search] Error:", error?.message);
+    console.error("[Search] Stack:", error?.stack);
     return Response.json(
-      { error: "Internal server error", message: error?.message },
+      { error: "Internal server error", message: error?.message, stack: error?.stack },
       { status: 500 },
     );
   }
