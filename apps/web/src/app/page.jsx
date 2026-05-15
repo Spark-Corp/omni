@@ -324,7 +324,7 @@ export default function LandingPage() {
               <p className="text-lg md:text-xl text-white/60 mb-10 max-w-xl leading-relaxed">
                 Des milliers de vendeurs et fournisseurs de services existent autour de toi.
                 Tu ne les connais pas, ils ne sont visibles nulle part.
-                On les cartographie pour propulser le commerce local.
+                Omni est là pour te les montrer.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 mb-12">
                 <motion.a href="/map" onClick={handleExploreClick}
@@ -365,7 +365,7 @@ export default function LandingPage() {
             Pas de boutique en ligne. Pas d'enseigne. Pas de pub.
             Pourtant, ils sont là, où que tu ailles : du riz, du pain, des habits, un réparateur téléphone.
             Pour les trouver, tu marches, tu demandes, tu espères.
-            Notre mission : rendre visible tout ce qui existe déjà autour de toi.
+            Notre mission : te montrer tout ce qui existe déjà autour de toi.
           </p>
         </div>
       </FloatSection>
@@ -460,7 +460,7 @@ export default function LandingPage() {
             <div className="relative z-10">
               <h2 className="text-3xl md:text-5xl font-bold mb-6">Prêt à découvrir ce qui existe autour de toi ?</h2>
               <p className="text-white/50 mb-10 max-w-lg mx-auto">
-                On cartographie les vendeurs et prestataires de ton quartier. Ceux qui existent mais que personne ne voit.
+                Omni est là pour te montrer ce qui existe autour de toi.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <a href={user ? "/map" : "/auth"}
@@ -487,7 +487,7 @@ export default function LandingPage() {
             </div>
             <span className="font-semibold">Omni</span>
           </div>
-          <p className="text-sm text-white/30">© 2026 Omni. On cartographie les commerces près de chez toi.</p>
+              <p className="text-sm text-white/30">© 2026 Omni. On te montre les commerces près de chez toi.</p>
           <div className="flex items-center gap-6 text-sm text-white/40">
             <a href="#" className="hover:text-white transition-colors">Confidentialité</a>
             <a href="#" className="hover:text-white transition-colors">Conditions</a>
