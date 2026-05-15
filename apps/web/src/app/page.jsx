@@ -171,57 +171,71 @@ function Globe3D({ phase = 0 }) {
 // --- Scroll-driven demo ---
 function ScrollDemo() {
   const sectionRef = useRef(null);
-  const [progress, setProgress] = useState(0);
+  const innerRef = useRef(null);
+  const [phase, setPhase] = useState(0);
+  const phaseRef = useRef(0);
+  const accumRef = useRef(0);
+  const [phaseProgress, setPhaseProgress] = useState(0);
 
+  // Wheel interceptor: scroll input drives the animation, not the page
   useEffect(() => {
-    const el = sectionRef.current;
+    const el = innerRef.current;
     if (!el) return;
-    const onScroll = () => {
-      const rect = el.getBoundingClientRect();
-      const vh = window.innerHeight;
-      const total = rect.height;
-      const visible = vh - rect.top;
-      const p = Math.max(0, Math.min(1, visible / (total - vh)));
-      setProgress(p);
+
+    let ticking = false;
+
+    const onWheel = (e) => {
+      if (phaseRef.current >= 3) return; // done, let page scroll normally
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      accumRef.current += Math.abs(e.deltaY) * 0.6;
+
+      const threshold = 150;
+      const p = phaseRef.current;
+
+      if (accumRef.current >= threshold) {
+        accumRef.current = 0;
+        const next = Math.min(3, p + 1);
+        phaseRef.current = next;
+        setPhase(next);
+        setPhaseProgress(0);
+      } else {
+        setPhaseProgress(accumRef.current / threshold);
+      }
+
+      ticking = false;
     };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    onScroll();
-    return () => window.removeEventListener("scroll", onScroll);
+
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
   }, []);
 
-  // Phases locked so each animation must finish before advancing
-  const rawPhase = progress * 4;
-  const targetPhase = Math.min(3, Math.floor(rawPhase));
-  const [displayPhase, setDisplayPhase] = useState(0);
-
+  // Auto-advance phase progress when not scrolling
   useEffect(() => {
-    if (targetPhase > displayPhase) {
-      const timer = setTimeout(() => setDisplayPhase(p => Math.min(p + 1, 3)), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [targetPhase, displayPhase]);
+    if (phase >= 3) return;
+    const interval = setInterval(() => {
+      setPhaseProgress(p => Math.min(1, p + 0.02));
+    }, 30);
+    return () => clearInterval(interval);
+  }, [phase]);
 
-  // phaseProgress: 0→1 within the locked phase
-  const phaseStart = displayPhase / 4;
-  const phaseEnd = (displayPhase + 1) / 4;
-  const phaseProgress = displayPhase < 3
-    ? Math.max(0, Math.min(1, (progress - phaseStart) / (phaseEnd - phaseStart)))
-    : 1;
-
-  const globePhase = Math.min(3, Math.floor(rawPhase * 1.2));
+  const displayPhase = phase;
+  const globePhase = Math.min(3, phase);
 
   // Typing
   const searchText = "patates";
-  const typedLen = displayPhase >= 1 ? Math.min(searchText.length, Math.floor(phaseProgress * searchText.length * 1.5)) : 0;
+  const typedLen = displayPhase >= 1 ? Math.min(searchText.length, Math.floor(phaseProgress * searchText.length)) : 0;
   const typed = searchText.slice(0, typedLen);
 
-  const searchOpacity = displayPhase >= 1 ? Math.min(1, phaseProgress * 2.5) : 0;
-  const markersProgress = displayPhase >= 2 ? Math.min(1, phaseProgress * 2) : 0;
+  const searchOpacity = displayPhase >= 1 ? Math.min(1, phaseProgress * 2) : 0;
+  const markersProgress = displayPhase >= 2 ? Math.min(1, phaseProgress * 1.5) : 0;
   const resultProgress = displayPhase >= 3 ? Math.min(1, phaseProgress * 2) : 0;
 
   return (
-    <section ref={sectionRef} className="relative" style={{ height: "500vh" }}>
-      <div className="sticky top-0 h-screen flex items-center justify-center overflow-hidden">
+    <section ref={sectionRef} className="relative">
+      <div ref={innerRef} className="h-screen w-full flex items-center justify-center overflow-hidden">
         {/* Background glow */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-[120px]" />
