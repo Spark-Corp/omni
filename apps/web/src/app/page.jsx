@@ -373,8 +373,8 @@ function ScrollDemo() {
                 key={p}
                 className="w-2 h-2 rounded-full transition-all duration-500"
                 style={{
-                  backgroundColor: currentPhase >= p ? '#34d399' : 'rgba(255,255,255,0.1)',
-                  transform: currentPhase >= p ? 'scale(1.3)' : 'scale(1)',
+                  backgroundColor: displayPhase >= p ? '#34d399' : 'rgba(255,255,255,0.1)',
+                  transform: displayPhase >= p ? 'scale(1.3)' : 'scale(1)',
                 }}
               />
             ))}
