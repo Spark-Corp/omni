@@ -353,7 +353,8 @@ function ScrollDemo() {
 
   return (
     <section ref={sectionRef} className="relative">
-      <div ref={innerRef} className="h-screen w-full flex items-center justify-center overflow-hidden">
+      <div ref={innerRef} className="h-screen w-full" style={{ paddingTop: '56px' }}>
+        <div className="w-full h-full flex items-center justify-center overflow-hidden relative">
         {/* Background glow */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-[120px]" />
