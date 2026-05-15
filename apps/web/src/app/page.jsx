@@ -371,7 +371,7 @@ function ScrollDemo() {
           <div className="lg:hidden absolute bottom-8 left-4 right-4 z-10 pointer-events-none">
             <div
               className="text-center transition-all duration-500"
-              style={{ opacity: 1 - Math.min(1, progress * 3) }}
+              style={{ opacity: 1 - Math.min(1, phase / 2) }}
             >
               <p className="text-white/80 text-sm font-medium">Omni. Tout près de chez toi.</p>
               <p className="text-white/30 text-xs mt-1">Scrolle pour voir</p>
