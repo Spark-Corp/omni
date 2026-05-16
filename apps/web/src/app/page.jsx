@@ -378,7 +378,7 @@ function ScrollDemo() {
           </div>
 
           {/* RIGHT: Content */}
-          <div className="hidden lg:flex lg:w-1/2 flex-col justify-center lg:pl-8 xl:pl-12">
+          <div className="hidden lg:flex lg:w-1/2 flex-col justify-center items-center text-center lg:pl-8 xl:pl-12">
             {/* Header text — always visible */}
             <div className="mb-6 xl:mb-8">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 mb-4 xl:mb-5">
@@ -389,7 +389,7 @@ function ScrollDemo() {
                 <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">Omni</span>
                 <span className="text-white/90 block mt-1">Tout près de chez toi.</span>
               </h2>
-              <p className="text-white/40 text-sm xl:text-base mt-3 max-w-sm">
+              <p className="text-white/40 text-sm xl:text-base mt-3 max-w-md mx-auto">
                 Omni est là pour te montrer les vendeurs et prestataires autour de toi.
               </p>
             </div>
