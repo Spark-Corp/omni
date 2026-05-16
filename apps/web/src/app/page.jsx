@@ -94,11 +94,6 @@ function Globe3D({ phase = 0 }) {
     });
     const atmosphere = new THREE.Mesh(new THREE.SphereGeometry(1.2, 64, 64), atmoMat);
     scene.add(atmosphere);
-    const starGeo = new THREE.BufferGeometry();
-    const starPos = new Float32Array(2000 * 3);
-    for (let i = 0; i < 2000 * 3; i++) starPos[i] = (Math.random() - 0.5) * 40;
-    starGeo.setAttribute("position", new THREE.BufferAttribute(starPos, 3));
-    scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ size: 0.04, color: 0xffffff, transparent: true, opacity: 0.7 })));
 
     // Interactive rotation group
     const rotGroup = new THREE.Group();
@@ -231,13 +226,13 @@ function Globe3D({ phase = 0 }) {
       // Auto-rotation
       if (autoRotate) rotGroup.rotation.y += 0.002 + Math.min(p, 2) * 0.0008;
 
-      // Camera breathe
-      const breathe = 1 + Math.sin(dt * 0.5) * 0.03;
-      camera.position.z = (3.2 - Math.min(p, 2) * 0.5) * breathe;
+      // Smooth camera zoom — no artificial breathe oscillation
+      const targetZ = 3.2 - Math.min(p, 2) * 0.5;
+      camera.position.z += (targetZ - camera.position.z) * 0.04;
 
-      // Atmosphere pulse
+      // Atmosphere — phase-driven only, no time pulse
       atmoMat.uniforms.time.value = dt;
-      atmoMat.uniforms.intensity.value = 0.35 + Math.min(p, 3) * 0.1 + Math.sin(dt * 0.8) * 0.05;
+      atmoMat.uniforms.intensity.value = 0.3 + Math.min(p, 3) * 0.12;
 
       // City dots: hidden in phase 0, fade in at phase 1-2, full at phase 3
       const cityTarget = Math.min(1, Math.max(0, (Math.min(p, 3) - 0.5) / 1.5));
@@ -290,6 +285,14 @@ function Globe3D({ phase = 0 }) {
 
   return <div ref={containerRef} className="w-full h-full" style={{ outline: 'none' }} />;
 }
+
+// Full-page CSS stars — no visible boundary, feels infinite
+const starPositions = Array.from({ length: 300 }, () => ({
+  x: Math.random() * 100,
+  y: Math.random() * 100,
+  s: 0.5 + Math.random() * 1.5,
+  o: 0.1 + Math.random() * 0.3,
+}));
 
 // --- Scroll-driven demo ---
 function ScrollDemo() {
@@ -360,19 +363,19 @@ function ScrollDemo() {
   const resultProgress = displayPhase >= 3 ? Math.min(1, phaseProgress * 2) : 0;
 
   return (
-    <section ref={sectionRef} className="relative pt-12 sm:pt-14">
-      <div ref={innerRef} className="h-screen w-full">
+    <section ref={sectionRef} className="relative h-[calc(100vh-48px)] sm:h-[calc(100vh-56px)] mt-12 sm:mt-14">
+      <div ref={innerRef} className="h-full w-full">
         <div className="w-full h-full flex items-center justify-center overflow-hidden relative">
-        {/* Background glow */}
+        {/* Background glow — spans full page, no visible edge */}
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-[120px]" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] bg-emerald-500/[0.04] rounded-full blur-[200px]" />
+          <div className="absolute top-1/3 left-1/4 w-[80%] h-[60%] bg-emerald-600/[0.02] rounded-full blur-[150px]" />
         </div>
 
-
-        <div className="relative w-full h-full max-w-7xl mx-auto px-4 sm:px-6 flex items-start sm:items-center">
-          {/* LEFT: Globe — no padding, blends fully */}
+        <div className="relative w-full h-full max-w-7xl mx-auto px-4 sm:px-6 flex items-center">
+          {/* LEFT: Globe — blends fully, overflow visible so canvas feels infinite */}
           <div className="w-full lg:w-1/2 h-full flex items-center justify-center">
-            <div className="relative w-full h-full min-h-0">
+            <div className="relative w-full h-full min-h-0 overflow-visible">
               <Globe3D phase={globePhase} />
               {/* Soft radial fade at bottom so globe blends into page */}
               <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-[#050510] via-[#050510]/80 to-transparent pointer-events-none" />
@@ -522,6 +525,21 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-[#050510] text-white overflow-x-hidden">
+      {/* Full-page CSS stars — no visible boundary like THREE.js stars */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        {starPositions.map((s, i) => (
+          <div key={i} className="absolute rounded-full bg-white"
+            style={{
+              left: `${s.x}%`,
+              top: `${s.y}%`,
+              width: `${s.s}px`,
+              height: `${s.s}px`,
+              opacity: s.o,
+            }}
+          />
+        ))}
+      </div>
+
       {/* NAV — fixed height, clean */}
       <nav className="fixed top-0 left-0 right-0 z-50 h-12 sm:h-14 bg-[#050510]/80 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-7xl mx-auto h-full px-4 sm:px-6 flex items-center justify-between">
