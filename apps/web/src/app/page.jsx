@@ -358,7 +358,7 @@ function ScrollDemo() {
   const resultProgress = displayPhase >= 3 ? Math.min(1, phaseProgress * 2) : 0;
 
   return (
-    <section ref={sectionRef} className="relative pt-14">
+    <section ref={sectionRef} className="relative pt-12 sm:pt-14">
       <div ref={innerRef} className="h-screen w-full">
         <div className="w-full h-full flex items-center justify-center overflow-hidden relative">
         {/* Background glow */}
@@ -367,7 +367,7 @@ function ScrollDemo() {
         </div>
 
 
-        <div className="relative w-full h-full max-w-7xl mx-auto px-4 sm:px-6 pt-16 sm:pt-20 flex items-start sm:items-center">
+        <div className="relative w-full h-full max-w-7xl mx-auto px-4 sm:px-6 flex items-start sm:items-center">
           {/* LEFT: Globe */}
           <div className="w-full lg:w-1/2 h-full flex items-center justify-center p-4 lg:p-8">
             <div className="relative w-full h-full min-h-0">
@@ -517,30 +517,28 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-[#050510] text-white overflow-x-hidden">
-      {/* NAV */}
-      <nav className="fixed top-0 left-0 right-0 z-50 px-3 sm:px-6 py-2 sm:py-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between px-3 sm:px-6 py-2 sm:py-3 rounded-xl sm:rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
-                <Globe className="text-white" size={16} />
-              </div>
-              <span className="text-base sm:text-xl font-semibold tracking-tight">Omni</span>
+      {/* NAV — fixed height, clean */}
+      <nav className="fixed top-0 left-0 right-0 z-50 h-12 sm:h-14 bg-[#050510]/80 backdrop-blur-xl border-b border-white/5">
+        <div className="max-w-7xl mx-auto h-full px-4 sm:px-6 flex items-center justify-between">
+          <a href="/" className="flex items-center gap-2 shrink-0">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+              <Globe className="text-white" size={14} />
             </div>
-            <div className="hidden md:flex items-center gap-4 lg:gap-8 text-xs lg:text-sm text-white/60">
-              <a href="/map" className="hover:text-white transition-colors whitespace-nowrap">Explorer</a>
-              <a href="/vendor/onboarding" className="hover:text-white transition-colors whitespace-nowrap">Je suis vendeur</a>
-            </div>
-            <div className="flex items-center gap-1.5 sm:gap-3">
-              {user ? (
-                <a href="/map" className="px-3 sm:px-5 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-medium text-xs sm:text-sm transition-all">Explorer</a>
-              ) : (
-                <>
-                  <a href="/auth" className="px-2.5 sm:px-4 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl text-white/80 hover:text-white text-xs sm:text-sm font-medium transition-all whitespace-nowrap">Connexion</a>
-                  <a href="/auth" className="px-3 sm:px-5 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium text-xs sm:text-sm transition-all border border-white/10 whitespace-nowrap">S'inscrire</a>
-                </>
-              )}
-            </div>
+            <span className="text-sm sm:text-base font-semibold tracking-tight">Omni</span>
+          </a>
+          <div className="hidden sm:flex items-center gap-6 text-xs sm:text-sm text-white/50">
+            <a href="/map" className="hover:text-white transition-colors">Explorer</a>
+            <a href="/vendor/onboarding" className="hover:text-white transition-colors">Je suis vendeur</a>
+          </div>
+          <div className="flex items-center gap-2">
+            {user ? (
+              <a href="/map" className="px-3 sm:px-4 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-medium text-xs sm:text-sm transition-all">Explorer</a>
+            ) : (
+              <>
+                <a href="/auth" className="px-2.5 sm:px-3 py-1.5 rounded-lg text-white/60 hover:text-white text-xs sm:text-sm transition-all">Connexion</a>
+                <a href="/auth" className="px-3 sm:px-4 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs sm:text-sm transition-all border border-white/10">S'inscrire</a>
+              </>
+            )}
           </div>
         </div>
       </nav>
