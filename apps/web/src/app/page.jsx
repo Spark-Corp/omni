@@ -135,12 +135,14 @@ function Globe3D({ phase = 0 }) {
     // Mock vendor pins — appear when phase >= 2, matching the 3 cards on the right
     const vendorsGroup = new THREE.Group();
     const mockVendorLocs = [
-      { lon: 1.2228, lat: 6.1319 },  // Marché de Bè — primary (green, big)
-      { lon: 1.2240, lat: 6.1330 },  // Ama Market
-      { lon: 1.2210, lat: 6.1295 },  // Mariam Boutique
+      { lon: 1.2228, lat: 6.1319 },  // Marché de Bè, Lomé — primary (green)
+      { lon: -3.9900, lat: 5.3200 },  // Yopougon, Abidjan
+      { lon: -0.2000, lat: 5.5600 },  // Makola, Accra
+      { lon: 3.3800, lat: 6.4500 },   // Balogun, Lagos
+      { lon: 36.8200, lat: -1.2900 }, // Nairobi
     ];
-    const vendorColors = [0x10b981, 0xf59e0b, 0xf59e0b];
-    const vendorSizes = [0.032, 0.022, 0.022];
+    const vendorColors = [0x10b981, 0xf59e0b, 0xf59e0b, 0xf59e0b, 0xf59e0b];
+    const vendorSizes = [0.032, 0.022, 0.022, 0.022, 0.022];
     const vendorDots = [];
     mockVendorLocs.forEach((v, i) => {
       const phi = (90 - v.lat) * Math.PI / 180, theta = (v.lon + 180) * Math.PI / 180;
@@ -312,10 +314,14 @@ function ScrollDemo({ onPhaseChange }) {
     let lastAdvance = 0;
 
     const onWheel = (e) => {
+      const p = phaseRef.current;
+
+      // Let events propagate when at boundaries — enables scrolling past the demo
+      if ((p >= 3 && e.deltaY > 0) || (p <= 0 && e.deltaY < 0)) return;
+
       e.preventDefault();
       e.stopPropagation();
 
-      const p = phaseRef.current;
       const now = Date.now();
       const threshold = 250;
 
@@ -457,9 +463,11 @@ function ScrollDemo({ onPhaseChange }) {
               >
                 <div className="space-y-3">
                   {[
-                    { name: "Marché de Bè", product: "Patates · 500 FCFA/kg", dist: "120m", delay: 0 },
-                    { name: "Ama Market", product: "Patates · 400 FCFA/kg", dist: "250m", delay: 0.2 },
-                    { name: "Mariam Boutique", product: "Patates · 600 FCFA/kg", dist: "400m", delay: 0.4 },
+                    { name: "Marché de Bè · Lomé", product: "Patates · 500 FCFA/kg", dist: "120m", delay: 0 },
+                    { name: "Yopougon · Abidjan", product: "Patates · 350 FCFA/kg", dist: "2 km", delay: 0.2 },
+                    { name: "Makola · Accra", product: "Patates · 450 FCFA/kg", dist: "5 km", delay: 0.4 },
+                    { name: "Balogun · Lagos", product: "Patates · 400 FCFA/kg", dist: "8 km", delay: 0.6 },
+                    { name: "Nairobi Centre", product: "Patates · 550 FCFA/kg", dist: "50 km", delay: 0.8 },
                   ].map((m, i) => {
                     const cardT = Math.max(0, Math.min(1, (markersProgress - m.delay) / 0.2));
                     return (
@@ -541,10 +549,10 @@ export default function LandingPage() {
   const handleExploreClick = (e) => { if (!user) { e.preventDefault(); setShowAuthModal(true); } };
 
   return (
-    <div className="min-h-screen bg-[#050510] text-white overflow-x-hidden">
+    <div className="min-h-screen bg-[#050510] text-white">
       {/* NAV — sticky: starts as site head, becomes overlay on scroll */}
       <nav className="sticky top-0 z-50 h-12 sm:h-14 bg-[#050510] border-b border-white/5">
-        <div className="max-w-7xl mx-auto h-full px-4 sm:px-6 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto h-full px-3 sm:px-6 flex items-center justify-between gap-2">
           <a href="/" className="flex items-center gap-2 shrink-0">
             <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
               <Globe className="text-white" size={14} />
@@ -599,7 +607,7 @@ export default function LandingPage() {
       </section>
 
       {/* MARKET */}
-      <section className="py-24 px-6 bg-white/[0.01] border-y border-white/5">
+      <section className="py-24 px-6 bg-white/[0.01] border-y border-white/5 overflow-x-hidden">
         <div className="max-w-6xl mx-auto">
           <div className="grid md:grid-cols-3 gap-8 text-center">
             <div className="p-10">
