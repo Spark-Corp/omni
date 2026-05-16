@@ -358,8 +358,8 @@ function ScrollDemo() {
   const resultProgress = displayPhase >= 3 ? Math.min(1, phaseProgress * 2) : 0;
 
   return (
-    <section ref={sectionRef} className="relative">
-      <div ref={innerRef} className="h-screen w-full" style={{ paddingTop: '56px' }}>
+    <section ref={sectionRef} className="relative pt-14">
+      <div ref={innerRef} className="h-screen w-full">
         <div className="w-full h-full flex items-center justify-center overflow-hidden relative">
         {/* Background glow */}
         <div className="absolute inset-0 pointer-events-none">
