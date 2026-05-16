@@ -25,6 +25,8 @@ function Globe3D({ phase = 0 }) {
     camera.position.z = 3.2;
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(W, H); renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.domElement.style.outline = 'none';
+    renderer.domElement.style.display = 'block';
     container.appendChild(renderer.domElement);
 
     const ambient = new THREE.AmbientLight(0x404060, 0.7);
@@ -36,19 +38,19 @@ function Globe3D({ phase = 0 }) {
     const texCanvas = document.createElement("canvas");
     texCanvas.width = 2048; texCanvas.height = 1024;
     const ctx = texCanvas.getContext("2d");
-    ctx.fillStyle = "#0a1628"; ctx.fillRect(0, 0, 2048, 1024);
+    ctx.fillStyle = "#050510"; ctx.fillRect(0, 0, 2048, 1024);
     const continents = [
-      { x: 0.5, y: 0.55, rx: 0.12, ry: 0.18, c: "#1a3a2a" },
-      { x: 0.5, y: 0.55, rx: 0.10, ry: 0.16, c: "#2a4a3a" },
-      { x: 0.48, y: 0.32, rx: 0.06, ry: 0.05, c: "#2a3a2a" },
-      { x: 0.48, y: 0.32, rx: 0.05, ry: 0.04, c: "#3a4a3a" },
-      { x: 0.72, y: 0.38, rx: 0.18, ry: 0.12, c: "#1a3a2a" },
-      { x: 0.72, y: 0.38, rx: 0.16, ry: 0.10, c: "#2a4a3a" },
-      { x: 0.20, y: 0.30, rx: 0.10, ry: 0.08, c: "#1a3a2a" },
-      { x: 0.20, y: 0.30, rx: 0.08, ry: 0.06, c: "#2a4a3a" },
-      { x: 0.28, y: 0.60, rx: 0.04, ry: 0.10, c: "#1a3a2a" },
-      { x: 0.28, y: 0.60, rx: 0.03, ry: 0.08, c: "#2a4a3a" },
-      { x: 0.88, y: 0.72, rx: 0.03, ry: 0.03, c: "#2a3a2a" },
+      { x: 0.5, y: 0.55, rx: 0.12, ry: 0.18, c: "#0d2a1a" },
+      { x: 0.5, y: 0.55, rx: 0.10, ry: 0.16, c: "#103a22" },
+      { x: 0.48, y: 0.32, rx: 0.06, ry: 0.05, c: "#0f2a18" },
+      { x: 0.48, y: 0.32, rx: 0.05, ry: 0.04, c: "#143a20" },
+      { x: 0.72, y: 0.38, rx: 0.18, ry: 0.12, c: "#0a2818" },
+      { x: 0.72, y: 0.38, rx: 0.16, ry: 0.10, c: "#103a22" },
+      { x: 0.20, y: 0.30, rx: 0.10, ry: 0.08, c: "#0d2a1a" },
+      { x: 0.20, y: 0.30, rx: 0.08, ry: 0.06, c: "#123822" },
+      { x: 0.28, y: 0.60, rx: 0.04, ry: 0.10, c: "#0a2818" },
+      { x: 0.28, y: 0.60, rx: 0.03, ry: 0.08, c: "#103a22" },
+      { x: 0.88, y: 0.72, rx: 0.03, ry: 0.03, c: "#0f2a1a" },
     ];
     for (const c of continents) {
       ctx.beginPath(); ctx.ellipse(c.x * 2048, c.y * 1024, c.rx * 2048, c.ry * 1024, 0, 0, Math.PI * 2);
@@ -76,12 +78,12 @@ function Globe3D({ phase = 0 }) {
     const texture = new THREE.CanvasTexture(texCanvas);
     const earth = new THREE.Mesh(
       new THREE.SphereGeometry(1, 80, 80),
-      new THREE.MeshPhongMaterial({ map: texture, emissive: new THREE.Color(0x0a1a1a), emissiveIntensity: 0.15, roughness: 0.6 })
+      new THREE.MeshPhongMaterial({ map: texture, emissive: new THREE.Color(0x050510), emissiveIntensity: 0.25, roughness: 0.7 })
     );
     scene.add(earth);
     const grid = new THREE.Mesh(
       new THREE.SphereGeometry(1.012, 40, 24),
-      new THREE.MeshBasicMaterial({ wireframe: true, color: 0x1a4a3a, transparent: true, opacity: 0.12 })
+      new THREE.MeshBasicMaterial({ wireframe: true, color: 0x10b981, transparent: true, opacity: 0.06 })
     );
     scene.add(grid);
     const atmoMat = new THREE.ShaderMaterial({
@@ -286,7 +288,7 @@ function Globe3D({ phase = 0 }) {
     return () => { cancelAnimationFrame(animId); window.removeEventListener("resize", onResize); container.removeChild(renderer.domElement); renderer.dispose(); };
   }, []);
 
-  return <div ref={containerRef} className="w-full h-full" />;
+  return <div ref={containerRef} className="w-full h-full" style={{ outline: 'none' }} />;
 }
 
 // --- Scroll-driven demo ---
@@ -314,7 +316,7 @@ function ScrollDemo() {
 
       accumRef.current += Math.abs(e.deltaY) * 0.6;
 
-      const threshold = 150;
+      const threshold = 250;
       const p = phaseRef.current;
       const now = Date.now();
 
@@ -368,8 +370,8 @@ function ScrollDemo() {
 
 
         <div className="relative w-full h-full max-w-7xl mx-auto px-4 sm:px-6 flex items-start sm:items-center">
-          {/* LEFT: Globe */}
-          <div className="w-full lg:w-1/2 h-full flex items-center justify-center p-4 lg:p-8">
+          {/* LEFT: Globe — no padding, blends fully */}
+          <div className="w-full lg:w-1/2 h-full flex items-center justify-center">
             <div className="relative w-full h-full min-h-0">
               <Globe3D phase={globePhase} />
               {/* Soft radial fade at bottom so globe blends into page */}
@@ -414,7 +416,7 @@ function ScrollDemo() {
                 </div>
               </div>
 
-              {/* Phase 2: Markers */}
+              {/* Phase 2: Markers — dramatic entrance */}
               <div
                 className="transition-all duration-500"
                 style={{
@@ -427,14 +429,16 @@ function ScrollDemo() {
                     { name: "Marché de Bè", product: "Patates · 500 FCFA/kg", dist: "120m", delay: 0 },
                     { name: "Ama Market", product: "Patates · 400 FCFA/kg", dist: "250m", delay: 0.2 },
                     { name: "Mariam Boutique", product: "Patates · 600 FCFA/kg", dist: "400m", delay: 0.4 },
-                  ].map((m, i) => (
+                  ].map((m, i) => {
+                    const cardT = Math.max(0, Math.min(1, (markersProgress - m.delay) / 0.2));
+                    return (
                     <div
                       key={i}
                       className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/5"
                       style={{
-                        opacity: Math.max(0, Math.min(1, (markersProgress - m.delay) / 0.2)),
-                        transform: `translateX(${(1 - Math.max(0, Math.min(1, (markersProgress - m.delay) / 0.2))) * 30}px)`,
-                        transition: 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                        opacity: cardT,
+                        transform: `scale(${0.5 + cardT * 0.5}) translateY(${(1 - cardT) * 30}px)`,
+                        transition: 'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)',
                       }}
                     >
                       <div className={`w-8 h-8 rounded-full border-2 border-white/70 flex items-center justify-center ${i === 0 ? 'bg-emerald-500' : 'bg-emerald-500/70'}`}>
@@ -446,7 +450,8 @@ function ScrollDemo() {
                       </div>
                       <span className="text-xs text-white/30 shrink-0">{m.dist}</span>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
