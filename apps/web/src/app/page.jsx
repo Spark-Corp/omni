@@ -295,7 +295,7 @@ const starPositions = Array.from({ length: 300 }, () => ({
 }));
 
 // --- Scroll-driven demo ---
-function ScrollDemo() {
+function ScrollDemo({ onPhaseChange }) {
   const sectionRef = useRef(null);
   const innerRef = useRef(null);
   const [phase, setPhase] = useState(0);
@@ -312,26 +312,39 @@ function ScrollDemo() {
     let lastAdvance = 0;
 
     const onWheel = (e) => {
-      if (phaseRef.current >= 3) return;
-
       e.preventDefault();
       e.stopPropagation();
 
-      accumRef.current += Math.abs(e.deltaY) * 0.6;
-
-      const threshold = 250;
       const p = phaseRef.current;
       const now = Date.now();
+      const threshold = 250;
 
-      if (accumRef.current >= threshold && now - lastAdvance > 600) {
-        accumRef.current = 0;
-        lastAdvance = now;
-        const next = Math.min(3, p + 1);
-        phaseRef.current = next;
-        setPhase(next);
-        setPhaseProgress(0);
-      } else {
-        setPhaseProgress(accumRef.current / threshold);
+      if (e.deltaY > 0 && p < 3) {
+        // Scrolling down — advance
+        accumRef.current += e.deltaY * 0.6;
+        if (accumRef.current >= threshold && now - lastAdvance > 600) {
+          accumRef.current = 0;
+          lastAdvance = now;
+          const next = Math.min(3, p + 1);
+          phaseRef.current = next;
+          setPhase(next);
+          setPhaseProgress(0);
+        } else {
+          setPhaseProgress(accumRef.current / threshold);
+        }
+      } else if (e.deltaY < 0 && p > 0) {
+        // Scrolling up — reverse
+        accumRef.current += Math.abs(e.deltaY) * 0.6;
+        if (accumRef.current >= threshold && now - lastAdvance > 600) {
+          accumRef.current = 0;
+          lastAdvance = now;
+          const next = p - 1;
+          phaseRef.current = next;
+          setPhase(next);
+          setPhaseProgress(1);
+        } else {
+          setPhaseProgress(1 - accumRef.current / threshold);
+        }
       }
 
       ticking = false;
@@ -353,6 +366,9 @@ function ScrollDemo() {
   const displayPhase = phase;
   const globePhase = Math.min(3, phase);
 
+  // Notify parent of phase changes (for nav dots)
+  useEffect(() => { onPhaseChange?.(phase); }, [phase, onPhaseChange]);
+
   // Typing
   const searchText = "patates";
   const typedLen = displayPhase >= 1 ? Math.min(searchText.length, Math.floor(phaseProgress * searchText.length)) : 0;
@@ -363,11 +379,23 @@ function ScrollDemo() {
   const resultProgress = displayPhase >= 3 ? Math.min(1, phaseProgress * 2) : 0;
 
   return (
-    <section ref={sectionRef} className="relative h-[calc(100vh-48px)] sm:h-[calc(100vh-56px)] mt-12 sm:mt-14">
+    <section ref={sectionRef} className="relative h-[calc(100vh-48px)] sm:h-[calc(100vh-56px)]">
       <div ref={innerRef} className="h-full w-full">
         <div className="w-full h-full flex items-center justify-center overflow-hidden relative">
-        {/* Background glow — spans full page, no visible edge */}
-        <div className="absolute inset-0 pointer-events-none">
+        {/* Background glow + stars — only in demo section, not rest of page */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          {/* Stars */}
+          {starPositions.map((s, i) => (
+            <div key={i} className="absolute rounded-full bg-white"
+              style={{
+                left: `${s.x}%`,
+                top: `${s.y}%`,
+                width: `${s.s}px`,
+                height: `${s.s}px`,
+                opacity: s.o,
+              }}
+            />
+          ))}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] bg-emerald-500/[0.04] rounded-full blur-[200px]" />
           <div className="absolute top-1/3 left-1/4 w-[80%] h-[60%] bg-emerald-600/[0.02] rounded-full blur-[150px]" />
         </div>
@@ -494,24 +522,12 @@ function ScrollDemo() {
           </div>
         </div>
 
-        {/* Scroll hint */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2">
-          <div className="flex gap-2">
-            {[0, 1, 2, 3].map(p => (
-              <div
-                key={p}
-                className="w-2 h-2 rounded-full transition-all duration-500"
-                style={{
-                  backgroundColor: displayPhase >= p ? '#34d399' : 'rgba(255,255,255,0.1)',
-                  transform: displayPhase >= p ? 'scale(1.3)' : 'scale(1)',
-                }}
-              />
-            ))}
+        {/* Minimal scroll hint — just text, dots moved to nav */}
+        {displayPhase < 3 && (
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10">
+            <span className="text-[10px] text-white/20 animate-bounce">↓ Scrolle</span>
           </div>
-          {displayPhase < 3 && (
-            <span className="text-[10px] text-white/20 animate-bounce mt-1">↓ Scrolle</span>
-          )}
-        </div>
+        )}
       </div>
     </div>
     </section>
@@ -521,27 +537,13 @@ function ScrollDemo() {
 export default function LandingPage() {
   const { user, loading } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [demoPhase, setDemoPhase] = useState(0);
   const handleExploreClick = (e) => { if (!user) { e.preventDefault(); setShowAuthModal(true); } };
 
   return (
     <div className="min-h-screen bg-[#050510] text-white overflow-x-hidden">
-      {/* Full-page CSS stars — no visible boundary like THREE.js stars */}
-      <div className="fixed inset-0 pointer-events-none z-0">
-        {starPositions.map((s, i) => (
-          <div key={i} className="absolute rounded-full bg-white"
-            style={{
-              left: `${s.x}%`,
-              top: `${s.y}%`,
-              width: `${s.s}px`,
-              height: `${s.s}px`,
-              opacity: s.o,
-            }}
-          />
-        ))}
-      </div>
-
-      {/* NAV — fixed height, clean */}
-      <nav className="fixed top-0 left-0 right-0 z-50 h-12 sm:h-14 bg-[#050510]/80 backdrop-blur-xl border-b border-white/5">
+      {/* NAV — sticky: starts as site head, becomes overlay on scroll */}
+      <nav className="sticky top-0 z-50 h-12 sm:h-14 bg-[#050510] border-b border-white/5">
         <div className="max-w-7xl mx-auto h-full px-4 sm:px-6 flex items-center justify-between">
           <a href="/" className="flex items-center gap-2 shrink-0">
             <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
@@ -552,6 +554,17 @@ export default function LandingPage() {
           <div className="hidden sm:flex items-center gap-6 text-xs sm:text-sm text-white/50">
             <a href="/map" className="hover:text-white transition-colors">Explorer</a>
             <a href="/vendor/onboarding" className="hover:text-white transition-colors">Je suis vendeur</a>
+          </div>
+          {/* Phase dots — in nav, not floating at bottom */}
+          <div className="hidden sm:flex items-center gap-1.5 mr-2">
+            {[0, 1, 2, 3].map(p => (
+              <div key={p} className="w-1.5 h-1.5 rounded-full transition-all duration-500"
+                style={{
+                  backgroundColor: demoPhase >= p ? '#34d399' : 'rgba(255,255,255,0.12)',
+                  transform: demoPhase >= p ? 'scale(1.4)' : 'scale(1)',
+                }}
+              />
+            ))}
           </div>
           <div className="flex items-center gap-2">
             {user ? (
@@ -567,7 +580,7 @@ export default function LandingPage() {
       </nav>
 
       {/* SCROLL DEMO — everything happens here */}
-      <ScrollDemo />
+      <ScrollDemo onPhaseChange={setDemoPhase} />
 
       {/* PROBLEM */}
       <section className="py-28 px-6">
