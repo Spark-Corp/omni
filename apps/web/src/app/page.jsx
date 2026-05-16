@@ -296,109 +296,61 @@ const starPositions = Array.from({ length: 300 }, () => ({
   o: 0.1 + Math.random() * 0.3,
 }));
 
-// --- Scroll-driven demo ---
+// --- Scroll-driven demo: premium 400vh + sticky pin pattern ---
 function ScrollDemo({ onPhaseChange }) {
   const sectionRef = useRef(null);
-  const innerRef = useRef(null);
-  const [phase, setPhase] = useState(0);
-  const phaseRef = useRef(0);
-  const accumRef = useRef(0);
-  const [phaseProgress, setPhaseProgress] = useState(0);
+  const [progress, setProgress] = useState(0);
 
-  // Wheel interceptor: scroll input drives the animation, not the page
+  // Track scroll progress through the section (continuous 0→1)
   useEffect(() => {
-    const el = innerRef.current;
-    if (!el) return;
-
-    let ticking = false;
-    let lastAdvance = 0;
-
-    const onWheel = (e) => {
-      const p = phaseRef.current;
-
-      // Let events propagate when at boundaries — enables scrolling past the demo
-      if ((p >= 3 && e.deltaY > 0) || (p <= 0 && e.deltaY < 0)) return;
-
-      e.preventDefault();
-      e.stopPropagation();
-
-      const now = Date.now();
-      const threshold = 250;
-
-      if (e.deltaY > 0 && p < 3) {
-        // Scrolling down — advance
-        accumRef.current += e.deltaY * 0.6;
-        if (accumRef.current >= threshold && now - lastAdvance > 600) {
-          accumRef.current = 0;
-          lastAdvance = now;
-          const next = Math.min(3, p + 1);
-          phaseRef.current = next;
-          setPhase(next);
-          setPhaseProgress(0);
-        } else {
-          setPhaseProgress(accumRef.current / threshold);
-        }
-      } else if (e.deltaY < 0 && p > 0) {
-        // Scrolling up — reverse
-        accumRef.current += Math.abs(e.deltaY) * 0.6;
-        if (accumRef.current >= threshold && now - lastAdvance > 600) {
-          accumRef.current = 0;
-          lastAdvance = now;
-          const next = p - 1;
-          phaseRef.current = next;
-          setPhase(next);
-          setPhaseProgress(1);
-        } else {
-          setPhaseProgress(1 - accumRef.current / threshold);
-        }
-      }
-
-      ticking = false;
+    const onScroll = () => {
+      const el = sectionRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const sectionTop = rect.top + window.scrollY;
+      const scrollable = el.offsetHeight - window.innerHeight;
+      if (scrollable <= 0) return;
+      const scrolled = window.scrollY - sectionTop;
+      setProgress(Math.max(0, Math.min(1, scrolled / scrollable)));
     };
-
-    el.addEventListener('wheel', onWheel, { passive: false });
-    return () => el.removeEventListener('wheel', onWheel);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Auto-advance phase progress when not scrolling
-  useEffect(() => {
-    if (phase >= 3) return;
-    const interval = setInterval(() => {
-      setPhaseProgress(p => Math.min(1, p + 0.02));
-    }, 30);
-    return () => clearInterval(interval);
-  }, [phase]);
+  // Derive phase + phase progress from continuous scroll
+  const totalPhases = 4;
+  const raw = progress * totalPhases;                     // 0 → 4
+  const phase = Math.min(3, Math.floor(raw));
+  const phaseProgress = Math.min(1, raw - phase);         // 0→1 within each phase
 
-  const displayPhase = phase;
-  const globePhase = Math.min(3, phase);
-
-  // Notify parent of phase changes (for nav dots)
-  useEffect(() => { onPhaseChange?.(phase); }, [phase, onPhaseChange]);
+  // Continuous values used by Globe3D (0→3)
+  const globePhase = Math.min(3, raw);
 
   // Typing
   const searchText = "patates";
-  const typedLen = displayPhase >= 1 ? Math.min(searchText.length, Math.floor(phaseProgress * searchText.length)) : 0;
+  const typedLen = phase >= 1 ? Math.min(searchText.length, Math.floor(phaseProgress * searchText.length)) : 0;
   const typed = searchText.slice(0, typedLen);
 
-  const searchOpacity = displayPhase >= 1 ? Math.min(1, phaseProgress * 2) : 0;
-  const markersProgress = displayPhase >= 2 ? Math.min(1, phaseProgress * 1.5) : 0;
-  const resultProgress = displayPhase >= 3 ? Math.min(1, phaseProgress * 2) : 0;
+  const searchOpacity = phase >= 1 ? Math.min(1, phaseProgress * 2) : 0;
+  const markersProgress = phase >= 2 ? Math.min(1, phaseProgress * 1.5) : 0;
+  const resultProgress = phase >= 3 ? Math.min(1, phaseProgress * 2) : 0;
+
+  // Notify parent (nav dots)
+  useEffect(() => { onPhaseChange?.(phase); }, [phase, onPhaseChange]);
 
   return (
-    <section ref={sectionRef} className="relative h-[calc(100vh-48px)] sm:h-[calc(100vh-56px)]">
-      <div ref={innerRef} className="h-full w-full">
-        <div className="w-full h-full flex items-center justify-center overflow-hidden relative">
-        {/* Background glow + stars — only in demo section, not rest of page */}
+    <section ref={sectionRef} className="relative" style={{ height: '400vh' }}>
+      {/* Sticky container — pinned while its parent scrolls */}
+      <div className="sticky top-12 sm:top-14 h-[calc(100vh-48px)] sm:h-[calc(100vh-56px)] overflow-hidden">
+        <div className="w-full h-full flex items-center justify-center">
+        {/* Background glow + stars */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          {/* Stars */}
           {starPositions.map((s, i) => (
             <div key={i} className="absolute rounded-full bg-white"
               style={{
-                left: `${s.x}%`,
-                top: `${s.y}%`,
-                width: `${s.s}px`,
-                height: `${s.s}px`,
-                opacity: s.o,
+                left: `${s.x}%`, top: `${s.y}%`,
+                width: `${s.s}px`, height: `${s.s}px`, opacity: s.o,
               }}
             />
           ))}
@@ -407,18 +359,16 @@ function ScrollDemo({ onPhaseChange }) {
         </div>
 
         <div className="relative w-full h-full max-w-7xl mx-auto px-4 sm:px-6 flex items-center">
-          {/* LEFT: Globe — blends fully, overflow visible so canvas feels infinite */}
+          {/* LEFT: Globe */}
           <div className="w-full lg:w-1/2 h-full flex items-center justify-center">
             <div className="relative w-full h-full min-h-0 overflow-visible">
               <Globe3D phase={globePhase} />
-              {/* Soft radial fade at bottom so globe blends into page */}
               <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-[#050510] via-[#050510]/80 to-transparent pointer-events-none" />
             </div>
           </div>
 
           {/* RIGHT: Content */}
           <div className="hidden lg:flex lg:w-1/2 flex-col justify-center items-center text-center lg:pl-8 xl:pl-12">
-            {/* Header text — always visible */}
             <div className="mb-6 xl:mb-8">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 mb-4 xl:mb-5">
                 <Sparkles size={12} className="text-emerald-400" />
@@ -433,7 +383,6 @@ function ScrollDemo({ onPhaseChange }) {
               </p>
             </div>
 
-            {/* Phase content */}
             <div className="space-y-6">
               {/* Phase 1: Search bar */}
               <div
@@ -453,7 +402,7 @@ function ScrollDemo({ onPhaseChange }) {
                 </div>
               </div>
 
-              {/* Phase 2: Markers — dramatic entrance */}
+              {/* Phase 2: Markers */}
               <div
                 className="transition-all duration-500"
                 style={{
@@ -471,8 +420,7 @@ function ScrollDemo({ onPhaseChange }) {
                   ].map((m, i) => {
                     const cardT = Math.max(0, Math.min(1, (markersProgress - m.delay) / 0.2));
                     return (
-                    <div
-                      key={i}
+                    <div key={i}
                       className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/5"
                       style={{
                         opacity: cardT,
@@ -518,10 +466,9 @@ function ScrollDemo({ onPhaseChange }) {
             </div>
           </div>
 
-          {/* Mobile: simple overlay text — better positioned */}
+          {/* Mobile overlay */}
           <div className="lg:hidden absolute bottom-20 left-4 right-4 z-10 pointer-events-none">
-            <div
-              className="text-center transition-all duration-500"
+            <div className="text-center transition-all duration-500"
               style={{ opacity: 1 - Math.min(1, phase / 1.5) }}
             >
               <p className="text-white/90 text-lg font-semibold">Omni. Tout près de chez toi.</p>
@@ -530,14 +477,14 @@ function ScrollDemo({ onPhaseChange }) {
           </div>
         </div>
 
-        {/* Minimal scroll hint — just text, dots moved to nav */}
-        {displayPhase < 3 && (
+        {/* Scroll hint */}
+        {phase < 3 && (
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10">
             <span className="text-[10px] text-white/20 animate-bounce">↓ Scrolle</span>
           </div>
         )}
       </div>
-    </div>
+      </div>
     </section>
   );
 }
