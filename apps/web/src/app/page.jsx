@@ -304,9 +304,10 @@ function ScrollDemo() {
     if (!el) return;
 
     let ticking = false;
+    let lastAdvance = 0;
 
     const onWheel = (e) => {
-      if (phaseRef.current >= 3) return; // done, let page scroll normally
+      if (phaseRef.current >= 3) return;
 
       e.preventDefault();
       e.stopPropagation();
@@ -315,9 +316,11 @@ function ScrollDemo() {
 
       const threshold = 150;
       const p = phaseRef.current;
+      const now = Date.now();
 
-      if (accumRef.current >= threshold) {
+      if (accumRef.current >= threshold && now - lastAdvance > 600) {
         accumRef.current = 0;
+        lastAdvance = now;
         const next = Math.min(3, p + 1);
         phaseRef.current = next;
         setPhase(next);
@@ -375,18 +378,18 @@ function ScrollDemo() {
           </div>
 
           {/* RIGHT: Content */}
-          <div className="hidden lg:flex lg:w-1/2 flex-col justify-center pl-8">
+          <div className="hidden lg:flex lg:w-1/2 flex-col justify-center lg:pl-8 xl:pl-12">
             {/* Header text — always visible */}
-            <div className="mb-8">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 mb-4">
+            <div className="mb-6 xl:mb-8">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 mb-4 xl:mb-5">
                 <Sparkles size={12} className="text-emerald-400" />
-                <span className="text-xs text-white/70">Tu cherches un produit ou service autour de toi ?</span>
+                <span className="text-xs xl:text-sm text-white/70">Tu cherches un produit ou service autour de toi ?</span>
               </div>
-              <h2 className="text-4xl md:text-5xl font-bold leading-tight">
+              <h2 className="text-4xl xl:text-6xl font-bold leading-tight">
                 <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">Omni</span>
-                <span className="text-white/90 block">Tout près de chez toi.</span>
+                <span className="text-white/90 block mt-1">Tout près de chez toi.</span>
               </h2>
-              <p className="text-white/40 text-sm mt-3 max-w-sm">
+              <p className="text-white/40 text-sm xl:text-base mt-3 max-w-sm">
                 Omni est là pour te montrer les vendeurs et prestataires autour de toi.
               </p>
             </div>
@@ -471,14 +474,14 @@ function ScrollDemo() {
             </div>
           </div>
 
-          {/* Mobile: simple overlay text */}
-          <div className="lg:hidden absolute bottom-8 left-4 right-4 z-10 pointer-events-none">
+          {/* Mobile: simple overlay text — better positioned */}
+          <div className="lg:hidden absolute bottom-20 left-4 right-4 z-10 pointer-events-none">
             <div
               className="text-center transition-all duration-500"
-              style={{ opacity: 1 - Math.min(1, phase / 2) }}
+              style={{ opacity: 1 - Math.min(1, phase / 1.5) }}
             >
-              <p className="text-white/80 text-sm font-medium">Omni. Tout près de chez toi.</p>
-              <p className="text-white/30 text-xs mt-1">Scrolle pour voir</p>
+              <p className="text-white/90 text-lg font-semibold">Omni. Tout près de chez toi.</p>
+              <p className="text-white/40 text-xs mt-2">Scrolle pour voir comment ça marche</p>
             </div>
           </div>
         </div>
