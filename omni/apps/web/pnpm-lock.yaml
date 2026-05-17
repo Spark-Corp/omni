@@ -80,6 +80,9 @@ importers:
       downshift:
         specifier: ^9.0.9
         version: 9.3.2(react@18.3.1)
+      framer-motion:
+        specifier: ^12.38.0
+        version: 12.38.0(@emotion/is-prop-valid@1.4.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       html-to-image:
         specifier: ^1.11.13
         version: 1.11.13
