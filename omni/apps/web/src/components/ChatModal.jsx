@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { X, Send } from "lucide-react";
+import { toast } from "sonner";
 
 export default function ChatModal({
   requestId,
