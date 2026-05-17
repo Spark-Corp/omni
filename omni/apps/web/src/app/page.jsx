@@ -286,7 +286,7 @@ function Globe3D({ phase = 0 }) {
     return () => { cancelAnimationFrame(animId); window.removeEventListener("resize", onResize); container.removeChild(renderer.domElement); renderer.dispose(); };
   }, []);
 
-  return <div ref={containerRef} className="w-full h-full" style={{ outline: 'none' }} />;
+  return <div ref={containerRef} className="w-full h-full min-h-[300px] sm:min-h-[400px]" style={{ outline: 'none' }} />;
 }
 
 // Full-page CSS stars — no visible boundary, feels infinite
