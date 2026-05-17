@@ -84,6 +84,6 @@ for (const method of ['post', 'put', 'patch'] as const) {
 app.route(API_BASENAME, api);
 
 const requestHandler = createRequestHandler(reactRouterBuild);
-app.mount('/', (c) => requestHandler(c.req.raw));
+app.mount('/', (request) => requestHandler(request));
 
 export default app;
