@@ -86,4 +86,4 @@ app.route(API_BASENAME, api);
 const requestHandler = createRequestHandler(reactRouterBuild);
 app.mount('/', (c) => requestHandler(c.req.raw));
 
-export default app.fetch;
+export default app;
