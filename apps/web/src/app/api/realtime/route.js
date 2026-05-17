@@ -1,12 +1,12 @@
-import { NextResponse } from 'next/server';
+// Simple SSE real-time updates for availability requests
+// Uses standard Web APIs, not Next.js
 
-// Simple in-memory store for connections (use Redis in production)
 const clients = new Map();
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get('userId');
-  const userType = searchParams.get('type'); // 'vendor' or 'buyer'
+  const userType = searchParams.get('type');
   
   if (!userId) {
     return new Response('User ID required', { status: 400 });
@@ -15,7 +15,6 @@ export async function GET(request) {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     start(controller) {
-      // Store connection
       const clientId = `${userType}_${userId}_${Date.now()}`;
       clients.set(clientId, {
         controller,
@@ -24,28 +23,23 @@ export async function GET(request) {
         lastPing: Date.now()
       });
 
-      // Send initial connection message
       controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'connected', clientId })}\n\n`));
 
-      // Send ping every 30 seconds to keep connection alive
       const pingInterval = setInterval(() => {
-        try {
+        if (clients.has(clientId)) {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'ping' })}\n\n`));
-        } catch (e) {
+        } else {
           clearInterval(pingInterval);
-          clients.delete(clientId);
         }
       }, 30000);
 
-      // Cleanup on close
-      request.signal.addEventListener('abort', () => {
+      const cleanup = () => {
         clearInterval(pingInterval);
         clients.delete(clientId);
-        console.log(`[WebSocket] Client disconnected: ${clientId}`);
-      });
+      };
 
-      console.log(`[WebSocket] Client connected: ${clientId}`);
-    }
+      request.signal.addEventListener('abort', cleanup);
+    },
   });
 
   return new Response(stream, {
@@ -57,32 +51,32 @@ export async function GET(request) {
   });
 }
 
-// API to send notifications
 export async function POST(request) {
   try {
-    const { targetUserId, targetType, message } = await request.json();
-    
-    const encoder = new TextEncoder();
-    let sent = 0;
-    
-    // Find and notify target clients
-    for (const [clientId, client] of clients.entries()) {
-      if (client.userId === targetUserId && client.userType === targetType) {
-        try {
-          client.controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify(message)}\n\n`)
-          );
-          sent++;
-        } catch (e) {
-          // Client disconnected
-          clients.delete(clientId);
+    const body = await request.json();
+    const { type, requestId, response, userId } = body;
+
+    if (type === 'broadcast' && requestId) {
+      const message = JSON.stringify({
+        type: 'request_update',
+        requestId,
+        response,
+        timestamp: Date.now()
+      });
+
+      for (const [clientId, client] of clients) {
+        if (client.userType === 'buyer') {
+          try {
+            client.controller.enqueue(new TextEncoder().encode(`data: ${message}\n\n`));
+          } catch {
+            clients.delete(clientId);
+          }
         }
       }
     }
 
-    return NextResponse.json({ success: true, sent });
+    return Response.json({ success: true });
   } catch (error) {
-    console.error('[WebSocket] Error sending notification:', error);
-    return NextResponse.json({ error: 'Failed to send' }, { status: 500 });
+    return Response.json({ error: error.message }, { status: 500 });
   }
 }

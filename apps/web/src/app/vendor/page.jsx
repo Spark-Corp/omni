@@ -38,13 +38,13 @@ export default function VendorPage() {
   }, [user, loading]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-[#08080f]">
       <div className="text-center">
         <Loader2
-          className="mx-auto mb-4 text-emerald-600 animate-spin"
-          size={48}
+          className="mx-auto mb-4 text-emerald-400 animate-spin"
+          size={32}
         />
-        <p className="text-gray-600">Redirection...</p>
+        <p className="text-white/40 text-sm">Redirection...</p>
       </div>
     </div>
   );

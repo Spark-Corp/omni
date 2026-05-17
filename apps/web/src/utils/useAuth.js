@@ -1,67 +1,62 @@
-import { useCallback } from 'react';
-import { signIn, signOut } from "@auth/create/react";
-
-function isDevIframe() {
-  try {
-    return typeof window !== 'undefined' && window.self !== window.top;
-  } catch { return true; }
-}
-
-function devSocialShim(provider, callbackUrl) {
-  const params = new URLSearchParams({ provider });
-  if (callbackUrl) params.set('callbackUrl', callbackUrl);
-  window.location.href = '/__create/social-dev-shim?' + params;
-}
+import { useCallback, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router';
 
 function useAuth() {
-  const callbackUrl = typeof window !== 'undefined'
-    ? new URLSearchParams(window.location.search).get('callbackUrl')
-    : null;
+  const navigate = useNavigate();
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const signInWithCredentials = useCallback((options) => {
-    return signIn("credentials-signin", {
-      ...options,
-      callbackUrl: callbackUrl ?? options.callbackUrl
-    });
-  }, [callbackUrl])
-
-  const signUpWithCredentials = useCallback((options) => {
-    return signIn("credentials-signup", {
-      ...options,
-      callbackUrl: callbackUrl ?? options.callbackUrl
-    });
-  }, [callbackUrl])
-
-  const signInWithGoogle = useCallback((options) => {
-    const cb = callbackUrl ?? options?.callbackUrl;
-    if (isDevIframe()) return devSocialShim("google", cb);
-    return signIn("google", { ...options, callbackUrl: cb });
-  }, [callbackUrl]);
-  const signInWithFacebook = useCallback((options) => {
-    const cb = options?.callbackUrl;
-    if (isDevIframe()) return devSocialShim("facebook", cb);
-    return signIn("facebook", options);
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        // Dynamic import to avoid SSR issues
+        const { getSession } = await import('@/lib/auth-client');
+        const session = await getSession();
+        setUser(session?.user || null);
+      } catch {
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    checkSession();
   }, []);
-  const signInWithTwitter = useCallback((options) => {
-    const cb = options?.callbackUrl;
-    if (isDevIframe()) return devSocialShim("twitter", cb);
-    return signIn("twitter", options);
+
+  const signIn = useCallback(() => {
+    navigate('/auth');
+  }, [navigate]);
+
+  const signUp = useCallback(() => {
+    navigate('/auth');
+  }, [navigate]);
+
+  const signOut = useCallback(async () => {
+    try {
+      const { signOut: apiSignOut } = await import('@/lib/auth-client');
+      await apiSignOut();
+    } catch {
+      // Ignore errors
+    }
+    setUser(null);
+    navigate('/');
+  }, [navigate]);
+
+  const refreshSession = useCallback(async () => {
+    const { getSession } = await import('@/lib/auth-client');
+    const session = await getSession();
+    setUser(session?.user || null);
+    return session;
   }, []);
-  const signInWithApple = useCallback((options) => {
-    const cb = callbackUrl ?? options?.callbackUrl;
-    if (isDevIframe()) return devSocialShim("apple", cb);
-    return signIn("apple", { ...options, callbackUrl: cb });
-  }, [callbackUrl]);
 
   return {
-    signInWithCredentials,
-    signUpWithCredentials,
-    signInWithGoogle,
-    signInWithFacebook,
-    signInWithTwitter,
-    signInWithApple,
+    user,
+    loading,
+    signIn,
+    signUp,
     signOut,
-  }
+    getSession: null,
+    refreshSession,
+  };
 }
 
 export default useAuth;

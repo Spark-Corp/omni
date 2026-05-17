@@ -1,15 +1,16 @@
 import sql from "@/app/api/utils/sql";
-import { auth } from "@/auth";
+import { authClient } from "@/lib/auth";
 
 export async function POST(request) {
   try {
-    const session = await auth();
-    if (!session || !session.user?.id) {
+    const session = await authClient.getSession();
+    if (!session?.data?.user?.id) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const userId = session.data.user.id;
     const body = await request.json();
-    const { vendorId, name, category, price, unit } = body;
+    const { vendorId, name, price, unit } = body;
 
     if (!vendorId || !name || !price) {
       return Response.json(
@@ -22,8 +23,7 @@ export async function POST(request) {
     const vendorCheck = await sql`
       SELECT v.id 
       FROM vendors v
-      JOIN users u ON u.id = v.user_id
-      WHERE v.id = ${vendorId} AND u.id = ${session.user.id}::uuid
+      WHERE v.id = ${vendorId} AND v.user_id = ${userId}
     `;
 
     if (vendorCheck.length === 0) {
@@ -31,16 +31,15 @@ export async function POST(request) {
     }
 
     const result = await sql`
-      INSERT INTO products (vendor_id, name, category, price, unit, is_available)
+      INSERT INTO products (vendor_id, name, price, unit, is_available)
       VALUES (
         ${vendorId},
         ${name},
-        ${category || "Général"},
         ${price},
-        ${unit || "unité"},
+        ${unit || "pièce"},
         true
       )
-      RETURNING id, vendor_id, name, category, price, unit, is_available, created_at
+      RETURNING id, vendor_id, name, price, unit, is_available, created_at
     `;
 
     return Response.json({ product: result[0], success: true });

@@ -1,35 +1,52 @@
-import * as React from 'react';
-import { useSession } from "@auth/create/react";
-
+import { useState, useEffect, useCallback } from 'react';
+import { authClient } from "@/lib/auth-client";
 
 const useUser = () => {
-  const { data: session, status } = useSession();
-  const id = session?.user?.id
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const [user, setUser] = React.useState(session?.user ?? null);
+  const fetchUser = useCallback(async () => {
+    try {
+      // First check localStorage for immediate auth
+      const storedUser = localStorage.getItem("omni_user");
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+        setLoading(false);
+        return;
+      }
 
-  const fetchUser = React.useCallback(async (session) => {
-  return session?.user;
-}, [])
-
-  const refetchUser = React.useCallback(() => {
-    if(process.env.NEXT_PUBLIC_CREATE_ENV === "PRODUCTION") {
-      if (id) {
-        fetchUser(session).then(setUser);
+      // Then check Neon Auth session
+      const session = await authClient.getSession();
+      if (session?.data?.user) {
+        localStorage.setItem("omni_user", JSON.stringify(session.data.user));
+        setUser(session.data.user);
       } else {
         setUser(null);
       }
+    } catch (error) {
+      console.error('Error fetching user:', error);
+      setUser(null);
+    } finally {
+      setLoading(false);
     }
-  }, [fetchUser, id])
+  }, []);
 
-  React.useEffect(refetchUser, [refetchUser]);
+  const refetch = useCallback(() => {
+    setLoading(true);
+    fetchUser();
+  }, [fetchUser]);
 
-  if (process.env.NEXT_PUBLIC_CREATE_ENV !== "PRODUCTION") {
-    return { user, data: session?.user || null, loading: status === 'loading', refetch: refetchUser };
-  }
-  return { user, data: user, loading: status === 'loading' || (status === 'authenticated' && !user), refetch: refetchUser };
+  useEffect(() => {
+    fetchUser();
+  }, [fetchUser]);
+
+  return { 
+    user, 
+    data: user, 
+    loading, 
+    refetch 
+  };
 };
 
-export { useUser }
-
+export { useUser };
 export default useUser;

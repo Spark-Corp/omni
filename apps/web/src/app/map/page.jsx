@@ -776,7 +776,7 @@ export default function MapPage() {
       <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20 w-full max-w-lg px-4">
         <div className="text-center mb-3">
           <p className="text-white/80 text-sm font-light tracking-wide">
-            <span className="text-emerald-400 font-medium">Omni</span> — Tout près de chez toi
+             <span className="text-emerald-400 font-medium">Omni</span> — Partout avec toi
           </p>
         </div>
         <form onSubmit={handleSearch} className="relative">

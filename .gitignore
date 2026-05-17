@@ -112,3 +112,11 @@ validate_temp.js
 
 # Generated route types
 .react-router/types/
+
+# Sensitive docs (keep locally, not on GitHub)
+OMNI_PRD_v1.0.*
+OMNI_Pitch_Deck_DjantaTech.*
+PITCH_DECK_DJANTATECH.md
+**/PRD_AUTH_CONFIG.md
+**/AUTH_SETUP.md
+TODO.md

@@ -1,0 +1,285 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { Link } from "react-router";
+import { Loader2, Store, MapPin, Trash2, Settings, ChevronRight } from "lucide-react";
+
+export default function VendorSettingsPage() {
+  const [vendor, setVendor] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+
+  const [form, setForm] = useState({
+    name: "", category: "", description: "", phone: "", email: "",
+    address: "", neighborhood: "",
+  });
+  const [location, setLocation] = useState(null);
+
+  useEffect(() => {
+    loadVendor();
+  }, []);
+
+  const loadVendor = async () => {
+    try {
+      const storedUser = localStorage.getItem("omni_user");
+      const userId = storedUser ? JSON.parse(storedUser).id : null;
+
+      const res = await fetch("/api/vendors/my-vendor", {
+        headers: userId ? { "x-user-id": userId } : {},
+      });
+      if (!res.ok) { setVendor(null); setLoading(false); return; }
+
+      const data = await res.json();
+      setVendor(data.vendor);
+      if (data.vendor) {
+        setForm({
+          name: data.vendor.name || "",
+          category: data.vendor.category || "",
+          description: data.vendor.description || "",
+          phone: data.vendor.phone || "",
+          email: data.vendor.email || "",
+          address: data.vendor.address || "",
+          neighborhood: data.vendor.neighborhood || "",
+        });
+        if (data.vendor.lat && data.vendor.lon) {
+          setLocation({ lat: data.vendor.lat, lon: data.vendor.lon });
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      setVendor(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const detectLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => setLocation({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+        () => setError("Impossible de détecter la position")
+      );
+    } else {
+      setError("Géolocalisation non supportée");
+    }
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const storedUser = localStorage.getItem("omni_user");
+      const userId = storedUser ? JSON.parse(storedUser).id : null;
+
+      const res = await fetch("/api/vendors/update", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "x-user-id": userId },
+        body: JSON.stringify({
+          vendorId: vendor.id,
+          ...form,
+          ...(location ? { lat: location.lat, lon: location.lon } : {}),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setSuccess("Boutique mise à jour");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteVendor = async () => {
+    setDeleting(true);
+    try {
+      const storedUser = localStorage.getItem("omni_user");
+      const userId = storedUser ? JSON.parse(storedUser).id : null;
+
+      const res = await fetch("/api/vendors/delete", {
+        method: "DELETE",
+        headers: { "x-user-id": userId, "x-vendor-id": vendor.id },
+      });
+      if (!res.ok) throw new Error("Erreur lors de la suppression");
+      window.location.href = "/vendor/onboarding";
+    } catch (err) {
+      setError(err.message);
+      setDeleting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="animate-spin text-emerald-400" size={32} />
+      </div>
+    );
+  }
+
+  if (!vendor) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="rounded-2xl border border-white/10 bg-zinc-900/60 p-8 text-center max-w-sm">
+          <Store size={28} className="mx-auto mb-4 text-emerald-400" />
+          <h2 className="font-space-grotesk text-xl font-bold text-white mb-2">Aucune boutique</h2>
+          <p className="font-dm-sans text-sm text-zinc-400 mb-6">Crée ta boutique pour voir les paramètres.</p>
+          <Link to="/vendor/onboarding" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-sm transition-all">
+            Créer ma boutique
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 md:p-8">
+      <div className="max-w-2xl">
+        <div className="flex items-center gap-3 mb-8">
+          <Settings size={20} className="text-emerald-400" />
+          <div>
+            <h1 className="font-space-grotesk text-xl md:text-2xl font-bold text-white">Paramètres boutique</h1>
+            <p className="font-dm-sans text-sm text-zinc-400">{vendor.name}</p>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          {/* Vendor form */}
+          <form onSubmit={handleSave} className="rounded-2xl border border-white/10 bg-zinc-900/60 p-6 space-y-5">
+            {/* Name */}
+            <div>
+              <label className="font-dm-sans block text-sm text-zinc-400 mb-2">Nom de la boutique</label>
+              <div className="rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-3 transition-all focus-within:border-emerald-500/50">
+                <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  className="w-full bg-transparent border-none outline-none text-zinc-200 text-sm placeholder:text-zinc-600 font-dm-sans" />
+              </div>
+            </div>
+
+            {/* Category */}
+            <div>
+              <label className="font-dm-sans block text-sm text-zinc-400 mb-2">Catégorie</label>
+              <div className="rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-3 transition-all focus-within:border-emerald-500/50">
+                <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}
+                  className="w-full bg-transparent border-none outline-none text-zinc-300 text-sm font-dm-sans appearance-none">
+                  <option value="Alimentation" className="bg-zinc-900">Alimentation</option>
+                  <option value="Electronique" className="bg-zinc-900">Électronique</option>
+                  <option value="Textile" className="bg-zinc-900">Textile</option>
+                  <option value="Sante" className="bg-zinc-900">Santé & Beauté</option>
+                  <option value="Materiaux" className="bg-zinc-900">Matériaux</option>
+                  <option value="Services" className="bg-zinc-900">Services</option>
+                  <option value="Autre" className="bg-zinc-900">Autre</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="font-dm-sans block text-sm text-zinc-400 mb-2">Description</label>
+              <div className="rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-3 transition-all focus-within:border-emerald-500/50">
+                <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  rows={3} className="w-full bg-transparent border-none outline-none text-zinc-200 text-sm placeholder:text-zinc-600 font-dm-sans resize-none" />
+              </div>
+            </div>
+
+            {/* Phone + Email */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="font-dm-sans block text-sm text-zinc-400 mb-2">Téléphone</label>
+                <div className="rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-3 transition-all focus-within:border-emerald-500/50">
+                  <input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                    className="w-full bg-transparent border-none outline-none text-zinc-200 text-sm placeholder:text-zinc-600 font-dm-sans" />
+                </div>
+              </div>
+              <div>
+                <label className="font-dm-sans block text-sm text-zinc-400 mb-2">Email</label>
+                <div className="rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-3 transition-all focus-within:border-emerald-500/50">
+                  <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    className="w-full bg-transparent border-none outline-none text-zinc-200 text-sm placeholder:text-zinc-600 font-dm-sans" />
+                </div>
+              </div>
+            </div>
+
+            {/* Address + Neighborhood */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="font-dm-sans block text-sm text-zinc-400 mb-2">Adresse</label>
+                <div className="rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-3 transition-all focus-within:border-emerald-500/50">
+                  <input type="text" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })}
+                    className="w-full bg-transparent border-none outline-none text-zinc-200 text-sm placeholder:text-zinc-600 font-dm-sans" />
+                </div>
+              </div>
+              <div>
+                <label className="font-dm-sans block text-sm text-zinc-400 mb-2">Quartier</label>
+                <div className="rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-3 transition-all focus-within:border-emerald-500/50">
+                  <input type="text" value={form.neighborhood} onChange={(e) => setForm({ ...form, neighborhood: e.target.value })}
+                    className="w-full bg-transparent border-none outline-none text-zinc-200 text-sm placeholder:text-zinc-600 font-dm-sans" />
+                </div>
+              </div>
+            </div>
+
+            {/* Location */}
+            <div>
+              <label className="font-dm-sans block text-sm text-zinc-400 mb-2">Localisation sur la carte</label>
+              <button type="button" onClick={detectLocation}
+                className="flex items-center gap-3 w-full rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-3 text-sm text-zinc-400 hover:text-zinc-300 hover:bg-zinc-800/70 transition-all font-dm-sans">
+                <MapPin size={16} className="text-emerald-400 shrink-0" />
+                {location ? `${location.lat.toFixed(4)}, ${location.lon.toFixed(4)}` : "Détecter ma position"}
+              </button>
+            </div>
+
+            {error && (
+              <div className="px-4 py-3 rounded-xl border border-red-500/20 bg-red-500/5">
+                <p className="font-dm-sans text-sm text-red-400">{error}</p>
+              </div>
+            )}
+            {success && (
+              <div className="px-4 py-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5">
+                <p className="font-dm-sans text-sm text-emerald-400">{success}</p>
+              </div>
+            )}
+
+            <button type="submit" disabled={saving}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-sm transition-all disabled:opacity-50">
+              {saving ? "Enregistrement..." : "Enregistrer"}
+            </button>
+          </form>
+
+          {/* Delete vendor */}
+          <div className="rounded-2xl border border-red-500/10 bg-red-500/[0.02] p-6">
+            <h2 className="font-space-grotesk text-base font-bold text-red-400 mb-2">Supprimer la boutique</h2>
+            <p className="font-dm-sans text-sm text-zinc-500 mb-4">
+              Supprime ta boutique et tous ses produits. Action irréversible.
+            </p>
+            {!showDeleteConfirm ? (
+              <button onClick={() => setShowDeleteConfirm(true)}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-500/20 hover:bg-red-500/5 text-red-400 text-sm font-dm-sans transition-all">
+                <Trash2 size={16} />
+                Supprimer ma boutique
+              </button>
+            ) : (
+              <div>
+                <p className="font-dm-sans text-sm text-red-400/80 mb-3">Es-tu sûr ? Tous les produits seront supprimés.</p>
+                <div className="flex gap-3">
+                  <button onClick={handleDeleteVendor} disabled={deleting}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-500 hover:bg-red-400 text-white font-semibold text-sm transition-all disabled:opacity-50">
+                    {deleting ? "..." : "Confirmer la suppression"}
+                  </button>
+                  <button onClick={() => setShowDeleteConfirm(false)}
+                    className="px-4 py-2.5 rounded-xl border border-zinc-700 hover:bg-zinc-800 text-zinc-400 text-sm font-dm-sans transition-all">
+                    Annuler
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

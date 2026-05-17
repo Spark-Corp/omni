@@ -38,7 +38,7 @@ function Globe3D({ phase = 0 }) {
     const texCanvas = document.createElement("canvas");
     texCanvas.width = 2048; texCanvas.height = 1024;
     const ctx = texCanvas.getContext("2d");
-    ctx.fillStyle = "#050510"; ctx.fillRect(0, 0, 2048, 1024);
+    ctx.fillStyle = "#08080f"; ctx.fillRect(0, 0, 2048, 1024);
     const continents = [
       { x: 0.5, y: 0.55, rx: 0.12, ry: 0.18, c: "#0d2a1a" },
       { x: 0.5, y: 0.55, rx: 0.10, ry: 0.16, c: "#103a22" },
@@ -132,17 +132,18 @@ function Globe3D({ phase = 0 }) {
     cityGroup.add(hlRing);
     rotGroup.add(cityGroup);
 
-    // Mock vendor pins — appear when phase >= 2, matching the 3 cards on the right
+    // Mock vendor pins — appear when phase >= 2, matching 6 continent-spanning cards
     const vendorsGroup = new THREE.Group();
     const mockVendorLocs = [
-      { lon: 1.2228, lat: 6.1319 },  // Marché de Bè, Lomé — primary (green)
-      { lon: -3.9900, lat: 5.3200 },  // Yopougon, Abidjan
-      { lon: -0.2000, lat: 5.5600 },  // Makola, Accra
-      { lon: 3.3800, lat: 6.4500 },   // Balogun, Lagos
-      { lon: 36.8200, lat: -1.2900 }, // Nairobi
+      { lon: 1.2228, lat: 6.1319 },   // Lomé, Afrique — primary (green)
+      { lon: -46.6333, lat: -23.5505 }, // São Paulo, Amériques
+      { lon: -74.0060, lat: 40.7128 },  // New York, Amériques
+      { lon: 2.3522, lat: 48.8566 },    // Paris, Europe
+      { lon: 139.6917, lat: 35.6895 },  // Tokyo, Asie
+      { lon: 151.2093, lat: -33.8688 }, // Sydney, Océanie
     ];
-    const vendorColors = [0x10b981, 0xf59e0b, 0xf59e0b, 0xf59e0b, 0xf59e0b];
-    const vendorSizes = [0.032, 0.022, 0.022, 0.022, 0.022];
+    const vendorColors = [0x10b981, 0xf59e0b, 0xf59e0b, 0xf59e0b, 0xf59e0b, 0xf59e0b];
+    const vendorSizes = [0.032, 0.022, 0.022, 0.022, 0.022, 0.022];
     const vendorDots = [];
     mockVendorLocs.forEach((v, i) => {
       const phi = (90 - v.lat) * Math.PI / 180, theta = (v.lon + 180) * Math.PI / 180;
@@ -336,14 +337,15 @@ function ScrollDemo({ onPhaseChange }) {
   const markersProgress = phase >= 2 ? Math.min(1, phaseProgress * 1.5) : 0;
   const resultProgress = phase >= 3 ? Math.min(1, phaseProgress * 2) : 0;
 
+  // DIAGNOSTIC: Log positions
   // Notify parent (nav dots)
   useEffect(() => { onPhaseChange?.(phase); }, [phase, onPhaseChange]);
 
   return (
     <section ref={sectionRef} className="relative" style={{ height: '400vh' }}>
       {/* Sticky container — pinned while its parent scrolls */}
-      <div className="sticky top-12 sm:top-14 h-[calc(100vh-48px)] sm:h-[calc(100vh-56px)] overflow-hidden">
-        <div className="w-full h-full flex items-center justify-center">
+      <div className="sticky top-0 h-screen">
+        <div className="w-full h-full flex flex-col pt-14">
         {/* Background glow + stars */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           {starPositions.map((s, i) => (
@@ -358,121 +360,143 @@ function ScrollDemo({ onPhaseChange }) {
           <div className="absolute top-1/3 left-1/4 w-[80%] h-[60%] bg-emerald-600/[0.02] rounded-full blur-[150px]" />
         </div>
 
-        <div className="relative w-full h-full max-w-7xl mx-auto px-4 sm:px-6 flex items-center">
-          {/* LEFT: Globe */}
-          <div className="w-full lg:w-1/2 h-full flex items-center justify-center">
-            <div className="relative w-full h-full min-h-0 overflow-visible">
+          <div className="relative flex-1 w-full overflow-visible"
+            style={{
+              transform: `scale(${1 - phase * 0.06}) translateY(${-phase * 3}%)`,
+              transition: 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+            }}
+          >
+            <div className="relative w-full h-full">
               <Globe3D phase={globePhase} />
-              <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-[#050510] via-[#050510]/80 to-transparent pointer-events-none" />
-            </div>
-          </div>
-
-          {/* RIGHT: Content */}
-          <div className="hidden lg:flex lg:w-1/2 flex-col justify-center items-center text-center lg:pl-8 xl:pl-12">
-            <div className="mb-6 xl:mb-8">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 mb-4 xl:mb-5">
-                <Sparkles size={12} className="text-emerald-400" />
-                <span className="text-xs xl:text-sm text-white/70">Tu cherches un produit ou service autour de toi ?</span>
-              </div>
-              <h2 className="text-4xl xl:text-6xl font-bold leading-tight">
-                <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">Omni</span>
-                <span className="text-white/90 block mt-1">Tout près de chez toi.</span>
-              </h2>
-              <p className="text-white/40 text-sm xl:text-base mt-3 max-w-md mx-auto">
-                Omni est là pour te montrer les vendeurs et prestataires autour de toi.
-              </p>
             </div>
 
-            <div className="space-y-6">
-              {/* Phase 1: Search bar */}
-              <div
-                className="transition-all duration-500"
-                style={{
-                  opacity: searchOpacity,
-                  transform: `translateY(${(1 - searchOpacity) * 20}px)`,
-                }}
-              >
-                <div className="flex items-center bg-black/50 backdrop-blur-xl rounded-2xl border border-white/10 px-4 py-3.5 shadow-2xl">
-                  <Search size={16} className="text-emerald-400 mr-3 shrink-0" />
-                  <span className="flex-1 text-white/80 text-sm font-light tracking-wide">
-                    {typed}
-                    <span className={`animate-pulse text-emerald-400 ${typedLen >= searchText.length ? 'opacity-0' : ''}`}>|</span>
-                  </span>
-                  <Mic size={14} className="text-white/30 shrink-0" />
+          {/* Content — inside flex-1, moves with globe */}
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="w-full">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 w-full">
+              <div className="lg:pl-8 xl:pl-12 w-full text-center lg:text-left pt-4 sm:pt-8 xl:pt-16">
+                {/* Badge + heading — collapses at phase 2 */}
+                <div className="transition-all duration-700 overflow-hidden"
+                  style={{
+                    maxHeight: phase < 2 ? '250px' : '0px',
+                    opacity: phase < 2 ? 1 : Math.max(0, 1 - (phase - 2) * 1.5),
+                    marginBottom: phase < 2 ? '20px' : '0px',
+                  }}
+                >
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.03] border border-white/[0.06] mb-4">
+                    <Sparkles size={12} className="text-emerald-400" />
+                    <span className="text-xs xl:text-sm text-white/70">Les commerces de ta rue, sur une carte</span>
+                  </div>
+                  <h2 className="font-space-grotesk text-4xl xl:text-6xl font-bold tracking-tight leading-tight">
+                    <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">Omni</span>
+                    <span className="text-white/80 block mt-1">Trouve tout ce qui existe autour de toi.</span>
+                  </h2>
+                  <p className="font-dm-sans text-white/50 text-sm xl:text-base mt-3 max-w-md mx-auto lg:mx-0">
+                    Marchés, artisans, services. Partout où tu vas, en un clic.
+                  </p>
                 </div>
-              </div>
 
-              {/* Phase 2: Markers */}
-              <div
-                className="transition-all duration-500"
-                style={{
-                  opacity: markersProgress,
-                  transform: `translateY(${(1 - markersProgress) * 20}px)`,
-                }}
-              >
-                <div className="space-y-3">
-                  {[
-                    { name: "Marché de Bè · Lomé", product: "Patates · 500 FCFA/kg", dist: "120m", delay: 0 },
-                    { name: "Yopougon · Abidjan", product: "Patates · 350 FCFA/kg", dist: "2 km", delay: 0.2 },
-                    { name: "Makola · Accra", product: "Patates · 450 FCFA/kg", dist: "5 km", delay: 0.4 },
-                    { name: "Balogun · Lagos", product: "Patates · 400 FCFA/kg", dist: "8 km", delay: 0.6 },
-                    { name: "Nairobi Centre", product: "Patates · 550 FCFA/kg", dist: "50 km", delay: 0.8 },
-                  ].map((m, i) => {
-                    const cardT = Math.max(0, Math.min(1, (markersProgress - m.delay) / 0.2));
-                    return (
-                    <div key={i}
-                      className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/5"
+                <div className="max-w-md mx-auto lg:mx-0">
+                  {/* Phase 1: Search bar — collapses when inactive */}
+                  <div className="transition-all duration-500 overflow-hidden"
+                    style={{ maxHeight: searchOpacity > 0 ? '80px' : '0px' }}
+                  >
+                    <div className="transition-all duration-500 pointer-events-auto pt-4"
                       style={{
-                        opacity: cardT,
-                        transform: `scale(${0.5 + cardT * 0.5}) translateY(${(1 - cardT) * 30}px)`,
-                        transition: 'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                        opacity: searchOpacity,
+                        transform: `translateY(${(1 - searchOpacity) * 20}px)`,
                       }}
                     >
-                      <div className={`w-8 h-8 rounded-full border-2 border-white/70 flex items-center justify-center ${i === 0 ? 'bg-emerald-500' : 'bg-emerald-500/70'}`}>
-                        <div className="w-2.5 h-2.5 rounded-full bg-white" />
+                      <div className="flex items-center bg-black/10 backdrop-blur-lg rounded-2xl border border-white/[0.04] px-4 py-3">
+                        <Search size={16} className="text-emerald-400 mr-3 shrink-0" />
+                        <span className="flex-1 text-white/80 text-sm font-light tracking-wide font-dm-sans">
+                          {typed}
+                          <span className={`animate-pulse text-emerald-400 ${typedLen >= searchText.length ? 'opacity-0' : ''}`}>|</span>
+                        </span>
+                        <Mic size={14} className="text-white/30 shrink-0" />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-white/90">{m.name}</p>
-                        <p className="text-xs text-white/40">{m.product}</p>
-                      </div>
-                      <span className="text-xs text-white/30 shrink-0">{m.dist}</span>
                     </div>
-                    );
-                  })}
-                </div>
-              </div>
+                  </div>
 
-              {/* Phase 3: Result */}
-              <div
-                className="transition-all duration-500"
-                style={{
-                  opacity: resultProgress,
-                  transform: `translateY(${(1 - resultProgress) * 20}px)`,
-                }}
-              >
-                <div className="p-5 rounded-xl bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/20">
-                  <p className="text-base font-medium text-white/90 mb-3">
-                    <span className="text-emerald-400 font-bold">4 vendeurs</span> trouvés
-                  </p>
-                  <p className="text-sm text-white/40 mb-4">Patates disponibles autour de toi. Prix, distance, disponibilité.</p>
-                  <a href="/map"
-                    className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black text-sm font-semibold transition-all"
+                  {/* Phase 2: Markers — collapses when inactive */}
+                  <div className="transition-all duration-500 overflow-hidden"
+                    style={{ maxHeight: markersProgress > 0 ? '400px' : '0px' }}
                   >
-                    Voir sur la carte
-                    <ArrowRight size={16} />
-                  </a>
+                    <div className="space-y-2 transition-all duration-500 pointer-events-auto pt-4"
+                      style={{
+                        opacity: markersProgress,
+                        transform: `translateY(${(1 - markersProgress) * 20}px)`,
+                      }}
+                    >
+                      {[
+                        { name: "Marché de Bè · Lomé", product: "Patates · 500 FCFA/kg", dist: "120m", continent: "Afrique", delay: 0 },
+                        { name: "Mercado da Lapa · São Paulo", product: "Patates · R$ 5/kg", dist: "6 000 km", continent: "Amériques", delay: 0.15 },
+                        { name: "Chelsea Market · New York", product: "Patates · $3/kg", dist: "8 000 km", continent: "Amériques", delay: 0.3 },
+                        { name: "Marché Bastille · Paris", product: "Patates · €2/kg", dist: "5 000 km", continent: "Europe", delay: 0.45 },
+                        { name: "Tsukiji · Tokyo", product: "Patates · ¥400/kg", dist: "14 000 km", continent: "Asie", delay: 0.6 },
+                        { name: "Paddy's · Sydney", product: "Patates · A$4/kg", dist: "16 000 km", continent: "Océanie", delay: 0.75 },
+                      ].map((m, i) => {
+                        const cardT = Math.max(0, Math.min(1, (markersProgress - m.delay) / 0.2));
+                        return (
+                        <div key={i}
+                          className="flex items-center gap-2"
+                          style={{
+                            opacity: cardT,
+                            transform: `translateY(${(1 - cardT) * 20}px)`,
+                            transition: 'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                          }}
+                        >
+                          <div className={`w-2 h-2 rounded-full shrink-0 ${i === 0 ? 'bg-emerald-400' : 'bg-amber-400/70'}`} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-white/80 font-dm-sans">{m.name}</p>
+                            <p className="text-xs text-white/40 font-dm-sans">{m.product}</p>
+                          </div>
+                          <span className="text-xs text-white/30 shrink-0">{m.dist}</span>
+                        </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Phase 3: Result — collapses when inactive */}
+                  <div className="transition-all duration-500 overflow-hidden"
+                    style={{ maxHeight: resultProgress > 0 ? '180px' : '0px' }}
+                  >
+                    <div className="transition-all duration-500 pointer-events-auto pt-4"
+                      style={{
+                        opacity: resultProgress,
+                        transform: `translateY(${(1 - resultProgress) * 20}px)`,
+                      }}
+                    >
+                      <p className="font-space-grotesk text-base font-medium text-white/80 mb-1">
+                        <span className="text-emerald-400 font-bold">6 vendeurs</span> trouvés
+                      </p>
+                      <p className="font-dm-sans text-sm text-white/40 mb-2">Patates, légumes, produits frais — autour de toi.</p>
+                      <a href="/map"
+                        className="inline-flex items-center gap-1.5 text-emerald-400 hover:text-emerald-300 text-sm font-medium transition-colors font-dm-sans"
+                      >
+                        Voir sur la carte
+                        <ArrowRight size={14} />
+                      </a>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
+            </div>
           </div>
+        </div>
+
+        {/* Gradient overlay — inside flex-1, fades globe into dark bg */}
+        <div className="absolute inset-x-0 bottom-0 h-1/4 bg-gradient-to-t from-[#08080f] via-[#08080f]/80 to-transparent pointer-events-none" />
 
           {/* Mobile overlay */}
-          <div className="lg:hidden absolute bottom-20 left-4 right-4 z-10 pointer-events-none">
+          <div className="lg:hidden absolute bottom-4 left-4 right-4 z-10 pointer-events-none">
             <div className="text-center transition-all duration-500"
               style={{ opacity: 1 - Math.min(1, phase / 1.5) }}
             >
-              <p className="text-white/90 text-lg font-semibold">Omni. Tout près de chez toi.</p>
-              <p className="text-white/40 text-xs mt-2">Scrolle pour voir comment ça marche</p>
+              <p className="text-white/90 text-lg font-semibold font-space-grotesk">Trouve tout. Autour de toi.</p>
+              <p className="font-dm-sans text-white/40 text-xs mt-2">Scrolle pour découvrir</p>
             </div>
           </div>
         </div>
@@ -480,10 +504,9 @@ function ScrollDemo({ onPhaseChange }) {
         {/* Scroll hint */}
         {phase < 3 && (
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10">
-            <span className="text-[10px] text-white/20 animate-bounce">↓ Scrolle</span>
+            <span className="font-dm-sans text-[10px] text-white/[0.15] animate-bounce">↓ Scrolle</span>
           </div>
         )}
-      </div>
       </div>
     </section>
   );
@@ -496,19 +519,36 @@ export default function LandingPage() {
   const handleExploreClick = (e) => { if (!user) { e.preventDefault(); setShowAuthModal(true); } };
 
   return (
-    <div className="min-h-screen bg-[#050510] text-white">
+    <div className="min-h-screen bg-[#08080f] text-white">
       {/* NAV — sticky: starts as site head, becomes overlay on scroll */}
-      <nav className="sticky top-0 z-50 h-12 sm:h-14 bg-[#050510] border-b border-white/5">
+      <nav className="sticky top-0 z-50 h-14">
+        {/* Background layer — fades out as scroll progresses */}
+        <div className="absolute inset-0 transition-all duration-700 ease-out"
+          style={{
+            opacity: 1 - Math.min(1, demoPhase / 3),
+            backgroundColor: '#08080f',
+          }}
+        />
+        <div className="absolute inset-x-0 bottom-0 h-[1px] transition-all duration-700 ease-out"
+          style={{
+            opacity: 1 - Math.min(1, demoPhase / 2),
+            backgroundColor: 'rgba(255,255,255,0.04)',
+          }}
+        />
+        {/* Content layer — fades slightly into overlay */}
+        <div className="relative h-full transition-all duration-700 ease-out"
+          style={{ opacity: 1 - Math.min(1, demoPhase / 3) * 0.35 }}
+        >
         <div className="max-w-7xl mx-auto h-full px-3 sm:px-6 flex items-center justify-between gap-2">
           <a href="/" className="flex items-center gap-2 shrink-0">
             <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
               <Globe className="text-white" size={14} />
             </div>
-            <span className="text-sm sm:text-base font-semibold tracking-tight">Omni</span>
+            <span className="text-sm sm:text-base font-semibold tracking-tight font-space-grotesk">Omni</span>
           </a>
           <div className="hidden sm:flex items-center gap-6 text-xs sm:text-sm text-white/50">
-            <a href="/map" className="hover:text-white transition-colors">Explorer</a>
-            <a href="/vendor/onboarding" className="hover:text-white transition-colors">Je suis vendeur</a>
+            <a href="/map" className="hover:text-white/80 transition-colors">Explorer</a>
+            <a href="/vendor/onboarding" className="hover:text-white/80 transition-colors">Je suis vendeur</a>
           </div>
           {/* Phase dots — in nav, not floating at bottom */}
           <div className="hidden sm:flex items-center gap-1.5 mr-2">
@@ -531,6 +571,7 @@ export default function LandingPage() {
               </>
             )}
           </div>
+          </div>
         </div>
       </nav>
 
@@ -538,67 +579,46 @@ export default function LandingPage() {
       <ScrollDemo onPhaseChange={setDemoPhase} />
 
       {/* PROBLEM */}
-      <section className="py-28 px-6">
+      <section className="py-28 md:py-32 px-6 border-y border-white/[0.03]">
         <div className="max-w-4xl mx-auto text-center">
-          <span className="text-emerald-400 text-sm uppercase tracking-[0.2em] font-medium">Le vrai problème</span>
-          <h2 className="text-3xl md:text-5xl font-bold mt-6 mb-8 leading-tight">
-            Autour de toi, des gens vendent des choses.<br />
-            Mais tu ne sais pas qu'ils existent.
+          <span className="text-emerald-400/80 text-[10px] sm:text-xs uppercase tracking-[0.25em] font-medium font-space-grotesk">Le vrai problème</span>
+          <h2 className="font-space-grotesk text-3xl md:text-5xl font-bold tracking-tight mt-6 mb-8 leading-tight">
+            Ton quartier a des commerces que tu ne vois pas.
           </h2>
-          <p className="text-white/50 text-lg max-w-2xl mx-auto leading-relaxed">
-            Pas de boutique en ligne. Pas d'enseigne. Pas de pub.
-            Pourtant, ils sont là, où que tu ailles.
-            <span className="text-emerald-400/80 block mt-2 font-medium">Omni est là pour te montrer ce qui existe autour de toi.</span>
+          <p className="font-dm-sans text-white/50 text-base md:text-lg max-w-2xl mx-auto leading-relaxed">
+            Marché de Bè, Mercado da Lapa, Chelsea Market… Dans chaque rue, des gens vendent.
+            Sans vitrine, sans pub, sans site.
+            <span className="text-emerald-400/80 block mt-2 font-medium">Omni les rend visibles. En 3 secondes.</span>
           </p>
         </div>
       </section>
 
-      {/* MARKET */}
-      <section className="py-24 px-6 bg-white/[0.01] border-y border-white/5 overflow-x-hidden">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid md:grid-cols-3 gap-8 text-center">
-            <div className="p-10">
-              <p className="text-5xl md:text-6xl font-bold bg-gradient-to-br from-emerald-400 to-teal-300 bg-clip-text text-transparent">$800 Mrd</p>
-              <p className="text-white/50 mt-3">Commerce informel en Afrique</p>
-            </div>
-            <div className="p-10">
-              <p className="text-5xl md:text-6xl font-bold bg-gradient-to-br from-emerald-400 to-teal-300 bg-clip-text text-transparent">100M+</p>
-              <p className="text-white/50 mt-3">Vendeurs et prestataires invisibles</p>
-            </div>
-            <div className="p-10">
-              <p className="text-5xl md:text-6xl font-bold bg-gradient-to-br from-emerald-400 to-teal-300 bg-clip-text text-transparent">30s</p>
-              <p className="text-white/50 mt-3">Pour trouver un produit et contacter le vendeur</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* TWO SIDES */}
-      <section className="py-28 px-6">
+      <section className="py-28 md:py-32 px-6">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <span className="text-emerald-400 text-sm uppercase tracking-[0.2em] font-medium">Pour tout le monde</span>
-            <h2 className="text-3xl md:text-5xl font-bold mt-6">Un outil, deux façons de l'utiliser</h2>
+            <span className="text-emerald-400/80 text-[10px] sm:text-xs uppercase tracking-[0.25em] font-medium font-space-grotesk">Pour tout le monde</span>
+            <h2 className="font-space-grotesk text-3xl md:text-5xl font-bold tracking-tight mt-6">Un outil. Deux façons de t'en servir.</h2>
           </div>
           <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-            <div className="p-8 md:p-10 rounded-3xl bg-gradient-to-br from-emerald-500/5 to-transparent border border-emerald-500/10">
-              <ShoppingBag size={28} className="text-emerald-400 mb-4" />
-              <h3 className="text-2xl font-bold mb-4">Je cherche quelque chose</h3>
-              <ul className="space-y-3 text-white/50 text-sm">
-                <li className="flex items-start gap-3"><span className="text-emerald-400 mt-0.5">→</span> Je tape ce que je veux, on me dit qui l'a</li>
-                <li className="flex items-start gap-3"><span className="text-emerald-400 mt-0.5">→</span> Je vois le prix et la distance</li>
-                <li className="flex items-start gap-3"><span className="text-emerald-400 mt-0.5">→</span> Je vérifie la disponibilité en 1 tap</li>
-                <li className="flex items-start gap-3"><span className="text-emerald-400 mt-0.5">→</span> La carte me guide avec la voix</li>
+            <div className="p-8 md:p-10 rounded-3xl bg-gradient-to-br from-emerald-500/[0.04] to-transparent border border-emerald-500/10">
+              <ShoppingBag size={24} className="text-emerald-400 mb-4" />
+              <h3 className="font-space-grotesk text-xl md:text-2xl font-bold mb-4">Je cherche quelque chose</h3>
+              <ul className="font-dm-sans space-y-3 text-white/50 text-sm leading-relaxed">
+                <li className="flex items-start gap-3"><span className="text-emerald-400 mt-0.5 font-medium">→</span> Tape ce que tu veux, on te dit qui l'a autour de toi</li>
+                <li className="flex items-start gap-3"><span className="text-emerald-400 mt-0.5 font-medium">→</span> Prix, distance, dispo en un coup d'œil</li>
+                <li className="flex items-start gap-3"><span className="text-emerald-400 mt-0.5 font-medium">→</span> Contacte le vendeur en direct</li>
+                <li className="flex items-start gap-3"><span className="text-emerald-400 mt-0.5 font-medium">→</span> La carte te guide jusqu'à lui</li>
               </ul>
             </div>
-            <div className="p-8 md:p-10 rounded-3xl bg-gradient-to-br from-blue-500/5 to-transparent border border-blue-500/10">
-              <Store size={28} className="text-blue-400 mb-4" />
-              <h3 className="text-2xl font-bold mb-4">Je vends quelque chose</h3>
-              <ul className="space-y-3 text-white/50 text-sm">
-                <li className="flex items-start gap-3"><span className="text-blue-400 mt-0.5">→</span> On fait connaître ton commerce à ceux qui cherchent</li>
-                <li className="flex items-start gap-3"><span className="text-blue-400 mt-0.5">→</span> Zéro contenu à créer, on s'occupe de tout</li>
-                <li className="flex items-start gap-3"><span className="text-blue-400 mt-0.5">→</span> Reçois les demandes des clients en direct</li>
-                <li className="flex items-start gap-3"><span className="text-blue-400 mt-0.5">→</span> Réponds OUI ou NON, c'est tout</li>
+            <div className="p-8 md:p-10 rounded-3xl bg-gradient-to-br from-blue-500/[0.04] to-transparent border border-blue-500/10">
+              <Store size={24} className="text-blue-400 mb-4" />
+              <h3 className="font-space-grotesk text-xl md:text-2xl font-bold mb-4">Je vends quelque chose</h3>
+              <ul className="font-dm-sans space-y-3 text-white/50 text-sm leading-relaxed">
+                <li className="flex items-start gap-3"><span className="text-blue-400 mt-0.5 font-medium">→</span> Sois visible pour ceux qui cherchent près de chez toi</li>
+                <li className="flex items-start gap-3"><span className="text-blue-400 mt-0.5 font-medium">→</span> Zéro pub, zéro site, zéro effort</li>
+                <li className="flex items-start gap-3"><span className="text-blue-400 mt-0.5 font-medium">→</span> Reçois les demandes des clients en direct</li>
+                <li className="flex items-start gap-3"><span className="text-blue-400 mt-0.5 font-medium">→</span> Réponds OUI ou NON, c'est tout</li>
               </ul>
             </div>
           </div>
@@ -606,21 +626,21 @@ export default function LandingPage() {
       </section>
 
       {/* CTA */}
-      <section className="py-28 px-6">
+      <section className="py-28 md:py-32 px-6">
         <div className="max-w-4xl mx-auto">
           <div className="relative p-12 md:p-16 rounded-[2.5rem] bg-gradient-to-br from-emerald-500/10 via-white/5 to-blue-500/10 border border-white/10 overflow-hidden text-center">
             <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 to-transparent opacity-50 pointer-events-none" />
             <div className="relative z-10">
-              <h2 className="text-3xl md:text-5xl font-bold mb-6">Prêt à découvrir ce qui existe autour de toi ?</h2>
-              <p className="text-white/50 mb-10 max-w-lg mx-auto">Omni est là pour te montrer ce qui existe autour de toi.</p>
+              <h2 className="font-space-grotesk text-3xl md:text-5xl font-bold tracking-tight mb-6">Trouve ce que tu cherches. Là, autour de toi.</h2>
+              <p className="font-dm-sans text-white/50 text-base mb-10 max-w-lg mx-auto">Des milliers de produits et services. En 30 secondes.</p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <a href={user ? "/map" : "/auth"}
                   className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-lg transition-all">
-                  {user ? "Ouvrir la carte" : "Créer un compte"}
+                  Trouver un produit
                   <ChevronRight size={20} />
                 </a>
                 <a href="/vendor/onboarding"
-                  className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold text-lg transition-all">
+                  className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-white/[0.04] hover:bg-white/10 border border-white/10 text-white font-semibold text-lg transition-all">
                   Devenir vendeur
                 </a>
               </div>
@@ -630,19 +650,19 @@ export default function LandingPage() {
       </section>
 
       {/* FOOTER */}
-      <footer className="py-12 px-6 border-t border-white/5">
+      <footer className="py-10 md:py-12 px-6 border-t border-white/[0.03]">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
               <Globe className="text-white" size={16} />
             </div>
-            <span className="font-semibold">Omni</span>
+            <span className="font-semibold font-space-grotesk">Omni</span>
           </div>
-          <p className="text-sm text-white/30">© 2026 Omni. On te montre les commerces près de chez toi.</p>
-          <div className="flex items-center gap-6 text-sm text-white/40">
-            <a href="#" className="hover:text-white transition-colors">Confidentialité</a>
-            <a href="#" className="hover:text-white transition-colors">Conditions</a>
-            <a href="#" className="hover:text-white transition-colors">Contact</a>
+          <p className="font-dm-sans text-xs text-white/30">© 2026 Omni. Les commerces autour de toi, où que tu sois.</p>
+          <div className="flex items-center gap-6 text-sm text-white/35">
+            <a href="#" className="hover:text-white/60 transition-colors">Confidentialité</a>
+            <a href="#" className="hover:text-white/60 transition-colors">Conditions</a>
+            <a href="#" className="hover:text-white/60 transition-colors">Contact</a>
           </div>
         </div>
       </footer>
@@ -656,16 +676,16 @@ export default function LandingPage() {
           >
             <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }} onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-md p-8 rounded-3xl bg-[#0a0a1a] border border-white/10 text-center"
+              className="w-full max-w-md p-8 rounded-3xl bg-[#0f0f1a] border border-white/[0.06] text-center"
             >
               <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 flex items-center justify-center mx-auto mb-6">
                 <Shield size={32} className="text-emerald-400" />
               </div>
-              <h3 className="text-2xl font-bold mb-3">Connexion requise</h3>
-              <p className="text-white/50 mb-8">Crée un compte pour explorer la carte.</p>
+              <h3 className="font-space-grotesk text-2xl font-bold mb-3">Connexion requise</h3>
+              <p className="font-dm-sans text-white/50 mb-8">Crée un compte pour explorer la carte.</p>
               <div className="flex flex-col gap-3">
                 <a href="/auth" className="w-full py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black font-semibold transition-all">Se connecter</a>
-                <a href="/auth" className="w-full py-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold transition-all">Créer un compte</a>
+                <a href="/auth" className="w-full py-4 rounded-2xl bg-white/[0.04] hover:bg-white/10 border border-white/10 text-white font-semibold transition-all">Créer un compte</a>
               </div>
               <button onClick={() => setShowAuthModal(false)} className="mt-4 text-sm text-white/40 hover:text-white/60 transition-colors">Annuler</button>
             </motion.div>

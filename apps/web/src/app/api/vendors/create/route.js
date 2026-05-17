@@ -1,15 +1,11 @@
 import sql from "@/app/api/utils/sql";
-import { auth } from "@/auth";
 
 export async function POST(request) {
   try {
-    const session = await auth();
-    if (!session || !session.user?.id) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const body = await request.json();
-    const { name, category, description, lat, lon, products } = body;
+    const { name, category, description, lat, lon, products, userId, phone } = body;
+
+    console.log('[Create Vendor] Request:', { name, category, lat, lon, userId });
 
     if (!name || !category || !lat || !lon) {
       return Response.json(
@@ -18,70 +14,71 @@ export async function POST(request) {
       );
     }
 
-    const authUserId = session.user.id;
+    if (!userId) {
+      console.log('[Create Vendor] No userId provided');
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-    // Update auth_users role to seller
-    await sql`UPDATE auth_users SET role = 'seller' WHERE id = ${authUserId}`;
-
-    // Get or create user in users table
-    let userResult = await sql`
-      SELECT id FROM users WHERE id = ${authUserId}::uuid
+    // Create user in users table if not exists (Neon Auth user)
+    const existingUser = await sql`
+      SELECT id FROM users WHERE id = ${userId}::uuid
     `;
-
-    if (userResult.length === 0) {
-      // Create user in users table (matching auth_users id as UUID)
-      userResult = await sql`
-        INSERT INTO users (id, phone, role, lang_preference)
-        VALUES (
-          ${authUserId}::uuid,
-          '',
-          'seller',
-          'fr'
-        )
-        RETURNING id
+    
+    if (existingUser.length === 0) {
+      console.log('[Create Vendor] Creating user in users table...');
+      await sql`
+        INSERT INTO users (id, name, email, phone, created_at)
+        VALUES (${userId}::uuid, 'User', 'user@example.com', ${phone || '+22800000000'}, CURRENT_TIMESTAMP)
       `;
     }
 
-    const userId = userResult[0].id;
-
-    // Create vendor
-    const vendorResult = await sql`
-      INSERT INTO vendors (user_id, name, category, description, location, is_online)
-      VALUES (
-        ${userId},
-        ${name},
-        ${category},
-        ${description || null},
-        ST_SetSRID(ST_MakePoint(${lon}, ${lat}), 4326),
-        true
-      )
-      RETURNING id, name, category, description, is_online, created_at
+    // Check if user already has a vendor
+    const existingVendor = await sql`
+      SELECT id FROM vendors WHERE user_id = ${userId}::uuid
     `;
+    
+    if (existingVendor.length > 0) {
+      console.log('[Create Vendor] User already has vendor');
+      return Response.json({ error: "User already has a vendor" }, { status: 400 });
+    }
 
-    const vendor = vendorResult[0];
+    // Insert vendor
+    const query = `
+      INSERT INTO vendors (name, category, description, location, user_id, is_online, phone, created_at, updated_at)
+      VALUES ($1, $2, $3, ST_SetSRID(ST_MakePoint($4, $5), 4326), $6, true, $7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      RETURNING id
+    `;
+    console.log('[Create Vendor] Inserting vendor...');
+    
+    const insertResult = await sql(query, [name, category, description || null, lon, lat, userId, phone || '+22800000000']);
+    console.log('[Create Vendor] Insert result:', insertResult);
 
-    // Create products if provided
+    if (!insertResult.length) {
+      return Response.json({ error: "Failed to create vendor" }, { status: 500 });
+    }
+
+    const vendorId = insertResult[0].id;
+
+    // Insert products if provided
     if (products && products.length > 0) {
       for (const product of products) {
         if (product.name && product.price) {
-          await sql`
-            INSERT INTO products (vendor_id, name, category, price, unit, is_available)
-            VALUES (
-              ${vendor.id},
-              ${product.name},
-              ${product.category || "Général"},
-              ${parseFloat(product.price)},
-              ${product.unit || "unité"},
-              true
-            )
-          `;
+          await sql(
+            `INSERT INTO products (vendor_id, name, price, unit, is_available)
+             VALUES ($1, $2, $3, $4, true)`,
+            [vendorId, product.name, product.price, product.unit || 'pièce']
+          );
         }
       }
     }
 
-    return Response.json({ vendor, success: true });
-  } catch (err) {
-    console.error("POST /api/vendors/create error:", err);
-    return Response.json({ error: "Internal Server Error" }, { status: 500 });
+    console.log('[Create Vendor] Success!');
+    return Response.json({ success: true, vendorId });
+  } catch (error) {
+    console.error("[Create Vendor] Error:", error);
+    return Response.json({ 
+      error: "Failed to create vendor", 
+      details: error.message 
+    }, { status: 500 });
   }
 }

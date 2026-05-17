@@ -1,0 +1,13 @@
+{
+  "buildCommand": "react-router build",
+  "outputDirectory": "build/client",
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 30
+    }
+  },
+  "routes": [
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/api/index" }
+  ]
+}

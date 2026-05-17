@@ -1,12 +1,14 @@
 import sql from "@/app/api/utils/sql";
-import { auth } from "@/auth";
+import { authClient } from "@/lib/auth";
 
 export async function GET(request) {
   try {
-    const session = await auth();
-    if (!session || !session.user?.id) {
+    const session = await authClient.getSession();
+    if (!session?.data?.user?.id) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const userId = session.data.user.id;
 
     // Get all availability requests for this vendor
     const requests = await sql`
@@ -23,8 +25,7 @@ export async function GET(request) {
       FROM availability_requests ar
       JOIN products p ON p.id = ar.product_id
       JOIN vendors v ON v.id = ar.vendor_id
-      JOIN users u ON u.id = v.user_id
-      WHERE u.id = ${session.user.id}::uuid
+      WHERE v.user_id = ${userId}
       ORDER BY ar.created_at DESC
       LIMIT 100
     `;

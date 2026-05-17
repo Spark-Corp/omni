@@ -1,0 +1,47 @@
+const RATE_LIMIT_WINDOW = 15 * 60 * 1000;
+const MAX_ATTEMPTS = 5;
+const rateLimitStore = new Map();
+
+function getClientIp(request) {
+  const forwarded = request.headers.get("x-forwarded-for");
+  if (forwarded) return forwarded.split(",")[0].trim();
+  const realIp = request.headers.get("x-real-ip");
+  if (realIp) return realIp;
+  return request.headers.get("x-client-ip") || "unknown";
+}
+
+function getRateLimitKey(ip, route) {
+  return ip + ":" + route;
+}
+
+export function checkRateLimit(request, route) {
+  const ip = getClientIp(request);
+  const key = getRateLimitKey(ip, route);
+  const now = Date.now();
+
+  let record = rateLimitStore.get(key);
+
+  if (!record || now > record.resetTime) {
+    record = { count: 1, resetTime: now + RATE_LIMIT_WINDOW };
+    rateLimitStore.set(key, record);
+    return { allowed: true, remaining: MAX_ATTEMPTS - 1, resetIn: Math.ceil(RATE_LIMIT_WINDOW / 1000) };
+  }
+
+  record.count++;
+
+  if (record.count > MAX_ATTEMPTS) {
+    return { allowed: false, remaining: 0, resetIn: Math.ceil((record.resetTime - now) / 1000) };
+  }
+
+  return { allowed: true, remaining: MAX_ATTEMPTS - record.count, resetIn: Math.ceil((record.resetTime - now) / 1000) };
+}
+
+export function recordFailedAttempt(request, route) {
+  const ip = getClientIp(request);
+  const key = getRateLimitKey(ip, route);
+  rateLimitStore.delete(key);
+}
+
+export function clearRateLimitStore() {
+  rateLimitStore.clear();
+}

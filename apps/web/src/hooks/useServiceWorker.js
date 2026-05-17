@@ -21,7 +21,7 @@ export function useServiceWorker() {
                 if (newWorker.state === 'activated') {
                   console.log('[SW] New version activated');
                   // Show update notification (optional)
-                  if (confirm('Une nouvelle version est disponible. Recharger ?')) {
+                  // Auto-reload on update {
                     window.location.reload();
                   }
                 }
