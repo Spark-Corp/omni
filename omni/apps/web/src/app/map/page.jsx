@@ -7,6 +7,7 @@ import ImageSearch from "@/components/ImageSearch";
 import ChatModal from "@/components/ChatModal";
 import NotificationBell from "@/components/NotificationBell";
 import FavoriteButton from "@/components/FavoriteButton";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 export default function MapPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -37,6 +38,7 @@ export default function MapPage() {
   const [routeSteps, setRouteSteps] = useState(null);
   const [showRoute, setShowRoute] = useState(false);
   const [announcedSteps, setAnnouncedSteps] = useState(new Set());
+  const isMobile = useIsMobile();
   const watchIdRef = useRef(null);
 
   // Auth check
@@ -766,16 +768,16 @@ export default function MapPage() {
       )}
 
       {/* Back Button - Minimal */}
-      <a href="/" className="absolute top-6 left-6 z-20">
+      <a href="/" className={`absolute ${isMobile ? "top-4 left-4" : "top-6 left-6"} z-20`}>
         <button className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center hover:bg-black/60 transition-all duration-300 group">
           <ArrowLeft size={18} className="text-white/70 group-hover:text-white transition-colors" />
         </button>
       </a>
 
       {/* Search Section */}
-      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20 w-full max-w-lg px-4">
+      <div className={`absolute ${isMobile ? "top-16" : "top-6"} left-1/2 -translate-x-1/2 z-20 w-full max-w-lg px-4`}>
         <div className="text-center mb-3">
-          <p className="text-white/80 text-sm font-light tracking-wide">
+          <p className={`text-white/80 text-sm font-light tracking-wide ${isMobile ? "hidden" : ""}`}>
              <span className="text-emerald-400 font-medium">Omni</span> — Partout avec toi
           </p>
         </div>
@@ -839,7 +841,7 @@ export default function MapPage() {
       </div>
 
       {/* Header Right */}
-      <div className="absolute top-6 right-6 z-20 flex items-center gap-3">
+      <div className={`absolute ${isMobile ? "top-4 right-4" : "top-6 right-6"} z-20 flex items-center gap-2`}>
         {/* Mode badge */}
         <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
@@ -878,7 +880,7 @@ export default function MapPage() {
             });
           }
         }}
-        className="absolute bottom-8 right-6 z-20 w-12 h-12 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center hover:bg-black/60 transition-all duration-300 group"
+        className={`absolute ${isMobile ? "bottom-4 right-4" : "bottom-8 right-6"} z-20 w-12 h-12 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center hover:bg-black/60 transition-all duration-300 group`}
       >
         <Navigation size={20} className="text-white/70 group-hover:text-white transition-colors" />
       </button>
