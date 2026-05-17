@@ -32,9 +32,11 @@ web-build/
 .env.production.local
 .env.staging
 
-# IDE
+# IDE / Local agent config
 .vscode/
 .idea/
+.opencode/
+.superpowers/
 *.swp
 *.swo
 
@@ -112,3 +114,13 @@ validate_temp.js
 
 # Generated route types
 .react-router/types/
+
+# Sensitive docs (keep locally, not on GitHub)
+/AGENTS.md
+/OMNI_PRD_v1.0.*
+/OMNI_Pitch_Deck_DjantaTech.*
+/PITCH_DECK_DJANTATECH.md
+omni/OMNI_PRD_v1.0.*
+omni/OMNI_Pitch_Deck_DjantaTech.*
+omni/PITCH_DECK_DJANTATECH.md
+**/PRD_AUTH_CONFIG.md
