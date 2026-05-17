@@ -14,13 +14,14 @@ import {
   Menu,
   X,
 } from "lucide-react";
-import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useIsMobile } from "@/hooks/useIsMobile";
+import { useIsTablet } from "@/hooks/useIsTablet";
 
 export default function VendorLayout({ children }) {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const isMobile = useMediaQuery("(max-width: 767px)");
-  const isTablet = useMediaQuery("(min-width: 768px) and (max-width: 1023px)");
+  const isMobile = useIsMobile();
+  const isTablet = useIsTablet();
 
   const navItems = [
     { path: "/vendor/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
