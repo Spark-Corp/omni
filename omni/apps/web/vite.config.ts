@@ -19,7 +19,6 @@ export default defineConfig({
   },
   ssr: {
     target: 'node',
-    noExternal: ['hono'],
   },
   // Keep them available via import.meta.env.NEXT_PUBLIC_*
   envPrefix: 'NEXT_PUBLIC_',
