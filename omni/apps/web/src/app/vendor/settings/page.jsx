@@ -188,7 +188,7 @@ export default function VendorSettingsPage() {
             </div>
 
             {/* Phone + Email */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="font-dm-sans block text-sm text-zinc-400 mb-2">Téléphone</label>
                 <div className="rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-3 transition-all focus-within:border-emerald-500/50">
@@ -206,7 +206,7 @@ export default function VendorSettingsPage() {
             </div>
 
             {/* Address + Neighborhood */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="font-dm-sans block text-sm text-zinc-400 mb-2">Adresse</label>
                 <div className="rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-3 transition-all focus-within:border-emerald-500/50">

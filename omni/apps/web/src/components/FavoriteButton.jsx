@@ -47,8 +47,8 @@ export default function FavoriteButton({ vendorId, initialFavorited = false }) {
       disabled={loading}
       className={`p-2 rounded-full transition-colors ${
         favorited 
-          ? "text-red-500 bg-red-50 hover:bg-red-100" 
-          : "text-gray-400 hover:text-red-500 hover:bg-red-50"
+          ? "text-red-500 bg-red-50 hover:bg-red-500/[0.12]" 
+          : "text-white/40 hover:text-red-500 hover:bg-red-500/[0.06]"
       }`}
     >
       <Heart 

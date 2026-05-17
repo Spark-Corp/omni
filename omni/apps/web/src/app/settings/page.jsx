@@ -102,7 +102,7 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-[#08080f]">
-      <div className="max-w-lg mx-auto px-4 py-12">
+      <div className="max-w-lg mx-auto px-6 py-12">
         <div className="flex items-center gap-3 mb-8">
           <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
             <User size={20} className="text-emerald-400" />

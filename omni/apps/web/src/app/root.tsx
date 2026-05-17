@@ -9,6 +9,7 @@ import {
   useRouteError,
 } from 'react-router';
 
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { useButton } from '@react-aria/button';
 import {
   type CSSProperties,
@@ -493,7 +494,7 @@ export function Layout({ children }: { children: ReactNode }) {
   useHandleScreenshotRequest();
   useDevServerHeartbeat();
 
-  const isMobile = typeof window !== 'undefined' ? window.innerWidth < 768 : false;
+  const isMobile = useIsMobile();
   return (
     <html lang="en">
       <head>
