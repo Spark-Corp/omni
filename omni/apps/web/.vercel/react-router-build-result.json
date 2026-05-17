@@ -1,0 +1,347 @@
+{
+  "buildManifest": {
+    "serverBundles": {
+      "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0": {
+        "id": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+        "file": "build/server/nodejs_eyJydW50aW1lIjoibm9kZWpzIn0/index.js",
+        "config": {
+          "runtime": "nodejs"
+        }
+      }
+    },
+    "routeIdToServerBundleId": {
+      "page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "account/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "auth/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "map/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "settings/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "user/profile/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "vendor/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "vendor/dashboard/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "vendor/messages/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "vendor/onboarding/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "vendor/products/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "vendor/requests/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "vendor/settings/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "__create/not-found": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0"
+    },
+    "routes": {
+      "root": {
+        "id": "root",
+        "file": "src/app/root.tsx",
+        "path": "",
+        "config": {}
+      },
+      "page": {
+        "id": "page",
+        "parentId": "root",
+        "file": "src/app/page.jsx",
+        "index": true,
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "account/page": {
+        "id": "account/page",
+        "parentId": "root",
+        "file": "src/app/account/page.jsx",
+        "path": "account",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "auth/page": {
+        "id": "auth/page",
+        "parentId": "root",
+        "file": "src/app/auth/page.jsx",
+        "path": "auth",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "map/page": {
+        "id": "map/page",
+        "parentId": "root",
+        "file": "src/app/map/page.jsx",
+        "path": "map",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "settings/page": {
+        "id": "settings/page",
+        "parentId": "root",
+        "file": "src/app/settings/page.jsx",
+        "path": "settings",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "user/profile/page": {
+        "id": "user/profile/page",
+        "parentId": "root",
+        "file": "src/app/user/profile/page.jsx",
+        "path": "user/profile",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "vendor/page": {
+        "id": "vendor/page",
+        "parentId": "root",
+        "file": "src/app/vendor/page.jsx",
+        "path": "vendor",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "vendor/dashboard/page": {
+        "id": "vendor/dashboard/page",
+        "parentId": "root",
+        "file": "src/app/vendor/dashboard/page.jsx",
+        "path": "vendor/dashboard",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "vendor/messages/page": {
+        "id": "vendor/messages/page",
+        "parentId": "root",
+        "file": "src/app/vendor/messages/page.jsx",
+        "path": "vendor/messages",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "vendor/onboarding/page": {
+        "id": "vendor/onboarding/page",
+        "parentId": "root",
+        "file": "src/app/vendor/onboarding/page.jsx",
+        "path": "vendor/onboarding",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "vendor/products/page": {
+        "id": "vendor/products/page",
+        "parentId": "root",
+        "file": "src/app/vendor/products/page.jsx",
+        "path": "vendor/products",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "vendor/requests/page": {
+        "id": "vendor/requests/page",
+        "parentId": "root",
+        "file": "src/app/vendor/requests/page.jsx",
+        "path": "vendor/requests",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "vendor/settings/page": {
+        "id": "vendor/settings/page",
+        "parentId": "root",
+        "file": "src/app/vendor/settings/page.jsx",
+        "path": "vendor/settings",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "__create/not-found": {
+        "id": "__create/not-found",
+        "parentId": "root",
+        "file": "src/app/__create/not-found.tsx",
+        "path": "*?",
+        "config": {
+          "runtime": "nodejs"
+        }
+      }
+    }
+  },
+  "reactRouterConfig": {
+    "appDirectory": "C:/Users/junio/Downloads/Omni/omni/apps/web/src/app",
+    "basename": "/",
+    "buildDirectory": "C:/Users/junio/Downloads/Omni/omni/apps/web/build",
+    "future": {
+      "unstable_optimizeDeps": false,
+      "unstable_passThroughRequests": false,
+      "unstable_subResourceIntegrity": false,
+      "unstable_trailingSlashAwareDataRequests": false,
+      "unstable_previewServerPrerendering": false,
+      "v8_middleware": false,
+      "v8_splitRouteModules": false,
+      "v8_viteEnvironmentApi": false
+    },
+    "routes": {
+      "root": {
+        "id": "root",
+        "file": "root.tsx",
+        "path": ""
+      },
+      "page": {
+        "id": "page",
+        "parentId": "root",
+        "file": "./page.jsx",
+        "index": true
+      },
+      "account/page": {
+        "id": "account/page",
+        "parentId": "root",
+        "file": "./account/page.jsx",
+        "path": "account"
+      },
+      "auth/page": {
+        "id": "auth/page",
+        "parentId": "root",
+        "file": "./auth/page.jsx",
+        "path": "auth"
+      },
+      "map/page": {
+        "id": "map/page",
+        "parentId": "root",
+        "file": "./map/page.jsx",
+        "path": "map"
+      },
+      "settings/page": {
+        "id": "settings/page",
+        "parentId": "root",
+        "file": "./settings/page.jsx",
+        "path": "settings"
+      },
+      "user/profile/page": {
+        "id": "user/profile/page",
+        "parentId": "root",
+        "file": "./user/profile/page.jsx",
+        "path": "user/profile"
+      },
+      "vendor/page": {
+        "id": "vendor/page",
+        "parentId": "root",
+        "file": "./vendor/page.jsx",
+        "path": "vendor"
+      },
+      "vendor/dashboard/page": {
+        "id": "vendor/dashboard/page",
+        "parentId": "root",
+        "file": "./vendor/dashboard/page.jsx",
+        "path": "vendor/dashboard"
+      },
+      "vendor/messages/page": {
+        "id": "vendor/messages/page",
+        "parentId": "root",
+        "file": "./vendor/messages/page.jsx",
+        "path": "vendor/messages"
+      },
+      "vendor/onboarding/page": {
+        "id": "vendor/onboarding/page",
+        "parentId": "root",
+        "file": "./vendor/onboarding/page.jsx",
+        "path": "vendor/onboarding"
+      },
+      "vendor/products/page": {
+        "id": "vendor/products/page",
+        "parentId": "root",
+        "file": "./vendor/products/page.jsx",
+        "path": "vendor/products"
+      },
+      "vendor/requests/page": {
+        "id": "vendor/requests/page",
+        "parentId": "root",
+        "file": "./vendor/requests/page.jsx",
+        "path": "vendor/requests"
+      },
+      "vendor/settings/page": {
+        "id": "vendor/settings/page",
+        "parentId": "root",
+        "file": "./vendor/settings/page.jsx",
+        "path": "vendor/settings"
+      },
+      "__create/not-found": {
+        "id": "__create/not-found",
+        "parentId": "root",
+        "file": "./__create/not-found.tsx",
+        "path": "*?"
+      }
+    },
+    "routeDiscovery": {
+      "mode": "lazy",
+      "manifestPath": "/__manifest"
+    },
+    "serverBuildFile": "index.js",
+    "serverModuleFormat": "esm",
+    "ssr": true,
+    "allowedActionOrigins": false,
+    "unstable_routeConfig": [
+      {
+        "id": "root",
+        "path": "",
+        "file": "root.tsx",
+        "children": [
+          {
+            "file": "./page.jsx",
+            "index": true
+          },
+          {
+            "file": "./account/page.jsx",
+            "path": "account"
+          },
+          {
+            "file": "./auth/page.jsx",
+            "path": "auth"
+          },
+          {
+            "file": "./map/page.jsx",
+            "path": "map"
+          },
+          {
+            "file": "./settings/page.jsx",
+            "path": "settings"
+          },
+          {
+            "file": "./user/profile/page.jsx",
+            "path": "user/profile"
+          },
+          {
+            "file": "./vendor/page.jsx",
+            "path": "vendor"
+          },
+          {
+            "file": "./vendor/dashboard/page.jsx",
+            "path": "vendor/dashboard"
+          },
+          {
+            "file": "./vendor/messages/page.jsx",
+            "path": "vendor/messages"
+          },
+          {
+            "file": "./vendor/onboarding/page.jsx",
+            "path": "vendor/onboarding"
+          },
+          {
+            "file": "./vendor/products/page.jsx",
+            "path": "vendor/products"
+          },
+          {
+            "file": "./vendor/requests/page.jsx",
+            "path": "vendor/requests"
+          },
+          {
+            "file": "./vendor/settings/page.jsx",
+            "path": "vendor/settings"
+          },
+          {
+            "file": "./__create/not-found.tsx",
+            "path": "*?"
+          }
+        ]
+      }
+    ]
+  },
+  "viteConfig": {
+    "build": {
+      "assetsDir": "assets"
+    }
+  }
+}

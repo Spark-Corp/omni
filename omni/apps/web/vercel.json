@@ -1,8 +1,4 @@
 {
   "buildCommand": "npx react-router build",
-  "outputDirectory": "build/client",
-  "routes": [
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/api/index" }
-  ]
+  "outputDirectory": "build/client"
 }
