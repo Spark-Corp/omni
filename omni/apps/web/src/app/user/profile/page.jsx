@@ -16,10 +16,10 @@ export default function UserProfilePage() {
       navigate("/auth");
       return;
     }
-    
+
     const userData = JSON.parse(storedUser);
     setUser(userData);
-    
+
     fetch(`/api/favorites?userId=${userData.id}`, {
       headers: { 'x-user-id': userData.id }
     })
@@ -36,44 +36,44 @@ export default function UserProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="animate-spin text-emerald-600" size={48} />
+      <div className="min-h-screen flex items-center justify-center bg-[#08080f]">
+        <Loader2 className="animate-spin text-emerald-500" size={48} />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-2xl mx-auto px-4 py-8">
-        <div className="bg-white rounded-xl shadow p-6 mb-6">
-          <h1 className="text-2xl font-bold mb-4">Mon Profil</h1>
+    <div className="min-h-screen bg-[#08080f]">
+      <div className="max-w-2xl mx-auto px-6 py-8">
+        <div className="bg-[#0e0e18] rounded-xl border border-white/[0.06] p-6 mb-6">
+          <h1 className="text-2xl font-bold text-white/90 mb-4">Mon Profil</h1>
           <div className="space-y-3">
             <div>
-              <span className="text-gray-500">Email:</span>
-              <span className="ml-2">{user?.email}</span>
+              <span className="text-white/40">Email:</span>
+              <span className="ml-2 text-white/70">{user?.email}</span>
             </div>
             <div>
-              <span className="text-gray-500">Nom:</span>
-              <span className="ml-2">{user?.name || "Non défini"}</span>
+              <span className="text-white/40">Nom:</span>
+              <span className="ml-2 text-white/70">{user?.name || "Non défini"}</span>
             </div>
           </div>
           <button
             onClick={handleSignOut}
-            className="mt-4 flex items-center gap-2 text-red-600 hover:text-red-700"
+            className="mt-4 flex items-center gap-2 text-red-400/60 hover:text-red-400 transition-colors"
           >
             <LogOut size={18} />
             Déconnexion
           </button>
         </div>
 
-        <div className="bg-white rounded-xl shadow p-6">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+        <div className="bg-[#0e0e18] rounded-xl border border-white/[0.06] p-6">
+          <h2 className="text-xl font-bold text-white/90 mb-4 flex items-center gap-2">
             <Heart className="text-red-500" size={20} />
             Mes boutiques favorites
           </h2>
-          
+
           {favorites.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">
+            <p className="text-white/40 text-center py-8">
               Aucune boutique favorite. Explorez la carte pour en trouver!
             </p>
           ) : (
@@ -81,15 +81,15 @@ export default function UserProfilePage() {
               {favorites.map((vendor) => (
                 <div
                   key={vendor.id}
-                  className="border border-gray-200 rounded-lg p-4 flex items-center justify-between"
+                  className="border border-white/[0.06] rounded-lg p-4 flex items-center justify-between"
                 >
                   <div>
-                    <h3 className="font-semibold">{vendor.name}</h3>
-                    <p className="text-sm text-gray-500">{vendor.category}</p>
+                    <h3 className="font-semibold text-white/80">{vendor.name}</h3>
+                    <p className="text-sm text-white/40">{vendor.category}</p>
                   </div>
                   <button
                     onClick={() => navigate(`/map?vendor=${vendor.id}`)}
-                    className="text-emerald-600 hover:text-emerald-700"
+                    className="text-emerald-400 hover:text-emerald-300 transition-colors"
                   >
                     <MapPin size={20} />
                   </button>
