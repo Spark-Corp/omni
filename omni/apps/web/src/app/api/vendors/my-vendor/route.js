@@ -1,26 +1,32 @@
 import sql from "@/app/api/utils/sql";
 import { authClient } from "@/lib/auth";
 
-export async function GET() {
+export async function GET(request) {
   try {
-    const session = await authClient.getSession();
-    if (!session || !session.user?.id) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    let userId;
+    
+    // Try header first (from client)
+    const headerUserId = request.headers.get("x-user-id");
+    
+    if (headerUserId) {
+      userId = headerUserId;
+    } else {
+      // Fallback to session (server-side)
+      const session = await authClient.getSession();
+      if (!session?.data?.user?.id) {
+        return Response.json({ vendor: null });
+      }
+      userId = session.data.user.id;
     }
 
-    const authUserId = session.user.id;
-
-    // Get or create user in users table
-    let userResult = await sql`
-      SELECT id FROM users WHERE id = ${authUserId}::uuid
+    // Get user from users table
+    const userResult = await sql`
+      SELECT id FROM users WHERE id = ${userId}
     `;
 
     if (userResult.length === 0) {
-      // No user in users table yet, so no vendor exists
       return Response.json({ vendor: null });
     }
-
-    const userId = userResult[0].id;
 
     // Get vendor for this user
     const vendorResult = await sql`
@@ -46,7 +52,7 @@ export async function GET() {
 
     // Get products for this vendor
     const productsResult = await sql`
-      SELECT id, name, category, price, unit, is_available, photo_url
+      SELECT id, name, price, unit, is_available, image_url
       FROM products
       WHERE vendor_id = ${vendor.id}
       ORDER BY created_at DESC

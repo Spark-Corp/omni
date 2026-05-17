@@ -1,8 +1,4 @@
-import { createNeonAuth } from "@neondatabase/auth/next";
-
-export const { handlers, auth, signIn, signUp, signOut } = createNeonAuth({
-  baseUrl: process.env.NEON_AUTH_URL!,
-  cookies: {
-    secret: process.env.AUTH_SECRET!,
-  },
-});
+export { auth, getSession, sendOTP, verifyOTP } from './auth/config'
+export { hasPermission, requireOwnership } from './auth/permissions'
+export type { Permission } from './auth/permissions'
+export type { AuthUser, AuthSession } from './auth/config'

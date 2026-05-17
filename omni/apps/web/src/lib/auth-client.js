@@ -1,44 +1,28 @@
 import { createAuthClient } from '@neondatabase/neon-js/auth';
 
-// Client-side Neon Auth - for browser use only
-const authUrl = import.meta.env.VITE_NEON_AUTH_URL;
+const authUrl = 'https://ep-purple-fog-amwsyc3j.neonauth.c-5.us-east-1.aws.neon.tech/neondb/auth';
+console.log('[AuthClient] Using URL:', authUrl);
 
-// Don't call createAuthClient during SSR
-const createClient = typeof window !== 'undefined' && authUrl ? createAuthClient(authUrl) : null;
+export const authClient = createAuthClient(authUrl);
 
-// We need to await the client, but for ESM we export a promise
-let authClientPromiseInternal = null;
-let cachedClient = null;
-
-export async function getAuthClient() {
-  if (cachedClient) return cachedClient;
-  if (!createClient) {
-    // Return a mock client for SSR
-    return {
-      signIn: async () => ({ error: new Error('Auth not available during SSR') }),
-      signUp: async () => ({ error: new Error('Auth not available during SSR') }),
-      signOut: async () => ({ error: new Error('Auth not available during SSR') }),
-      getSession: async () => null,
+export async function getSession() {
+  try {
+    const result = await authClient.getSession();
+    if (result.error) {
+      console.log('[AuthClient] getSession error:', result.error);
+      return { user: null, session: null };
+    }
+    return { 
+      user: result.data?.user || null, 
+      session: result.data?.session || null 
     };
+  } catch (e) {
+    console.log('[AuthClient] getSession exception:', e.message);
+    return { user: null, session: null };
   }
-  if (!authClientPromiseInternal) {
-    authClientPromiseInternal = createClient();
-  }
-  cachedClient = await authClientPromiseInternal;
-  return cachedClient;
 }
 
-// For components that need immediate access, export the promise
-export const authClientPromise = createClient || Promise.resolve({
-  signIn: async () => ({ error: new Error('Auth not configured') }),
-  signUp: async () => ({ error: new Error('Auth not configured') }),
-  signOut: async () => ({ error: new Error('Auth not configured') }),
-  getSession: async () => null,
-});
-
-// Export authClient as the promise for backward compatibility
-// Components should await it or use getAuthClient()
-export const authClient = authClientPromise;
-
-// Default export for backward compatibility - will be the promise
-export default authClientPromise;
+export async function checkAuth() {
+  const { user } = await getSession();
+  return !!user;
+}

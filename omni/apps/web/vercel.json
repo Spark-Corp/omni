@@ -1,0 +1,13 @@
+{
+  "buildCommand": "react-router build",
+  "outputDirectory": "build/client",
+  "functions": {
+    "api/index.js": {
+      "runtime": "@vercel/node@3"
+    }
+  },
+  "routes": [
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/api/index" }
+  ]
+}

@@ -4,20 +4,20 @@ import { authClient } from "@/lib/auth";
 export async function PUT(request, { params }) {
   try {
     const session = await authClient.getSession();
-    if (!session || !session.user?.id) {
+    if (!session?.data?.user?.id) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const userId = session.data.user.id;
     const { id } = params;
     const body = await request.json();
-    const { vendorId, name, category, price, unit, isAvailable } = body;
+    const { vendorId, name, price, unit, isAvailable } = body;
 
     // Verify vendor ownership
     const vendorCheck = await sql`
       SELECT v.id 
       FROM vendors v
-      JOIN users u ON u.id = v.user_id
-      WHERE v.id = ${vendorId} AND u.id = ${session.user.id}::uuid
+      WHERE v.id = ${vendorId} AND v.user_id = ${userId}
     `;
 
     if (vendorCheck.length === 0) {
@@ -32,10 +32,6 @@ export async function PUT(request, { params }) {
     if (name !== undefined) {
       updates.push(`name = $${paramIndex++}`);
       values.push(name);
-    }
-    if (category !== undefined) {
-      updates.push(`category = $${paramIndex++}`);
-      values.push(category);
     }
     if (price !== undefined) {
       updates.push(`price = $${paramIndex++}`);
@@ -59,9 +55,9 @@ export async function PUT(request, { params }) {
 
     const query = `
       UPDATE products
-      SET ${updates.join(", ")}
+      SET ${updates.join(", ")}, updated_at = CURRENT_TIMESTAMP
       WHERE id = $${paramIndex++} AND vendor_id = $${paramIndex}
-      RETURNING id, vendor_id, name, category, price, unit, is_available, created_at
+      RETURNING id, vendor_id, name, price, unit, is_available, created_at
     `;
 
     const result = await sql(query, values);
@@ -80,20 +76,20 @@ export async function PUT(request, { params }) {
 export async function DELETE(request, { params }) {
   try {
     const session = await authClient.getSession();
-    if (!session || !session.user?.id) {
+    if (!session?.data?.user?.id) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const userId = session.data.user.id;
     const { id } = params;
 
     // Verify ownership before deleting
     const result = await sql`
       DELETE FROM products p
-      USING vendors v, users u
+      USING vendors v
       WHERE p.id = ${id}
         AND p.vendor_id = v.id
-        AND v.user_id = u.id
-        AND u.id = ${session.user.id}::uuid
+        AND v.user_id = ${userId}
       RETURNING p.id
     `;
 

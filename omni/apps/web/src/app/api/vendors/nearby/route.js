@@ -42,7 +42,7 @@ export async function POST(request) {
     console.error("Message:", error.message);
     console.error("Stack:", error.stack);
     return Response.json(
-      { error: "Internal server error" }
+      { error: "Internal server error" },
       { status: 500 },
     );
   }

@@ -7,8 +7,22 @@ const useUser = () => {
 
   const fetchUser = useCallback(async () => {
     try {
+      // First check localStorage for immediate auth
+      const storedUser = localStorage.getItem("omni_user");
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+        setLoading(false);
+        return;
+      }
+
+      // Then check Neon Auth session
       const session = await authClient.getSession();
-      setUser(session?.user || null);
+      if (session?.data?.user) {
+        localStorage.setItem("omni_user", JSON.stringify(session.data.user));
+        setUser(session.data.user);
+      } else {
+        setUser(null);
+      }
     } catch (error) {
       console.error('Error fetching user:', error);
       setUser(null);
@@ -18,6 +32,7 @@ const useUser = () => {
   }, []);
 
   const refetch = useCallback(() => {
+    setLoading(true);
     fetchUser();
   }, [fetchUser]);
 

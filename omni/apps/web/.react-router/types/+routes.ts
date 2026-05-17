@@ -23,6 +23,12 @@ type Pages = {
   "/map": {
     params: {};
   };
+  "/settings": {
+    params: {};
+  };
+  "/user/profile": {
+    params: {};
+  };
   "/vendor": {
     params: {};
   };
@@ -41,6 +47,9 @@ type Pages = {
   "/vendor/requests": {
     params: {};
   };
+  "/vendor/settings": {
+    params: {};
+  };
   "/*": {
     params: {
       "*": string;
@@ -51,7 +60,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/account" | "/auth" | "/map" | "/vendor" | "/vendor/dashboard" | "/vendor/messages" | "/vendor/onboarding" | "/vendor/products" | "/vendor/requests" | "/*";
+    page: "/" | "/account" | "/auth" | "/map" | "/settings" | "/user/profile" | "/vendor" | "/vendor/dashboard" | "/vendor/messages" | "/vendor/onboarding" | "/vendor/products" | "/vendor/requests" | "/vendor/settings" | "/*";
   };
   "./page.jsx": {
     id: "page";
@@ -68,6 +77,14 @@ type RouteFiles = {
   "./map/page.jsx": {
     id: "map/page";
     page: "/map";
+  };
+  "./settings/page.jsx": {
+    id: "settings/page";
+    page: "/settings";
+  };
+  "./user/profile/page.jsx": {
+    id: "user/profile/page";
+    page: "/user/profile";
   };
   "./vendor/page.jsx": {
     id: "vendor/page";
@@ -93,6 +110,10 @@ type RouteFiles = {
     id: "vendor/requests/page";
     page: "/vendor/requests";
   };
+  "./vendor/settings/page.jsx": {
+    id: "vendor/settings/page";
+    page: "/vendor/settings";
+  };
   "./__create/not-found.tsx": {
     id: "__create/not-found";
     page: "/" | "/*";
@@ -105,11 +126,14 @@ type RouteModules = {
   "account/page": typeof import("./src/app/./account/page.jsx");
   "auth/page": typeof import("./src/app/./auth/page.jsx");
   "map/page": typeof import("./src/app/./map/page.jsx");
+  "settings/page": typeof import("./src/app/./settings/page.jsx");
+  "user/profile/page": typeof import("./src/app/./user/profile/page.jsx");
   "vendor/page": typeof import("./src/app/./vendor/page.jsx");
   "vendor/dashboard/page": typeof import("./src/app/./vendor/dashboard/page.jsx");
   "vendor/messages/page": typeof import("./src/app/./vendor/messages/page.jsx");
   "vendor/onboarding/page": typeof import("./src/app/./vendor/onboarding/page.jsx");
   "vendor/products/page": typeof import("./src/app/./vendor/products/page.jsx");
   "vendor/requests/page": typeof import("./src/app/./vendor/requests/page.jsx");
+  "vendor/settings/page": typeof import("./src/app/./vendor/settings/page.jsx");
   "__create/not-found": typeof import("./src/app/./__create/not-found.tsx");
 };

@@ -59,7 +59,7 @@ export default function ImageSearch({ onSearchQuery }) {
         onChange={handleImageUpload}
         className="hidden"
       />
-      <style jsx global>{`
+      <style>{`
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }

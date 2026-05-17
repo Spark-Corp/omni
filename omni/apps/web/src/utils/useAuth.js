@@ -1,38 +1,61 @@
-import { useCallback } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { getAuthClient } from '@/lib/auth-client';
 
 function useAuth() {
   const navigate = useNavigate();
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const signIn = useCallback(async () => {
-    // Navigate to Neon Auth page
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        // Dynamic import to avoid SSR issues
+        const { getSession } = await import('@/lib/auth-client');
+        const session = await getSession();
+        setUser(session?.user || null);
+      } catch {
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    checkSession();
+  }, []);
+
+  const signIn = useCallback(() => {
     navigate('/auth');
   }, [navigate]);
 
-  const signUp = useCallback(async () => {
-    // Navigate to Neon Auth page (handles both signin/signup)
+  const signUp = useCallback(() => {
     navigate('/auth');
   }, [navigate]);
 
   const signOut = useCallback(async () => {
-    const authClient = await getAuthClient();
-    await authClient.signOut();
+    try {
+      const { signOut: apiSignOut } = await import('@/lib/auth-client');
+      await apiSignOut();
+    } catch {
+      // Ignore errors
+    }
+    setUser(null);
     navigate('/');
   }, [navigate]);
 
-  const getSession = useCallback(async () => {
-    const authClient = await getAuthClient();
-    const session = await authClient.getSession();
+  const refreshSession = useCallback(async () => {
+    const { getSession } = await import('@/lib/auth-client');
+    const session = await getSession();
+    setUser(session?.user || null);
     return session;
   }, []);
 
   return {
+    user,
+    loading,
     signIn,
     signUp,
     signOut,
-    getSession,
-    getAuthClient,
+    getSession: null,
+    refreshSession,
   };
 }
 

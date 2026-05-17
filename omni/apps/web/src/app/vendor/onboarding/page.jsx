@@ -1,41 +1,82 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MapPin, Loader2, Store, Package } from "lucide-react";
-import useUser from "@/utils/useUser";
+import { Loader2, Store, MapPin, Package, Plus, Trash2, ChevronRight, ArrowLeft } from "lucide-react";
+import { authClient } from "@/lib/auth-client";
 
 export default function VendorOnboardingPage() {
-  const { data: user, loading: userLoading } = useUser();
+  const [user, setUser] = useState(null);
+  const [userLoading, setUserLoading] = useState(true);
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const storedUser = localStorage.getItem("omni_user");
+        if (storedUser) {
+          setUser(JSON.parse(storedUser));
+          setUserLoading(false);
+          return;
+        }
+
+        const session = await authClient.getSession();
+        if (session?.data?.user) {
+          localStorage.setItem("omni_user", JSON.stringify(session.data.user));
+          setUser(session.data.user);
+        } else {
+          setUser(null);
+        }
+      } catch {
+        setUser(null);
+      } finally {
+        setUserLoading(false);
+      }
+    };
+    fetchUser();
+  }, []);
 
   // Vendor info
   const [vendorName, setVendorName] = useState("");
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
+  const [phone, setPhone] = useState("");
   const [location, setLocation] = useState(null);
 
   // Products
   const [products, setProducts] = useState([
-    { name: "", category: "", price: "", unit: "unité" },
+    { name: "", price: "", unit: "pièce" },
   ]);
 
+  // Redirect to dashboard if user already has a vendor
   useEffect(() => {
-    if (user && !userLoading) {
-      // Check localStorage for pending role
-      const pendingRole =
-        typeof window !== "undefined"
-          ? localStorage.getItem("pendingRole")
-          : null;
-      if (pendingRole === "seller") {
-        localStorage.removeItem("pendingRole");
+    let mounted = true;
+
+    const checkVendor = async () => {
+      const storedUser = localStorage.getItem("omni_user");
+      if (!storedUser) return;
+      const userId = JSON.parse(storedUser).id;
+      try {
+        const response = await fetch("/api/vendors/my-vendor", {
+          headers: { 'x-user-id': userId }
+        });
+        const data = await response.json();
+        if (mounted && data.vendor) {
+          window.location.href = "/vendor/dashboard";
+        }
+      } catch {
+        // No vendor yet — continue onboarding
       }
+    };
+
+    if (!userLoading) {
+      checkVendor();
     }
-  }, [user, userLoading]);
+    return () => { mounted = false; };
+  }, [userLoading]);
 
   useEffect(() => {
-    // Get current location
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -44,11 +85,7 @@ export default function VendorOnboardingPage() {
             lon: position.coords.longitude,
           });
         },
-        (error) => {
-          console.error("Error getting location:", error);
-          // Default to Lome, Togo
-          setLocation({ lat: 6.1319, lon: 1.2228 });
-        },
+        () => setLocation({ lat: 6.1319, lon: 1.2228 }),
       );
     } else {
       setLocation({ lat: 6.1319, lon: 1.2228 });
@@ -56,10 +93,7 @@ export default function VendorOnboardingPage() {
   }, []);
 
   const addProduct = () => {
-    setProducts([
-      ...products,
-      { name: "", category: "", price: "", unit: "unité" },
-    ]);
+    setProducts([...products, { name: "", price: "", unit: "unité" }]);
   };
 
   const removeProduct = (index) => {
@@ -81,14 +115,17 @@ export default function VendorOnboardingPage() {
         return;
       }
       setStep(2);
+      setError(null);
       return;
     }
 
-    // Step 2: Create vendor and products
     setLoading(true);
     setError(null);
 
     try {
+      const storedUser = localStorage.getItem("omni_user");
+      const userId = storedUser ? JSON.parse(storedUser).id : null;
+
       const response = await fetch("/api/vendors/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -96,44 +133,47 @@ export default function VendorOnboardingPage() {
           name: vendorName,
           category,
           description,
+          phone,
           lat: location.lat,
           lon: location.lon,
           products: products.filter((p) => p.name && p.price),
+          userId,
         }),
       });
 
-      if (!response.ok) throw new Error("Failed to create vendor");
+      if (!response.ok) {
+        throw new Error("Erreur lors de la création de votre boutique");
+      }
 
-      const data = await response.json();
-
-      // Redirect to dashboard
       window.location.href = "/vendor/dashboard";
     } catch (err) {
-      console.error(err);
-      setError("Erreur lors de la création de votre boutique");
+      setError(err.message || "Une erreur est survenue");
       setLoading(false);
     }
   };
 
   if (userLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="animate-spin text-emerald-600" size={48} />
+      <div className="min-h-screen bg-[#08080f] flex items-center justify-center">
+        <Loader2 className="animate-spin text-emerald-400" size={32} />
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-        <div className="text-center">
-          <p className="text-gray-600 mb-4">
-            Veuillez vous connecter pour continuer
-          </p>
-          <a href="/auth?callbackUrl=/vendor/onboarding">
-            <button className="bg-emerald-600 text-white px-6 py-3 rounded-lg font-semibold">
-              Se connecter
-            </button>
+      <div className="min-h-screen bg-[#08080f] flex items-center justify-center p-4">
+        <div className="text-center max-w-sm">
+          <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 flex items-center justify-center mx-auto mb-5">
+            <Store size={28} className="text-emerald-400" />
+          </div>
+          <h1 className="font-space-grotesk text-2xl font-bold text-white/90 mb-2">Connecte-toi pour continuer</h1>
+          <p className="font-dm-sans text-sm text-white/40 mb-8">Tu dois avoir un compte pour créer ta boutique.</p>
+          <a href="/auth?callbackUrl=/vendor/onboarding"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-sm transition-all"
+          >
+            Se connecter
+            <ChevronRight size={16} />
           </a>
         </div>
       </div>
@@ -141,213 +181,237 @@ export default function VendorOnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-50 py-12 px-4">
-      <div className="max-w-2xl mx-auto">
-        {/* Progress */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-700">
-              Étape {step} sur 2
-            </span>
-            <span className="text-sm text-gray-500">
-              {step === 1 ? "Info boutique" : "Produits"}
-            </span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div
-              className="bg-emerald-600 h-2 rounded-full transition-all"
-              style={{ width: `${(step / 2) * 100}%` }}
-            ></div>
-          </div>
+    <div className="min-h-screen bg-[#08080f] flex items-start justify-center px-4 py-12 md:py-20">
+      <div className="w-full max-w-lg">
+        {/* Step indicator */}
+        <div className="flex items-center gap-3 mb-10">
+          <div className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${step >= 1 ? 'bg-emerald-400' : 'bg-white/10'}`} />
+          <div className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${step >= 2 ? 'bg-emerald-400' : 'bg-white/10'}`} />
+          <span className="font-dm-sans text-xs text-white/30 shrink-0">Étape {step}/2</span>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-xl p-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            {step === 1 ? "Créer votre boutique" : "Ajouter vos produits"}
-          </h1>
-          <p className="text-gray-600 mb-8">
-            {step === 1
-              ? "Commencez à être visible en moins de 3 minutes"
-              : "Ajoutez au moins un produit pour commencer"}
-          </p>
+        <form onSubmit={handleSubmit}>
+          {step === 1 ? (
+            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-6 md:p-8">
+              <div className="flex items-center gap-3 mb-1">
+                <Store size={20} className="text-emerald-400" />
+                <h2 className="font-space-grotesk text-xl md:text-2xl font-bold text-white/90">Crée ta boutique</h2>
+              </div>
+              <p className="font-dm-sans text-sm text-white/40 mb-8 ml-[36px]">
+                Visible pour tous les acheteurs autour de toi.
+              </p>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {step === 1 ? (
-              <>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <Store className="inline mr-2" size={18} />
-                    Nom de votre boutique *
-                  </label>
+              {/* Name */}
+              <div className="mb-5">
+                <label className="font-dm-sans block text-sm text-white/50 mb-2">Nom de la boutique *</label>
+                <div className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 transition-all focus-within:border-emerald-500/50 focus-within:bg-white/[0.06]">
+                  <Store size={16} className="text-emerald-400 shrink-0" />
                   <input
                     required
                     type="text"
                     value={vendorName}
                     onChange={(e) => setVendorName(e.target.value)}
                     placeholder="Ex: Boutique Ama"
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+                    className="flex-1 bg-transparent border-none outline-none text-white/80 text-sm placeholder:text-white/20 font-dm-sans"
                   />
                 </div>
+              </div>
 
+              {/* Category + Phone */}
+              <div className="grid grid-cols-2 gap-4 mb-5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Catégorie *
-                  </label>
-                  <select
-                    required
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
-                  >
-                    <option value="">Sélectionnez une catégorie</option>
-                    <option value="Alimentation">Alimentation</option>
-                    <option value="Electronique">Electronique</option>
-                    <option value="Textile">Textile</option>
-                    <option value="Santé & Beauté">Santé & Beauté</option>
-                    <option value="Matériaux">Matériaux de construction</option>
-                    <option value="Services">Services</option>
-                    <option value="Autre">Autre</option>
-                  </select>
+                  <label className="font-dm-sans block text-sm text-white/50 mb-2">Catégorie *</label>
+                  <div className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 transition-all focus-within:border-emerald-500/50 focus-within:bg-white/[0.06]">
+                    <select
+                      required
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)}
+                      className="w-full bg-transparent border-none outline-none text-white/60 text-sm font-dm-sans appearance-none"
+                    >
+                      <option value="" className="bg-[#08080f]">Sélectionne une catégorie</option>
+                      <option value="Alimentation" className="bg-[#08080f]">Alimentation</option>
+                      <option value="Electronique" className="bg-[#08080f]">Électronique</option>
+                      <option value="Textile" className="bg-[#08080f]">Textile</option>
+                      <option value="Sante" className="bg-[#08080f]">Santé & Beauté</option>
+                      <option value="Materiaux" className="bg-[#08080f]">Matériaux</option>
+                      <option value="Services" className="bg-[#08080f]">Services</option>
+                      <option value="Autre" className="bg-[#08080f]">Autre</option>
+                    </select>
+                  </div>
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Description
-                  </label>
+                  <label className="font-dm-sans block text-sm text-white/50 mb-2">Téléphone</label>
+                  <div className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 transition-all focus-within:border-emerald-500/50 focus-within:bg-white/[0.06]">
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="+228 XX XX XX"
+                      className="w-full bg-transparent border-none outline-none text-white/80 text-sm placeholder:text-white/20 font-dm-sans"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Description */}
+              <div className="mb-5">
+                <label className="font-dm-sans block text-sm text-white/50 mb-2">Description</label>
+                <div className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 transition-all focus-within:border-emerald-500/50 focus-within:bg-white/[0.06]">
                   <textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Décrivez ce que vous vendez..."
-                    rows={3}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
-                  ></textarea>
+                    placeholder="Décris ce que tu vends..."
+                    rows={2}
+                    className="w-full bg-transparent border-none outline-none text-white/80 text-sm placeholder:text-white/20 font-dm-sans resize-none"
+                  />
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <MapPin className="inline mr-2" size={18} />
-                    Localisation
-                  </label>
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
-                    {location ? (
-                      <p className="text-emerald-700 text-sm">
-                        ✓ Position détectée: {location.lat.toFixed(4)},{" "}
-                        {location.lon.toFixed(4)}
-                      </p>
-                    ) : (
-                      <p className="text-gray-600 text-sm">
-                        Détection de votre position...
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="space-y-4">
-                  {products.map((product, index) => (
-                    <div
-                      key={index}
-                      className="border border-gray-200 rounded-lg p-4"
-                    >
-                      <div className="flex items-center justify-between mb-3">
-                        <h3 className="font-semibold text-gray-900">
-                          <Package className="inline mr-2" size={18} />
-                          Produit {index + 1}
-                        </h3>
-                        {products.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removeProduct(index)}
-                            className="text-red-600 hover:text-red-700 text-sm"
-                          >
-                            Supprimer
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <input
-                          type="text"
-                          value={product.name}
-                          onChange={(e) =>
-                            updateProduct(index, "name", e.target.value)
-                          }
-                          placeholder="Nom du produit"
-                          className="px-4 py-2 border border-gray-200 rounded-lg outline-none focus:border-emerald-600"
-                        />
-                        <input
-                          type="text"
-                          value={product.category}
-                          onChange={(e) =>
-                            updateProduct(index, "category", e.target.value)
-                          }
-                          placeholder="Catégorie"
-                          className="px-4 py-2 border border-gray-200 rounded-lg outline-none focus:border-emerald-600"
-                        />
-                        <input
-                          type="number"
-                          value={product.price}
-                          onChange={(e) =>
-                            updateProduct(index, "price", e.target.value)
-                          }
-                          placeholder="Prix (FCFA)"
-                          className="px-4 py-2 border border-gray-200 rounded-lg outline-none focus:border-emerald-600"
-                        />
-                        <input
-                          type="text"
-                          value={product.unit}
-                          onChange={(e) =>
-                            updateProduct(index, "unit", e.target.value)
-                          }
-                          placeholder="Unité (kg, sac, pièce...)"
-                          className="px-4 py-2 border border-gray-200 rounded-lg outline-none focus:border-emerald-600"
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={addProduct}
-                  className="w-full border-2 border-dashed border-gray-300 hover:border-emerald-600 text-gray-600 hover:text-emerald-600 py-3 rounded-lg font-semibold transition-colors"
-                >
-                  + Ajouter un autre produit
-                </button>
-              </>
-            )}
-
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                {error}
               </div>
-            )}
 
-            <div className="flex gap-4">
-              {step === 2 && (
-                <button
-                  type="button"
-                  onClick={() => setStep(1)}
-                  className="flex-1 border-2 border-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
-                >
-                  Retour
-                </button>
+              {/* Location */}
+              <div className="mb-8">
+                <label className="font-dm-sans block text-sm text-white/50 mb-2">Localisation</label>
+                <div className="flex items-center gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.06] px-4 py-3">
+                  <MapPin size={16} className="text-emerald-400 shrink-0" />
+                  {location ? (
+                    <span className="font-dm-sans text-sm text-emerald-400/80">
+                      Position détectée
+                    </span>
+                  ) : (
+                    <span className="font-dm-sans text-sm text-white/30">
+                      Détection en cours...
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Error */}
+              {error && (
+                <div className="mb-5 px-4 py-3 rounded-xl border border-red-500/20 bg-red-500/[0.06]">
+                  <p className="font-dm-sans text-sm text-red-400">{error}</p>
+                </div>
               )}
+
               <button
                 type="submit"
-                disabled={loading}
-                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-lg font-semibold transition-colors disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-sm transition-all"
               >
-                {loading
-                  ? "Chargement..."
-                  : step === 1
-                    ? "Continuer"
-                    : "Créer ma boutique"}
+                Continuer
+                <ChevronRight size={16} />
               </button>
+
+              <p className="font-dm-sans text-xs text-white/20 text-center mt-5">
+                Déjà inscrit ?{' '}
+                <a href="/vendor/dashboard" className="text-emerald-400 hover:text-emerald-300 transition-colors">
+                  Accède à ton tableau de bord
+                </a>
+              </p>
             </div>
-          </form>
-        </div>
+          ) : (
+            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-6 md:p-8">
+              <div className="flex items-center gap-3 mb-1">
+                <Package size={20} className="text-emerald-400" />
+                <h2 className="font-space-grotesk text-xl md:text-2xl font-bold text-white/90">Ajoute tes produits</h2>
+              </div>
+              <p className="font-dm-sans text-sm text-white/40 mb-8 ml-[36px]">
+                Au moins un produit pour commencer.
+              </p>
+
+              <div className="space-y-4 mb-6">
+                {products.map((product, index) => (
+                  <div key={index}
+                    className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 transition-all"
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="font-dm-sans text-xs text-white/30">Produit {index + 1}</span>
+                      {products.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeProduct(index)}
+                          className="flex items-center gap-1 text-red-400/60 hover:text-red-400 text-xs transition-colors font-dm-sans"
+                        >
+                          <Trash2 size={12} />
+                          Supprimer
+                        </button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="col-span-3 sm:col-span-1">
+                        <div className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-2.5 transition-all focus-within:border-emerald-500/50">
+                          <input
+                            type="text"
+                            value={product.name}
+                            onChange={(e) => updateProduct(index, "name", e.target.value)}
+                            placeholder="Nom du produit"
+                            className="w-full bg-transparent border-none outline-none text-white/80 text-sm placeholder:text-white/20 font-dm-sans"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <div className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-2.5 transition-all focus-within:border-emerald-500/50">
+                          <input
+                            type="number"
+                            value={product.price}
+                            onChange={(e) => updateProduct(index, "price", e.target.value)}
+                            placeholder="Prix"
+                            className="w-full bg-transparent border-none outline-none text-white/80 text-sm placeholder:text-white/20 font-dm-sans"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <div className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-2.5">
+                          <input
+                            type="text"
+                            value={product.unit}
+                            onChange={(e) => updateProduct(index, "unit", e.target.value)}
+                            placeholder="Unité"
+                            className="w-full bg-transparent border-none outline-none text-white/60 text-sm placeholder:text-white/20 font-dm-sans"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={addProduct}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-white/[0.08] hover:border-emerald-500/30 text-white/40 hover:text-emerald-400 text-sm font-dm-sans transition-all mb-6"
+              >
+                <Plus size={14} />
+                Ajouter un produit
+              </button>
+
+              {error && (
+                <div className="mb-5 px-4 py-3 rounded-xl border border-red-500/20 bg-red-500/[0.06]">
+                  <p className="font-dm-sans text-sm text-red-400">{error}</p>
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => { setStep(1); setError(null); }}
+                  className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl border border-white/[0.08] hover:bg-white/[0.04] text-white/60 hover:text-white/80 text-sm font-dm-sans transition-all"
+                >
+                  <ArrowLeft size={14} />
+                  Retour
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <>Créer ma boutique <ChevronRight size={16} /></>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+        </form>
       </div>
     </div>
   );

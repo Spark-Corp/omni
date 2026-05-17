@@ -1,497 +1,693 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
 import {
-  Globe,
-  MapPin,
-  ArrowRight,
-  Sparkles,
-  Shield,
-  Smartphone,
-  Zap,
-  ChevronRight,
+  Globe, MapPin, ArrowRight, Sparkles, Shield, Smartphone,
+  ChevronRight, Search, MessageCircle, Store, ShoppingBag, Navigation, Mic,
 } from "lucide-react";
 import * as THREE from "three";
 import useAuth from "@/utils/useAuth";
 
-// 3D Globe Component
-function Globe3D() {
+// --- 3D Globe with interaction ---
+function Globe3D({ phase = 0 }) {
   const containerRef = useRef(null);
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
 
   useEffect(() => {
     if (!containerRef.current) return;
-
     const container = containerRef.current;
+    const W = container.clientWidth;
+    const H = container.clientHeight;
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(
-      45,
-      container.clientWidth / container.clientHeight,
-      0.1,
-      1000
-    );
-    camera.position.z = 3;
-
-    const renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      alpha: true,
-    });
-    renderer.setSize(container.clientWidth, container.clientHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    const camera = new THREE.PerspectiveCamera(45, W / H, 0.1, 1000);
+    camera.position.z = 3.2;
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(W, H); renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.domElement.style.outline = 'none';
+    renderer.domElement.style.display = 'block';
     container.appendChild(renderer.domElement);
 
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
-    scene.add(ambientLight);
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-    directionalLight.position.set(5, 3, 5);
-    scene.add(directionalLight);
+    const ambient = new THREE.AmbientLight(0x404060, 0.7);
+    scene.add(ambient);
+    const sun = new THREE.DirectionalLight(0xffffff, 1.8);
+    sun.position.set(5, 3, 5);
+    scene.add(sun);
 
-    // Earth
-    const earthGeometry = new THREE.SphereGeometry(1, 64, 64);
-    const earthMaterial = new THREE.MeshStandardMaterial({
-      color: 0x0a0a1a,
-      roughness: 0.8,
-      metalness: 0.2,
-      emissive: 0x1a1a3a,
-      emissiveIntensity: 0.1,
-    });
-    const earth = new THREE.Mesh(earthGeometry, earthMaterial);
+    const texCanvas = document.createElement("canvas");
+    texCanvas.width = 2048; texCanvas.height = 1024;
+    const ctx = texCanvas.getContext("2d");
+    ctx.fillStyle = "#08080f"; ctx.fillRect(0, 0, 2048, 1024);
+    const continents = [
+      { x: 0.5, y: 0.55, rx: 0.12, ry: 0.18, c: "#0d2a1a" },
+      { x: 0.5, y: 0.55, rx: 0.10, ry: 0.16, c: "#103a22" },
+      { x: 0.48, y: 0.32, rx: 0.06, ry: 0.05, c: "#0f2a18" },
+      { x: 0.48, y: 0.32, rx: 0.05, ry: 0.04, c: "#143a20" },
+      { x: 0.72, y: 0.38, rx: 0.18, ry: 0.12, c: "#0a2818" },
+      { x: 0.72, y: 0.38, rx: 0.16, ry: 0.10, c: "#103a22" },
+      { x: 0.20, y: 0.30, rx: 0.10, ry: 0.08, c: "#0d2a1a" },
+      { x: 0.20, y: 0.30, rx: 0.08, ry: 0.06, c: "#123822" },
+      { x: 0.28, y: 0.60, rx: 0.04, ry: 0.10, c: "#0a2818" },
+      { x: 0.28, y: 0.60, rx: 0.03, ry: 0.08, c: "#103a22" },
+      { x: 0.88, y: 0.72, rx: 0.03, ry: 0.03, c: "#0f2a1a" },
+    ];
+    for (const c of continents) {
+      ctx.beginPath(); ctx.ellipse(c.x * 2048, c.y * 1024, c.rx * 2048, c.ry * 1024, 0, 0, Math.PI * 2);
+      ctx.fillStyle = c.c; ctx.fill();
+    }
+    const cities = [
+      { lon: 1.22, lat: 6.13 }, { lon: -3.99, lat: 5.35 },
+      { lon: 3.38, lat: 6.45 }, { lon: 11.50, lat: 3.87 },
+      { lon: 17.46, lat: -12.34 }, { lon: 13.20, lat: 9.18 },
+      { lon: -1.69, lat: 9.40 }, { lon: 1.48, lat: 6.63 },
+      { lon: 2.34, lat: 6.66 }, { lon: -0.23, lat: 14.45 },
+      { lon: -15.98, lat: 18.06 }, { lon: -17.45, lat: 14.72 },
+    ];
+    for (const c of cities) {
+      const x = ((c.lon + 180) / 360) * 2048;
+      const y = ((90 - c.lat) / 180) * 1024;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, 14);
+      g.addColorStop(0, "rgba(16, 185, 129, 0.95)");
+      g.addColorStop(0.5, "rgba(16, 185, 129, 0.3)");
+      g.addColorStop(1, "rgba(16, 185, 129, 0)");
+      ctx.fillStyle = g; ctx.fillRect(x - 14, y - 14, 28, 28);
+      ctx.beginPath(); ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = "#34d399"; ctx.fill();
+    }
+    const texture = new THREE.CanvasTexture(texCanvas);
+    const earth = new THREE.Mesh(
+      new THREE.SphereGeometry(1, 80, 80),
+      new THREE.MeshPhongMaterial({ map: texture, emissive: new THREE.Color(0x050510), emissiveIntensity: 0.25, roughness: 0.7 })
+    );
     scene.add(earth);
-
-    // Atmosphere glow
-    const atmosphereGeometry = new THREE.SphereGeometry(1.15, 64, 64);
-    const atmosphereMaterial = new THREE.ShaderMaterial({
-      transparent: true,
-      side: THREE.BackSide,
-      uniforms: {
-        color: { value: new THREE.Color(0x10b981) },
-      },
-      vertexShader: `
-        varying vec3 vNormal;
-        void main() {
-          vNormal = normalize(normalMatrix * normal);
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      `,
-      fragmentShader: `
-        varying vec3 vNormal;
-        uniform vec3 color;
-        void main() {
-          float intensity = pow(0.6 - dot(vNormal, vec3(0, 0, 1.0)), 4.0);
-          gl_FragColor = vec4(color, intensity * 0.3);
-        }
-      `,
+    const grid = new THREE.Mesh(
+      new THREE.SphereGeometry(1.012, 40, 24),
+      new THREE.MeshBasicMaterial({ wireframe: true, color: 0x10b981, transparent: true, opacity: 0.06 })
+    );
+    scene.add(grid);
+    const atmoMat = new THREE.ShaderMaterial({
+      transparent: true, side: THREE.BackSide,
+      uniforms: { color: { value: new THREE.Color(0x10b981) }, intensity: { value: 0.35 }, time: { value: 0 } },
+      vertexShader: `varying vec3 vNormal; void main(){vNormal=normalize(normalMatrix*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+      fragmentShader: `varying vec3 vNormal;uniform vec3 color;uniform float intensity;uniform float time;void main(){float i=pow(0.65-dot(vNormal,vec3(0,0,1.0)),3.5);float p=1.0+0.1*sin(time);gl_FragColor=vec4(color,i*intensity*p);}`,
     });
-    const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
+    const atmosphere = new THREE.Mesh(new THREE.SphereGeometry(1.2, 64, 64), atmoMat);
     scene.add(atmosphere);
 
-    // Stars
-    const starsGeometry = new THREE.BufferGeometry();
-    const starsCount = 1000;
-    const positions = new Float32Array(starsCount * 3);
-    for (let i = 0; i < starsCount * 3; i++) {
-      positions[i] = (Math.random() - 0.5) * 20;
-    }
-    starsGeometry.setAttribute(
-      "position",
-      new THREE.BufferAttribute(positions, 3)
-    );
-    const starsMaterial = new THREE.PointsMaterial({
-      size: 0.02,
-      color: 0xffffff,
-      transparent: true,
-      opacity: 0.8,
-    });
-    const stars = new THREE.Points(starsGeometry, starsMaterial);
-    scene.add(stars);
+    // Interactive rotation group
+    const rotGroup = new THREE.Group();
+    rotGroup.add(earth); rotGroup.add(grid); rotGroup.add(atmosphere);
+    scene.add(rotGroup);
 
-    // Animation
-    let animationId;
+    // City dots — separate group that appears after phase 2
+    const cityGroup = new THREE.Group();
+    const city3D = cities.map(c => {
+      const phi = (90 - c.lat) * Math.PI / 180, theta = (c.lon + 180) * Math.PI / 180;
+      return { x: -Math.sin(phi) * Math.cos(theta), y: Math.cos(phi), z: Math.sin(phi) * Math.sin(theta) };
+    });
+    const dotMeshes = [];
+    city3D.forEach((c, i) => {
+      const dot = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 8), new THREE.MeshBasicMaterial({ color: 0x34d399 }));
+      dot.position.set(c.x * 1.01, c.y * 1.01, c.z * 1.01);
+      cityGroup.add(dot); dotMeshes.push(dot);
+      const ring = new THREE.Mesh(new THREE.RingGeometry(0.025, 0.045, 16), new THREE.MeshBasicMaterial({ color: 0x34d399, transparent: true, opacity: 0.5, side: THREE.DoubleSide }));
+      ring.position.set(c.x * 1.06, c.y * 1.06, c.z * 1.06); ring.lookAt(0, 0, 0);
+      ring.userData = { speed: 0.008 + Math.random() * 0.008, phase: Math.random() * Math.PI * 2 };
+      cityGroup.add(ring);
+      const gc = document.createElement("canvas"); gc.width = 48; gc.height = 48;
+      const gctx = gc.getContext("2d"); const grad = gctx.createRadialGradient(24, 24, 0, 24, 24, 24);
+      grad.addColorStop(0, "rgba(52,211,153,0.8)"); grad.addColorStop(1, "rgba(52,211,153,0)");
+      gctx.fillStyle = grad; gctx.fillRect(0, 0, 48, 48);
+      const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(gc), transparent: true, blending: THREE.AdditiveBlending }));
+      glow.scale.set(0.12, 0.12, 1); glow.position.set(c.x * 1.02, c.y * 1.02, c.z * 1.02);
+      cityGroup.add(glow);
+    });
+    const target = city3D[0];
+    const hlDot = new THREE.Mesh(new THREE.SphereGeometry(0.035, 12, 12), new THREE.MeshBasicMaterial({ color: 0x10b981 }));
+    hlDot.position.set(target.x * 1.01, target.y * 1.01, target.z * 1.01); hlDot.visible = false;
+    cityGroup.add(hlDot);
+    const hlRing = new THREE.Mesh(new THREE.RingGeometry(0.05, 0.1, 24), new THREE.MeshBasicMaterial({ color: 0x10b981, transparent: true, opacity: 0.7, side: THREE.DoubleSide }));
+    hlRing.position.set(target.x * 1.1, target.y * 1.1, target.z * 1.1); hlRing.lookAt(0, 0, 0); hlRing.visible = false;
+    cityGroup.add(hlRing);
+    rotGroup.add(cityGroup);
+
+    // Mock vendor pins — appear when phase >= 2, matching 6 continent-spanning cards
+    const vendorsGroup = new THREE.Group();
+    const mockVendorLocs = [
+      { lon: 1.2228, lat: 6.1319 },   // Lomé, Afrique — primary (green)
+      { lon: -46.6333, lat: -23.5505 }, // São Paulo, Amériques
+      { lon: -74.0060, lat: 40.7128 },  // New York, Amériques
+      { lon: 2.3522, lat: 48.8566 },    // Paris, Europe
+      { lon: 139.6917, lat: 35.6895 },  // Tokyo, Asie
+      { lon: 151.2093, lat: -33.8688 }, // Sydney, Océanie
+    ];
+    const vendorColors = [0x10b981, 0xf59e0b, 0xf59e0b, 0xf59e0b, 0xf59e0b, 0xf59e0b];
+    const vendorSizes = [0.032, 0.022, 0.022, 0.022, 0.022, 0.022];
+    const vendorDots = [];
+    mockVendorLocs.forEach((v, i) => {
+      const phi = (90 - v.lat) * Math.PI / 180, theta = (v.lon + 180) * Math.PI / 180;
+      const x = -Math.sin(phi) * Math.cos(theta), y = Math.cos(phi), z = Math.sin(phi) * Math.sin(theta);
+      const dot = new THREE.Mesh(new THREE.SphereGeometry(vendorSizes[i], 10, 10), new THREE.MeshBasicMaterial({ color: vendorColors[i] }));
+      dot.position.set(x * 1.02, y * 1.02, z * 1.02);
+      dot.userData = { idx: i, baseScale: 1 };
+      vendorsGroup.add(dot); vendorDots.push(dot);
+      const vRing = new THREE.Mesh(new THREE.RingGeometry(0.025 + i * 0.005, 0.05 + i * 0.01, 16), new THREE.MeshBasicMaterial({ color: vendorColors[i], transparent: true, opacity: 0.6, side: THREE.DoubleSide }));
+      vRing.position.set(x * 1.08, y * 1.08, z * 1.08); vRing.lookAt(0, 0, 0);
+      vRing.userData = { speed: 0.01 + i * 0.002, phase: Math.random() * Math.PI * 2 };
+      vendorsGroup.add(vRing);
+      const gc2 = document.createElement("canvas"); gc2.width = 48; gc2.height = 48;
+      const c2 = gc2.getContext("2d");
+      const g2 = c2.createRadialGradient(24, 24, 0, 24, 24, 24);
+      const col = i === 0 ? 'rgba(16, 185, 129, 0.9)' : 'rgba(245, 158, 11, 0.8)';
+      g2.addColorStop(0, col); g2.addColorStop(1, 'rgba(0,0,0,0)');
+      c2.fillStyle = g2; c2.fillRect(0, 0, 48, 48);
+      const vGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(gc2), transparent: true, blending: THREE.AdditiveBlending }));
+      vGlow.scale.set(i === 0 ? 0.2 : 0.12, i === 0 ? 0.2 : 0.12, 1);
+      vGlow.position.set(x * 1.02, y * 1.02, z * 1.02);
+      vendorsGroup.add(vGlow);
+    });
+    vendorsGroup.visible = false;
+    rotGroup.add(vendorsGroup);
+
+    // Mouse interaction
+    let isDragging = false;
+    let prevX = 0, prevY = 0;
+    let autoRotate = true;
+    let interactTimeout = null;
+
+    renderer.domElement.style.cursor = 'grab';
+    renderer.domElement.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      prevX = e.clientX; prevY = e.clientY;
+      autoRotate = false;
+      renderer.domElement.style.cursor = 'grabbing';
+      clearTimeout(interactTimeout);
+    });
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      const dx = e.clientX - prevX;
+      const dy = e.clientY - prevY;
+      rotGroup.rotation.y += dx * 0.01;
+      rotGroup.rotation.x += dy * 0.005;
+      prevX = e.clientX; prevY = e.clientY;
+    });
+    window.addEventListener('mouseup', () => {
+      if (!isDragging) return;
+      isDragging = false;
+      renderer.domElement.style.cursor = 'grab';
+      interactTimeout = setTimeout(() => { autoRotate = true; }, 3000);
+    });
+    // Touch support
+    let touchId = null;
+    renderer.domElement.addEventListener('touchstart', (e) => {
+      const t = e.changedTouches[0];
+      touchId = t.identifier; prevX = t.clientX; prevY = t.clientY;
+      autoRotate = false; clearTimeout(interactTimeout);
+    }, { passive: true });
+    renderer.domElement.addEventListener('touchmove', (e) => {
+      for (const t of e.changedTouches) {
+        if (t.identifier !== touchId) continue;
+        const dx = t.clientX - prevX; const dy = t.clientY - prevY;
+        rotGroup.rotation.y += dx * 0.01;
+        rotGroup.rotation.x += dy * 0.005;
+        prevX = t.clientX; prevY = t.clientY;
+      }
+    }, { passive: true });
+    renderer.domElement.addEventListener('touchend', () => {
+      touchId = null; autoRotate = false;
+      interactTimeout = setTimeout(() => { autoRotate = true; }, 3000);
+    }, { passive: true });
+
+    let animId;
+    const clock = new THREE.Clock();
     const animate = () => {
-      animationId = requestAnimationFrame(animate);
-      earth.rotation.y += 0.002;
-      atmosphere.rotation.y += 0.002;
-      stars.rotation.y += 0.0002;
+      animId = requestAnimationFrame(animate);
+      const p = phaseRef.current;
+      const dt = clock.getElapsedTime();
+
+      // Auto-rotation
+      if (autoRotate) rotGroup.rotation.y += 0.002 + Math.min(p, 2) * 0.0008;
+
+      // Smooth camera zoom — no artificial breathe oscillation
+      const targetZ = 3.2 - Math.min(p, 2) * 0.5;
+      camera.position.z += (targetZ - camera.position.z) * 0.04;
+
+      // Atmosphere — phase-driven only, no time pulse
+      atmoMat.uniforms.time.value = dt;
+      atmoMat.uniforms.intensity.value = 0.3 + Math.min(p, 3) * 0.12;
+
+      // City dots: hidden in phase 0, fade in at phase 1-2, full at phase 3
+      const cityTarget = Math.min(1, Math.max(0, (Math.min(p, 3) - 0.5) / 1.5));
+      // Mock vendor pins: appear at phase 2
+      vendorsGroup.visible = p >= 2;
+      cityGroup.children.forEach(child => {
+        if (child.type === "Mesh" && child.geometry?.type === "RingGeometry" && child !== hlRing) {
+          const t = (child.userData?.phase || 0);
+          child.userData.phase = t + (child.userData?.speed || 0.008);
+          const s = 1 + Math.sin(t) * 0.4;
+          child.scale.set(s, s, 1);
+          child.material.opacity = cityTarget * (0.3 + Math.sin(t) * 0.25);
+        }
+        if (child.type === "Points" || child.type === "Sprite" || (child.type === "Mesh" && child.geometry?.type === "SphereGeometry")) {
+          child.visible = cityTarget > 0.05;
+        }
+      });
+      dotMeshes.forEach((d, i) => {
+        const pulse = 1 + Math.sin(dt * 2 + i * 0.5) * 0.2;
+        d.scale.set(pulse * cityTarget, pulse * cityTarget, pulse * cityTarget);
+      });
+      hlDot.visible = p >= 3; hlRing.visible = p >= 3;
+      if (hlRing.visible) {
+        const s = 1 + Math.sin(dt * 2) * 0.6; hlRing.scale.set(s, s, 1);
+        hlRing.material.opacity = 0.3 + Math.sin(dt * 3) * 0.4;
+      }
+      // Vendor pins pulse
+      if (vendorsGroup.visible) {
+        vendorDots.forEach((d, i) => {
+          const s = 1.2 + Math.sin(dt * 3 + i * 0.8) * 0.3;
+          d.scale.set(s, s, s);
+        });
+        vendorsGroup.children.forEach(child => {
+          if (child.type === "Mesh" && child.geometry?.type === "RingGeometry") {
+            const t = (child.userData?.phase || 0);
+            child.userData.phase = t + (child.userData?.speed || 0.01);
+            const s = 1 + Math.sin(t) * 0.6;
+            child.scale.set(s, s, 1);
+          }
+        });
+      }
       renderer.render(scene, camera);
     };
     animate();
 
-    // Resize handler
-    const handleResize = () => {
-      camera.aspect = container.clientWidth / container.clientHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(container.clientWidth, container.clientHeight);
-    };
-    window.addEventListener("resize", handleResize);
-
-    return () => {
-      cancelAnimationFrame(animationId);
-      window.removeEventListener("resize", handleResize);
-      container.removeChild(renderer.domElement);
-      earthGeometry.dispose();
-      earthMaterial.dispose();
-      atmosphereGeometry.dispose();
-      starsGeometry.dispose();
-      renderer.dispose();
-    };
+    const onResize = () => { camera.aspect = container.clientWidth / container.clientHeight; camera.updateProjectionMatrix(); renderer.setSize(container.clientWidth, container.clientHeight); };
+    window.addEventListener("resize", onResize);
+    return () => { cancelAnimationFrame(animId); window.removeEventListener("resize", onResize); container.removeChild(renderer.domElement); renderer.dispose(); };
   }, []);
 
-  return <div ref={containerRef} className="w-full h-full" />;
+  return <div ref={containerRef} className="w-full h-full" style={{ outline: 'none' }} />;
+}
+
+// Full-page CSS stars — no visible boundary, feels infinite
+const starPositions = Array.from({ length: 300 }, () => ({
+  x: Math.random() * 100,
+  y: Math.random() * 100,
+  s: 0.5 + Math.random() * 1.5,
+  o: 0.1 + Math.random() * 0.3,
+}));
+
+// --- Scroll-driven demo: premium 400vh + sticky pin pattern ---
+function ScrollDemo({ onPhaseChange }) {
+  const sectionRef = useRef(null);
+  const [progress, setProgress] = useState(0);
+
+  // Track scroll progress through the section (continuous 0→1)
+  useEffect(() => {
+    const onScroll = () => {
+      const el = sectionRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const sectionTop = rect.top + window.scrollY;
+      const scrollable = el.offsetHeight - window.innerHeight;
+      if (scrollable <= 0) return;
+      const scrolled = window.scrollY - sectionTop;
+      setProgress(Math.max(0, Math.min(1, scrolled / scrollable)));
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // Derive phase + phase progress from continuous scroll
+  const totalPhases = 4;
+  const raw = progress * totalPhases;                     // 0 → 4
+  const phase = Math.min(3, Math.floor(raw));
+  const phaseProgress = Math.min(1, raw - phase);         // 0→1 within each phase
+
+  // Continuous values used by Globe3D (0→3)
+  const globePhase = Math.min(3, raw);
+
+  // Typing
+  const searchText = "patates";
+  const typedLen = phase >= 1 ? Math.min(searchText.length, Math.floor(phaseProgress * searchText.length)) : 0;
+  const typed = searchText.slice(0, typedLen);
+
+  const searchOpacity = phase >= 1 ? Math.min(1, phaseProgress * 2) : 0;
+  const markersProgress = phase >= 2 ? Math.min(1, phaseProgress * 1.5) : 0;
+  const resultProgress = phase >= 3 ? Math.min(1, phaseProgress * 2) : 0;
+
+  // DIAGNOSTIC: Log positions
+  // Notify parent (nav dots)
+  useEffect(() => { onPhaseChange?.(phase); }, [phase, onPhaseChange]);
+
+  return (
+    <section ref={sectionRef} className="relative" style={{ height: '400vh' }}>
+      {/* Sticky container — pinned while its parent scrolls */}
+      <div className="sticky top-0 h-screen">
+        <div className="w-full h-full flex flex-col pt-14">
+        {/* Background glow + stars */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          {starPositions.map((s, i) => (
+            <div key={i} className="absolute rounded-full bg-white"
+              style={{
+                left: `${s.x}%`, top: `${s.y}%`,
+                width: `${s.s}px`, height: `${s.s}px`, opacity: s.o,
+              }}
+            />
+          ))}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] bg-emerald-500/[0.04] rounded-full blur-[200px]" />
+          <div className="absolute top-1/3 left-1/4 w-[80%] h-[60%] bg-emerald-600/[0.02] rounded-full blur-[150px]" />
+        </div>
+
+          <div className="relative flex-1 w-full overflow-visible"
+            style={{
+              transform: `scale(${1 - phase * 0.06}) translateY(${-phase * 3}%)`,
+              transition: 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+            }}
+          >
+            <div className="relative w-full h-full">
+              <Globe3D phase={globePhase} />
+            </div>
+
+          {/* Content — inside flex-1, moves with globe */}
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="w-full">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 w-full">
+              <div className="lg:pl-8 xl:pl-12 w-full text-center lg:text-left pt-4 sm:pt-8 xl:pt-16">
+                {/* Badge + heading — collapses at phase 2 */}
+                <div className="transition-all duration-700 overflow-hidden"
+                  style={{
+                    maxHeight: phase < 2 ? '250px' : '0px',
+                    opacity: phase < 2 ? 1 : Math.max(0, 1 - (phase - 2) * 1.5),
+                    marginBottom: phase < 2 ? '20px' : '0px',
+                  }}
+                >
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.03] border border-white/[0.06] mb-4">
+                    <Sparkles size={12} className="text-emerald-400" />
+                    <span className="text-xs xl:text-sm text-white/70">Les commerces de ta rue, sur une carte</span>
+                  </div>
+                  <h2 className="font-space-grotesk text-4xl xl:text-6xl font-bold tracking-tight leading-tight">
+                    <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">Omni</span>
+                    <span className="text-white/80 block mt-1">Trouve tout ce qui existe autour de toi.</span>
+                  </h2>
+                  <p className="font-dm-sans text-white/50 text-sm xl:text-base mt-3 max-w-md mx-auto lg:mx-0">
+                    Marchés, artisans, services. Partout où tu vas, en un clic.
+                  </p>
+                </div>
+
+                <div className="max-w-md mx-auto lg:mx-0">
+                  {/* Phase 1: Search bar — collapses when inactive */}
+                  <div className="transition-all duration-500 overflow-hidden"
+                    style={{ maxHeight: searchOpacity > 0 ? '80px' : '0px' }}
+                  >
+                    <div className="transition-all duration-500 pointer-events-auto pt-4"
+                      style={{
+                        opacity: searchOpacity,
+                        transform: `translateY(${(1 - searchOpacity) * 20}px)`,
+                      }}
+                    >
+                      <div className="flex items-center bg-black/10 backdrop-blur-lg rounded-2xl border border-white/[0.04] px-4 py-3">
+                        <Search size={16} className="text-emerald-400 mr-3 shrink-0" />
+                        <span className="flex-1 text-white/80 text-sm font-light tracking-wide font-dm-sans">
+                          {typed}
+                          <span className={`animate-pulse text-emerald-400 ${typedLen >= searchText.length ? 'opacity-0' : ''}`}>|</span>
+                        </span>
+                        <Mic size={14} className="text-white/30 shrink-0" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Phase 2: Markers — collapses when inactive */}
+                  <div className="transition-all duration-500 overflow-hidden"
+                    style={{ maxHeight: markersProgress > 0 ? '400px' : '0px' }}
+                  >
+                    <div className="space-y-2 transition-all duration-500 pointer-events-auto pt-4"
+                      style={{
+                        opacity: markersProgress,
+                        transform: `translateY(${(1 - markersProgress) * 20}px)`,
+                      }}
+                    >
+                      {[
+                        { name: "Marché de Bè · Lomé", product: "Patates · 500 FCFA/kg", dist: "120m", continent: "Afrique", delay: 0 },
+                        { name: "Mercado da Lapa · São Paulo", product: "Patates · R$ 5/kg", dist: "6 000 km", continent: "Amériques", delay: 0.15 },
+                        { name: "Chelsea Market · New York", product: "Patates · $3/kg", dist: "8 000 km", continent: "Amériques", delay: 0.3 },
+                        { name: "Marché Bastille · Paris", product: "Patates · €2/kg", dist: "5 000 km", continent: "Europe", delay: 0.45 },
+                        { name: "Tsukiji · Tokyo", product: "Patates · ¥400/kg", dist: "14 000 km", continent: "Asie", delay: 0.6 },
+                        { name: "Paddy's · Sydney", product: "Patates · A$4/kg", dist: "16 000 km", continent: "Océanie", delay: 0.75 },
+                      ].map((m, i) => {
+                        const cardT = Math.max(0, Math.min(1, (markersProgress - m.delay) / 0.2));
+                        return (
+                        <div key={i}
+                          className="flex items-center gap-2"
+                          style={{
+                            opacity: cardT,
+                            transform: `translateY(${(1 - cardT) * 20}px)`,
+                            transition: 'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                          }}
+                        >
+                          <div className={`w-2 h-2 rounded-full shrink-0 ${i === 0 ? 'bg-emerald-400' : 'bg-amber-400/70'}`} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-white/80 font-dm-sans">{m.name}</p>
+                            <p className="text-xs text-white/40 font-dm-sans">{m.product}</p>
+                          </div>
+                          <span className="text-xs text-white/30 shrink-0">{m.dist}</span>
+                        </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Phase 3: Result — collapses when inactive */}
+                  <div className="transition-all duration-500 overflow-hidden"
+                    style={{ maxHeight: resultProgress > 0 ? '180px' : '0px' }}
+                  >
+                    <div className="transition-all duration-500 pointer-events-auto pt-4"
+                      style={{
+                        opacity: resultProgress,
+                        transform: `translateY(${(1 - resultProgress) * 20}px)`,
+                      }}
+                    >
+                      <p className="font-space-grotesk text-base font-medium text-white/80 mb-1">
+                        <span className="text-emerald-400 font-bold">6 vendeurs</span> trouvés
+                      </p>
+                      <p className="font-dm-sans text-sm text-white/40 mb-2">Patates, légumes, produits frais — autour de toi.</p>
+                      <a href="/map"
+                        className="inline-flex items-center gap-1.5 text-emerald-400 hover:text-emerald-300 text-sm font-medium transition-colors font-dm-sans"
+                      >
+                        Voir sur la carte
+                        <ArrowRight size={14} />
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Gradient overlay — inside flex-1, fades globe into dark bg */}
+        <div className="absolute inset-x-0 bottom-0 h-1/4 bg-gradient-to-t from-[#08080f] via-[#08080f]/80 to-transparent pointer-events-none" />
+
+          {/* Mobile overlay */}
+          <div className="lg:hidden absolute bottom-4 left-4 right-4 z-10 pointer-events-none">
+            <div className="text-center transition-all duration-500"
+              style={{ opacity: 1 - Math.min(1, phase / 1.5) }}
+            >
+              <p className="text-white/90 text-lg font-semibold font-space-grotesk">Trouve tout. Autour de toi.</p>
+              <p className="font-dm-sans text-white/40 text-xs mt-2">Scrolle pour découvrir</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Scroll hint */}
+        {phase < 3 && (
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10">
+            <span className="font-dm-sans text-[10px] text-white/[0.15] animate-bounce">↓ Scrolle</span>
+          </div>
+        )}
+      </div>
+    </section>
+  );
 }
 
 export default function LandingPage() {
   const { user, loading } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
-
-  const handleExploreClick = (e) => {
-    if (!user) {
-      e.preventDefault();
-      setShowAuthModal(true);
-    }
-  };
+  const [demoPhase, setDemoPhase] = useState(0);
+  const handleExploreClick = (e) => { if (!user) { e.preventDefault(); setShowAuthModal(true); } };
 
   return (
-    <div className="min-h-screen bg-[#050510] text-white overflow-x-hidden">
-      {/* Navigation - Glassmorphism */}
-      <nav className="fixed top-0 left-0 right-0 z-50 px-6 py-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between px-6 py-3 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
-                <Globe className="text-white" size={20} />
-              </div>
-              <span className="text-xl font-semibold tracking-tight">Omni</span>
+    <div className="min-h-screen bg-[#08080f] text-white">
+      {/* NAV — sticky: starts as site head, becomes overlay on scroll */}
+      <nav className="sticky top-0 z-50 h-14">
+        {/* Background layer — fades out as scroll progresses */}
+        <div className="absolute inset-0 transition-all duration-700 ease-out"
+          style={{
+            opacity: 1 - Math.min(1, demoPhase / 3),
+            backgroundColor: '#08080f',
+          }}
+        />
+        <div className="absolute inset-x-0 bottom-0 h-[1px] transition-all duration-700 ease-out"
+          style={{
+            opacity: 1 - Math.min(1, demoPhase / 2),
+            backgroundColor: 'rgba(255,255,255,0.04)',
+          }}
+        />
+        {/* Content layer — fades slightly into overlay */}
+        <div className="relative h-full transition-all duration-700 ease-out"
+          style={{ opacity: 1 - Math.min(1, demoPhase / 3) * 0.35 }}
+        >
+        <div className="max-w-7xl mx-auto h-full px-3 sm:px-6 flex items-center justify-between gap-2">
+          <a href="/" className="flex items-center gap-2 shrink-0">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+              <Globe className="text-white" size={14} />
             </div>
-            
-            <div className="hidden md:flex items-center gap-8 text-sm text-white/60">
-              <span className="hover:text-white transition-colors cursor-pointer">Découvrir</span>
-              <span className="hover:text-white transition-colors cursor-pointer">Vendeurs</span>
-              <span className="hover:text-white transition-colors cursor-pointer">Comment ça marche</span>
-            </div>
-
-            <div className="flex items-center gap-3">
-              {user ? (
-                <a
-                  href="/map"
-                  className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-medium text-sm transition-all"
-                >
-                  Explorer
-                </a>
-              ) : (
-                <>
-                  <a
-                    href="/auth"
-                    className="px-4 py-2.5 rounded-xl text-white/80 hover:text-white text-sm font-medium transition-all"
-                  >
-                    Connexion
-                  </a>
-                  <a
-                    href="/auth"
-                    className="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium text-sm transition-all border border-white/10"
-                  >
-                    S'inscrire
-                  </a>
-                </>
-              )}
-            </div>
+            <span className="text-sm sm:text-base font-semibold tracking-tight font-space-grotesk">Omni</span>
+          </a>
+          <div className="hidden sm:flex items-center gap-6 text-xs sm:text-sm text-white/50">
+            <a href="/map" className="hover:text-white/80 transition-colors">Explorer</a>
+            <a href="/vendor/onboarding" className="hover:text-white/80 transition-colors">Je suis vendeur</a>
+          </div>
+          {/* Phase dots — in nav, not floating at bottom */}
+          <div className="hidden sm:flex items-center gap-1.5 mr-2">
+            {[0, 1, 2, 3].map(p => (
+              <div key={p} className="w-1.5 h-1.5 rounded-full transition-all duration-500"
+                style={{
+                  backgroundColor: demoPhase >= p ? '#34d399' : 'rgba(255,255,255,0.12)',
+                  transform: demoPhase >= p ? 'scale(1.4)' : 'scale(1)',
+                }}
+              />
+            ))}
+          </div>
+          <div className="flex items-center gap-2">
+            {user ? (
+              <a href="/map" className="px-3 sm:px-4 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-medium text-xs sm:text-sm transition-all">Explorer</a>
+            ) : (
+              <>
+                <a href="/auth" className="px-2.5 sm:px-3 py-1.5 rounded-lg text-white/60 hover:text-white text-xs sm:text-sm transition-all">Connexion</a>
+                <a href="/auth" className="px-3 sm:px-4 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs sm:text-sm transition-all border border-white/10">S'inscrire</a>
+              </>
+            )}
+          </div>
           </div>
         </div>
       </nav>
 
-      {/* Hero Section with 3D Globe */}
-      <section className="relative min-h-screen flex items-center pt-20">
-        {/* Background Effects */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-500/20 rounded-full blur-[120px]" />
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[120px]" />
+      {/* SCROLL DEMO — everything happens here */}
+      <ScrollDemo onPhaseChange={setDemoPhase} />
+
+      {/* PROBLEM */}
+      <section className="py-28 md:py-32 px-6 border-y border-white/[0.03]">
+        <div className="max-w-4xl mx-auto text-center">
+          <span className="text-emerald-400/80 text-[10px] sm:text-xs uppercase tracking-[0.25em] font-medium font-space-grotesk">Le vrai problème</span>
+          <h2 className="font-space-grotesk text-3xl md:text-5xl font-bold tracking-tight mt-6 mb-8 leading-tight">
+            Ton quartier a des commerces que tu ne vois pas.
+          </h2>
+          <p className="font-dm-sans text-white/50 text-base md:text-lg max-w-2xl mx-auto leading-relaxed">
+            Marché de Bè, Mercado da Lapa, Chelsea Market… Dans chaque rue, des gens vendent.
+            Sans vitrine, sans pub, sans site.
+            <span className="text-emerald-400/80 block mt-2 font-medium">Omni les rend visibles. En 3 secondes.</span>
+          </p>
         </div>
+      </section>
 
-        <div className="max-w-7xl mx-auto px-6 py-20 w-full">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            {/* Left: Content */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-              className="relative z-10"
-            >
-              {/* Badge */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.2 }}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-8"
-              >
-                <Sparkles size={14} className="text-emerald-400" />
-                <span className="text-sm text-white/70">Carte 3D en temps réel</span>
-              </motion.div>
-
-              <h1 className="text-5xl md:text-7xl font-bold leading-[1.1] mb-6">
-                Le commerce de{" "}
-                <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
-                  proximité
-                </span>
-                , réinventé.
-              </h1>
-
-              <p className="text-lg text-white/50 mb-10 max-w-lg leading-relaxed">
-                Trouvez les vendeurs autour de vous, vérifiez leur disponibilité, 
-                et visualisez votre itinéraire avant de vous déplacer.
-              </p>
-
-              {/* CTA Buttons */}
-              <div className="flex flex-col sm:flex-row gap-4 mb-12">
-                <motion.a
-                  href="/map"
-                  onClick={handleExploreClick}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="group inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-lg transition-all"
-                >
-                  Explorer la carte
-                  <ArrowRight
-                    size={20}
-                    className="group-hover:translate-x-1 transition-transform"
-                  />
-                </motion.a>
-
-                <motion.a
-                  href="/vendor/onboarding"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold text-lg transition-all"
-                >
-                  <MapPin size={20} />
-                  Devenir vendeur
-                </motion.a>
-              </div>
-
-              {/* Stats - Minimal */}
-              <div className="flex items-center gap-8 text-sm">
-                <div className="flex items-center gap-2 text-white/40">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>Globe 3D temps réel</span>
-                </div>
-                <div className="flex items-center gap-2 text-white/40">
-                  <Shield size={14} />
-                  <span>100% gratuit</span>
-                </div>
-                <div className="flex items-center gap-2 text-white/40">
-                  <Smartphone size={14} />
-                  <span>PWA Ready</span>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Right: 3D Globe */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 1, delay: 0.3 }}
-              className="relative h-[500px] lg:h-[600px]"
-            >
-              <Globe3D />
-              
-              {/* Floating cards */}
-              <motion.div
-                animate={{ y: [0, -10, 0] }}
-                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute top-10 right-10 p-4 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
-                    <MapPin size={18} className="text-emerald-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Vendeurs proches</p>
-                    <p className="text-xs text-white/40">Dans un rayon de 5km</p>
-                  </div>
-                </div>
-              </motion.div>
-
-              <motion.div
-                animate={{ y: [0, 10, 0] }}
-                transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                className="absolute bottom-20 left-10 p-4 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
-                    <Zap size={18} className="text-blue-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Disponibilité</p>
-                    <p className="text-xs text-white/40">En temps réel</p>
-                  </div>
-                </div>
-              </motion.div>
-            </motion.div>
+      {/* TWO SIDES */}
+      <section className="py-28 md:py-32 px-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <span className="text-emerald-400/80 text-[10px] sm:text-xs uppercase tracking-[0.25em] font-medium font-space-grotesk">Pour tout le monde</span>
+            <h2 className="font-space-grotesk text-3xl md:text-5xl font-bold tracking-tight mt-6">Un outil. Deux façons de t'en servir.</h2>
+          </div>
+          <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+            <div className="p-8 md:p-10 rounded-3xl bg-gradient-to-br from-emerald-500/[0.04] to-transparent border border-emerald-500/10">
+              <ShoppingBag size={24} className="text-emerald-400 mb-4" />
+              <h3 className="font-space-grotesk text-xl md:text-2xl font-bold mb-4">Je cherche quelque chose</h3>
+              <ul className="font-dm-sans space-y-3 text-white/50 text-sm leading-relaxed">
+                <li className="flex items-start gap-3"><span className="text-emerald-400 mt-0.5 font-medium">→</span> Tape ce que tu veux, on te dit qui l'a autour de toi</li>
+                <li className="flex items-start gap-3"><span className="text-emerald-400 mt-0.5 font-medium">→</span> Prix, distance, dispo en un coup d'œil</li>
+                <li className="flex items-start gap-3"><span className="text-emerald-400 mt-0.5 font-medium">→</span> Contacte le vendeur en direct</li>
+                <li className="flex items-start gap-3"><span className="text-emerald-400 mt-0.5 font-medium">→</span> La carte te guide jusqu'à lui</li>
+              </ul>
+            </div>
+            <div className="p-8 md:p-10 rounded-3xl bg-gradient-to-br from-blue-500/[0.04] to-transparent border border-blue-500/10">
+              <Store size={24} className="text-blue-400 mb-4" />
+              <h3 className="font-space-grotesk text-xl md:text-2xl font-bold mb-4">Je vends quelque chose</h3>
+              <ul className="font-dm-sans space-y-3 text-white/50 text-sm leading-relaxed">
+                <li className="flex items-start gap-3"><span className="text-blue-400 mt-0.5 font-medium">→</span> Sois visible pour ceux qui cherchent près de chez toi</li>
+                <li className="flex items-start gap-3"><span className="text-blue-400 mt-0.5 font-medium">→</span> Zéro pub, zéro site, zéro effort</li>
+                <li className="flex items-start gap-3"><span className="text-blue-400 mt-0.5 font-medium">→</span> Reçois les demandes des clients en direct</li>
+                <li className="flex items-start gap-3"><span className="text-blue-400 mt-0.5 font-medium">→</span> Réponds OUI ou NON, c'est tout</li>
+              </ul>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Features Grid - Minimal */}
-      <section className="py-24 px-6">
-        <div className="max-w-7xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Une expérience unique
-            </h2>
-            <p className="text-white/40 max-w-2xl mx-auto">
-              Omni combine cartographie 3D, géolocalisation précise et 
-              marketplace local pour une expérience premium.
-            </p>
-          </motion.div>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            {[
-              {
-                icon: Globe,
-                title: "Carte 3D Globe",
-                desc: "Visualisez la Terre en 3D avec projection réaliste et transitions fluides.",
-              },
-              {
-                icon: MapPin,
-                title: "Street View",
-                desc: "Explorez les environs avec Street View intégré avant de vous déplacer.",
-              },
-              {
-                icon: Zap,
-                title: "Temps réel",
-                desc: "Statut des vendeurs mis à jour instantanément. Pas de déplacement inutile.",
-              },
-            ].map((feature, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                className="group p-8 rounded-3xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 hover:border-white/10 transition-all duration-500"
-              >
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                  <feature.icon size={28} className="text-emerald-400" />
-                </div>
-                <h3 className="text-xl font-semibold mb-3">{feature.title}</h3>
-                <p className="text-white/40 text-sm leading-relaxed">
-                  {feature.desc}
-                </p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-24 px-6">
-        <div className="max-w-5xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="relative p-12 md:p-16 rounded-[2.5rem] bg-gradient-to-br from-emerald-500/10 via-white/5 to-blue-500/10 border border-white/10 overflow-hidden"
-          >
-            {/* Background glow */}
-            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 to-transparent opacity-50" />
-            
-            <div className="relative z-10 text-center">
-              <h2 className="text-3xl md:text-5xl font-bold mb-6">
-                Prêt à explorer ?
-              </h2>
-              <p className="text-white/50 mb-10 max-w-lg mx-auto">
-                Rejoignez des milliers d'utilisateurs qui découvrent 
-                le commerce local autrement.
-              </p>
-              
+      {/* CTA */}
+      <section className="py-28 md:py-32 px-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="relative p-12 md:p-16 rounded-[2.5rem] bg-gradient-to-br from-emerald-500/10 via-white/5 to-blue-500/10 border border-white/10 overflow-hidden text-center">
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 to-transparent opacity-50 pointer-events-none" />
+            <div className="relative z-10">
+              <h2 className="font-space-grotesk text-3xl md:text-5xl font-bold tracking-tight mb-6">Trouve ce que tu cherches. Là, autour de toi.</h2>
+              <p className="font-dm-sans text-white/50 text-base mb-10 max-w-lg mx-auto">Des milliers de produits et services. En 30 secondes.</p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <a
-                  href={user ? "/map" : "/auth"}
-                  className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-lg transition-all"
-                >
-                  {user ? "Ouvrir la carte" : "Créer un compte"}
+                <a href={user ? "/map" : "/auth"}
+                  className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-lg transition-all">
+                  Trouver un produit
                   <ChevronRight size={20} />
                 </a>
-                <a
-                  href="/vendor/onboarding"
-                  className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold text-lg transition-all"
-                >
+                <a href="/vendor/onboarding"
+                  className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-white/[0.04] hover:bg-white/10 border border-white/10 text-white font-semibold text-lg transition-all">
                   Devenir vendeur
                 </a>
               </div>
             </div>
-          </motion.div>
+          </div>
         </div>
       </section>
 
-      {/* Footer - Minimal */}
-      <footer className="py-12 px-6 border-t border-white/5">
+      {/* FOOTER */}
+      <footer className="py-10 md:py-12 px-6 border-t border-white/[0.03]">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
               <Globe className="text-white" size={16} />
             </div>
-            <span className="font-semibold">Omni</span>
+            <span className="font-semibold font-space-grotesk">Omni</span>
           </div>
-          <p className="text-sm text-white/30">
-            © 2025 Omni. Commerce de proximité.
-          </p>
-          <div className="flex items-center gap-6 text-sm text-white/40">
-            <a href="#" className="hover:text-white transition-colors">Confidentialité</a>
-            <a href="#" className="hover:text-white transition-colors">Conditions</a>
-            <a href="#" className="hover:text-white transition-colors">Contact</a>
+          <p className="font-dm-sans text-xs text-white/30">© 2026 Omni. Les commerces autour de toi, où que tu sois.</p>
+          <div className="flex items-center gap-6 text-sm text-white/35">
+            <a href="#" className="hover:text-white/60 transition-colors">Confidentialité</a>
+            <a href="#" className="hover:text-white/60 transition-colors">Conditions</a>
+            <a href="#" className="hover:text-white/60 transition-colors">Contact</a>
           </div>
         </div>
       </footer>
 
-      {/* Auth Modal */}
+      {/* AUTH MODAL */}
       <AnimatePresence>
         {showAuthModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
             onClick={() => setShowAuthModal(false)}
           >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-md p-8 rounded-3xl bg-[#0a0a1a] border border-white/10 text-center"
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }} onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md p-8 rounded-3xl bg-[#0f0f1a] border border-white/[0.06] text-center"
             >
               <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 flex items-center justify-center mx-auto mb-6">
                 <Shield size={32} className="text-emerald-400" />
               </div>
-              <h3 className="text-2xl font-bold mb-3">Connexion requise</h3>
-              <p className="text-white/50 mb-8">
-                L'accès à la carte nécessite un compte pour une expérience personnalisée.
-              </p>
+              <h3 className="font-space-grotesk text-2xl font-bold mb-3">Connexion requise</h3>
+              <p className="font-dm-sans text-white/50 mb-8">Crée un compte pour explorer la carte.</p>
               <div className="flex flex-col gap-3">
-                <a
-                  href="/auth"
-                  className="w-full py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black font-semibold transition-all"
-                >
-                  Se connecter
-                </a>
-                <a
-                  href="/auth"
-                  className="w-full py-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold transition-all"
-                >
-                  Créer un compte
-                </a>
+                <a href="/auth" className="w-full py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black font-semibold transition-all">Se connecter</a>
+                <a href="/auth" className="w-full py-4 rounded-2xl bg-white/[0.04] hover:bg-white/10 border border-white/10 text-white font-semibold transition-all">Créer un compte</a>
               </div>
-              <button
-                onClick={() => setShowAuthModal(false)}
-                className="mt-4 text-sm text-white/40 hover:text-white/60 transition-colors"
-              >
-                Annuler
-              </button>
+              <button onClick={() => setShowAuthModal(false)} className="mt-4 text-sm text-white/40 hover:text-white/60 transition-colors">Annuler</button>
             </motion.div>
           </motion.div>
         )}

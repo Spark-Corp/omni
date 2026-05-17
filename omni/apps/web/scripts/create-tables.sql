@@ -11,7 +11,8 @@ CREATE TABLE IF NOT EXISTS auth_users (
     name TEXT,
     email TEXT UNIQUE,
     "emailVerified" TIMESTAMP,
-    image TEXT
+    image TEXT,
+    password_hash TEXT
 );
 
 CREATE TABLE IF NOT EXISTS auth_accounts (
@@ -106,6 +107,39 @@ CREATE TABLE IF NOT EXISTS messages (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Table des demandes de disponibilité
+CREATE TABLE IF NOT EXISTS availability_requests (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    buyer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    vendor_id UUID NOT NULL REFERENCES vendors(id) ON DELETE CASCADE,
+    product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    quantity_requested DECIMAL(10, 2) NOT NULL,
+    quantity_confirmed DECIMAL(10, 2),
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'denied')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    responded_at TIMESTAMP
+);
+
+-- Table des favoris
+CREATE TABLE IF NOT EXISTS favorites (
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    vendor_id UUID NOT NULL REFERENCES vendors(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, vendor_id)
+);
+
+-- Table des notifications
+CREATE TABLE IF NOT EXISTS notifications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    type TEXT NOT NULL DEFAULT 'info',
+    title TEXT NOT NULL,
+    message TEXT,
+    link TEXT,
+    is_read BOOLEAN DEFAULT false,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Créer index géospatial pour les vendeurs
 CREATE INDEX IF NOT EXISTS idx_vendors_location ON vendors USING GIST (location);
 
@@ -114,6 +148,12 @@ CREATE INDEX IF NOT EXISTS idx_vendors_category ON vendors(category);
 CREATE INDEX IF NOT EXISTS idx_vendors_online ON vendors(is_online);
 CREATE INDEX IF NOT EXISTS idx_products_vendor ON products(vendor_id);
 CREATE INDEX IF NOT EXISTS idx_messages_users ON messages(sender_id, receiver_id);
+CREATE INDEX IF NOT EXISTS idx_availability_requests_vendor ON availability_requests(vendor_id);
+CREATE INDEX IF NOT EXISTS idx_availability_requests_buyer ON availability_requests(buyer_id);
+CREATE INDEX IF NOT EXISTS idx_availability_requests_status ON availability_requests(status);
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(user_id, is_read);
+CREATE INDEX IF NOT EXISTS idx_favorites_user ON favorites(user_id);
 CREATE INDEX IF NOT EXISTS idx_auth_accounts_user ON auth_accounts("userId");
 CREATE INDEX IF NOT EXISTS idx_auth_sessions_user ON auth_sessions("userId");
 CREATE INDEX IF NOT EXISTS idx_auth_sessions_token ON auth_sessions("sessionToken");

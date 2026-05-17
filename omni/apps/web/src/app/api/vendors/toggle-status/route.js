@@ -3,9 +3,17 @@ import { authClient } from "@/lib/auth";
 
 export async function POST(request) {
   try {
-    const session = await authClient.getSession();
-    if (!session || !session.user?.id) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    let userId;
+    
+    const headerUserId = request.headers.get("x-user-id");
+    if (headerUserId) {
+      userId = headerUserId;
+    } else {
+      const session = await authClient.getSession();
+      if (!session?.data?.user?.id) {
+        return Response.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      userId = session.data.user.id;
     }
 
     const body = await request.json();
@@ -18,14 +26,12 @@ export async function POST(request) {
       );
     }
 
-    const userId = session.user.id;
-
     // Update vendor status (only if owned by this user)
     const result = await sql`
       UPDATE vendors
-      SET is_online = ${isOnline}, last_seen = NOW()
+      SET is_online = ${isOnline}, updated_at = CURRENT_TIMESTAMP
       WHERE id = ${vendorId} AND user_id = ${userId}
-      RETURNING id, is_online, last_seen
+      RETURNING id, is_online
     `;
 
     if (result.length === 0) {

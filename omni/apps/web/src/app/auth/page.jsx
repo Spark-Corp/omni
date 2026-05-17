@@ -3,15 +3,9 @@
 import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
 import { Globe, Sparkles } from "lucide-react";
-import { SimpleAuthWrapper } from "@/components/NeonAuthWrapper";
+import { NeonAuthWrapper } from "@/components/NeonAuthWrapper";
 
 export default function AuthPage() {
-  const navigate = useNavigate();
-
-  const handleAuthSuccess = () => {
-    navigate("/map");
-  };
-
   return (
     <div className="min-h-screen bg-[#050510] flex">
       {/* Left Side - Visual */}
@@ -71,8 +65,7 @@ export default function AuthPage() {
             <span className="text-xl font-semibold text-white">Omni</span>
           </div>
 
-          {/* Auth Wrapper - No React Router conflicts */}
-          <SimpleAuthWrapper onAuthSuccess={handleAuthSuccess} />
+          <NeonAuthWrapper />
 
           <div className="mt-8 text-center">
             <a href="/" className="text-sm text-white/30 hover:text-white/50 transition-colors">

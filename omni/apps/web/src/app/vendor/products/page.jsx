@@ -1,11 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Edit, Trash2, Loader2, ArrowLeft, Upload } from "lucide-react";
-import useUser from "@/utils/useUser";
+import { Plus, Edit, Trash2, Loader2, Package } from "lucide-react";
 
 export default function VendorProductsPage() {
-  const { data: user, loading: userLoading } = useUser();
   const [vendor, setVendor] = useState(null);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -13,25 +11,29 @@ export default function VendorProductsPage() {
   const [editingProduct, setEditingProduct] = useState(null);
   const [formData, setFormData] = useState({
     name: "",
-    category: "",
     price: "",
-    unit: "unité",
+    unit: "pièce",
   });
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    if (user && !userLoading) {
-      loadVendorData();
-    }
-  }, [user, userLoading]);
+    loadVendorData();
+  }, []);
 
   const loadVendorData = async () => {
     try {
-      const response = await fetch("/api/vendors/my-vendor");
+      const storedUser = localStorage.getItem("omni_user");
+      const userId = storedUser ? JSON.parse(storedUser).id : null;
+
+      const response = await fetch("/api/vendors/my-vendor", {
+        headers: userId ? { 'x-user-id': userId } : {},
+      });
+
       if (!response.ok) throw new Error("Failed to load vendor");
 
       const data = await response.json();
       setVendor(data.vendor);
-      setProducts(data.vendor.products || []);
+      setProducts(data.vendor?.products || []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -41,16 +43,23 @@ export default function VendorProductsPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
     setLoading(true);
 
     try {
+      const storedUser = localStorage.getItem("omni_user");
+      const userId = storedUser ? JSON.parse(storedUser).id : null;
+
       const url = editingProduct
         ? `/api/vendors/products/${editingProduct.id}`
         : "/api/vendors/products/create";
 
       const response = await fetch(url, {
         method: editingProduct ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(userId ? { 'x-user-id': userId } : {})
+        },
         body: JSON.stringify({
           vendorId: vendor.id,
           ...formData,
@@ -58,305 +67,207 @@ export default function VendorProductsPage() {
         }),
       });
 
-      if (!response.ok) throw new Error("Failed to save product");
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to save product");
+      }
 
-      await loadVendorData();
+      loadVendorData();
       setShowForm(false);
       setEditingProduct(null);
-      setFormData({ name: "", category: "", price: "", unit: "unité" });
+      setFormData({ name: "", price: "", unit: "pièce" });
     } catch (err) {
-      console.error(err);
-      toast("Erreur lors de la sauvegarde du produit");
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleEdit = (product) => {
-    setEditingProduct(product);
-    setFormData({
-      name: product.name,
-      category: product.category,
-      price: product.price.toString(),
-      unit: product.unit,
-    });
-    setShowForm(true);
-  };
-
   const handleDelete = async (productId) => {
-    toast.warning(" Suppression en cours...)
+    if (!confirm("Supprimer ce produit?")) return;
 
-    setLoading(true);
     try {
+      const storedUser = localStorage.getItem("omni_user");
+      const userId = storedUser ? JSON.parse(storedUser).id : null;
+
       const response = await fetch(`/api/vendors/products/${productId}`, {
         method: "DELETE",
+        headers: userId ? { 'x-user-id': userId } : {},
       });
 
       if (!response.ok) throw new Error("Failed to delete product");
 
-      await loadVendorData();
+      loadVendorData();
     } catch (err) {
       console.error(err);
-      toast("Erreur lors de la suppression");
-    } finally {
-      setLoading(false);
     }
   };
 
-  const toggleAvailability = async (product) => {
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/vendors/products/${product.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          vendorId: vendor.id,
-          isAvailable: !product.is_available,
-        }),
-      });
-
-      if (!response.ok) throw new Error("Failed to update availability");
-
-      await loadVendorData();
-    } catch (err) {
-      console.error(err);
-      toast("Erreur lors de la mise à jour");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (userLoading || loading) {
+  if (loading && !vendor) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="animate-spin text-emerald-600" size={48} />
-      </div>
-    );
-  }
-
-  if (!user || !vendor) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-        <div className="text-center">
-          <p className="text-gray-600 mb-4">Veuillez vous connecter</p>
-          <a href="/vendor/dashboard">
-            <button className="bg-emerald-600 text-white px-6 py-3 rounded-lg font-semibold">
-              Retour au dashboard
-            </button>
-          </a>
-        </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="animate-spin text-emerald-400" size={32} />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="p-6 md:p-8">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <a href="/vendor/dashboard">
-                <button className="p-2 hover:bg-gray-100 rounded-full">
-                  <ArrowLeft size={24} className="text-gray-700" />
-                </button>
-              </a>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">
-                  Mes produits
-                </h1>
-                <p className="text-gray-600">{vendor.name}</p>
-              </div>
-            </div>
-            <button
-              onClick={() => {
-                setShowForm(true);
-                setEditingProduct(null);
-                setFormData({
-                  name: "",
-                  category: "",
-                  price: "",
-                  unit: "unité",
-                });
-              }}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-lg font-semibold flex items-center gap-2"
-            >
-              <Plus size={20} />
-              Nouveau produit
-            </button>
-          </div>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="font-space-grotesk text-2xl md:text-3xl font-bold text-white">Mes produits</h1>
+          {vendor && (
+            <p className="font-dm-sans text-sm text-zinc-400 mt-1">{vendor.name}</p>
+          )}
         </div>
+        <button
+          onClick={() => setShowForm(true)}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-sm transition-all"
+        >
+          <Plus size={16} />
+          Ajouter
+        </button>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Products Grid */}
-        {products.length === 0 ? (
-          <div className="bg-white rounded-xl shadow p-12 text-center">
-            <p className="text-gray-500 mb-4">Aucun produit pour le moment</p>
-            <button
-              onClick={() => setShowForm(true)}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-lg font-semibold"
-            >
-              Ajouter votre premier produit
-            </button>
-          </div>
-        ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {products.map((product) => (
-              <div
-                key={product.id}
-                className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow"
-              >
-                <div className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <h3 className="text-xl font-bold text-gray-900 mb-1">
-                        {product.name}
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        {product.category}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => toggleAvailability(product)}
-                      className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                        product.is_available
-                          ? "bg-emerald-100 text-emerald-700"
-                          : "bg-gray-100 text-gray-700"
-                      }`}
-                    >
-                      {product.is_available ? "Disponible" : "Indisponible"}
-                    </button>
-                  </div>
+      <div className="max-w-4xl space-y-6">
+        {/* Add/Edit Form */}
+        {showForm && (
+          <div className="rounded-2xl border border-white/10 bg-zinc-900/60 p-6 md:p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <Package size={18} className="text-emerald-400" />
+              <h2 className="font-space-grotesk text-lg font-bold text-white">
+                {editingProduct ? "Modifier le produit" : "Nouveau produit"}
+              </h2>
+            </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="font-dm-sans block text-sm text-zinc-400 mb-2">Nom du produit *</label>
+                <div className="rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-3 transition-all focus-within:border-emerald-500/50 focus-within:bg-zinc-800/70">
+                  <input
+                    type="text"
+                    required
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Ex: Tomates fraîches"
+                    className="w-full bg-transparent border-none outline-none text-zinc-200 text-sm placeholder:text-zinc-600 font-dm-sans"
+                  />
+                </div>
+              </div>
 
-                  <div className="mb-4">
-                    <div className="text-2xl font-bold text-emerald-600">
-                      {product.price} FCFA
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      par {product.unit}
-                    </div>
-                  </div>
+              {error && (
+                <div className="px-4 py-3 rounded-xl border border-red-500/30 bg-red-500/10">
+                  <p className="font-dm-sans text-sm text-red-400">{error}</p>
+                </div>
+              )}
 
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleEdit(product)}
-                      className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-600 py-2 rounded-lg font-semibold flex items-center justify-center gap-2"
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="font-dm-sans block text-sm text-zinc-400 mb-2">Prix (FCFA) *</label>
+                  <div className="rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-3 transition-all focus-within:border-emerald-500/50 focus-within:bg-zinc-800/70">
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      value={formData.price}
+                      onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                      placeholder="500"
+                      className="w-full bg-transparent border-none outline-none text-zinc-200 text-sm placeholder:text-zinc-600 font-dm-sans"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="font-dm-sans block text-sm text-zinc-400 mb-2">Unité *</label>
+                  <div className="rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-3 transition-all focus-within:border-emerald-500/50 focus-within:bg-zinc-800/70">
+                    <select
+                      value={formData.unit}
+                      onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                      className="w-full bg-transparent border-none outline-none text-zinc-400 text-sm font-dm-sans appearance-none"
                     >
-                      <Edit size={16} />
-                      Modifier
-                    </button>
-                    <button
-                      onClick={() => handleDelete(product.id)}
-                      className="flex-1 bg-red-50 hover:bg-red-100 text-red-600 py-2 rounded-lg font-semibold flex items-center justify-center gap-2"
-                    >
-                      <Trash2 size={16} />
-                      Supprimer
-                    </button>
+                      <option value="pièce" className="bg-zinc-900">pièce</option>
+                      <option value="kg" className="bg-zinc-900">kg</option>
+                      <option value="litre" className="bg-zinc-900">litre</option>
+                      <option value="sac" className="bg-zinc-900">sac</option>
+                    </select>
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
 
-      {/* Form Modal */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">
-              {editingProduct ? "Modifier le produit" : "Nouveau produit"}
-            </h2>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nom du produit *
-                </label>
-                <input
-                  required
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  placeholder="Ex: Riz local"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Catégorie
-                </label>
-                <input
-                  type="text"
-                  value={formData.category}
-                  onChange={(e) =>
-                    setFormData({ ...formData, category: e.target.value })
-                  }
-                  placeholder="Ex: Alimentation"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Prix (FCFA) *
-                </label>
-                <input
-                  required
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.price}
-                  onChange={(e) =>
-                    setFormData({ ...formData, price: e.target.value })
-                  }
-                  placeholder="Ex: 2500"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Unité
-                </label>
-                <input
-                  type="text"
-                  value={formData.unit}
-                  onChange={(e) =>
-                    setFormData({ ...formData, unit: e.target.value })
-                  }
-                  placeholder="Ex: sac, kg, pièce"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
-                />
-              </div>
-
-              <div className="flex gap-3 pt-4">
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? "Enregistrement..." : "Enregistrer"}
+                </button>
                 <button
                   type="button"
                   onClick={() => {
                     setShowForm(false);
                     setEditingProduct(null);
+                    setFormData({ name: "", price: "", unit: "pièce" });
                   }}
-                  className="flex-1 border-2 border-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-50"
+                  className="px-6 py-3 rounded-xl border border-zinc-700 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-300 text-sm font-dm-sans transition-all"
                 >
                   Annuler
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-lg font-semibold disabled:opacity-50"
-                >
-                  {loading ? "Enregistrement..." : "Enregistrer"}
                 </button>
               </div>
             </form>
           </div>
+        )}
+
+        {/* Products List */}
+        <div className="rounded-2xl border border-white/10 bg-zinc-900/60">
+          <div className="p-6 md:p-8">
+            {products.length > 0 ? (
+              <div className="space-y-3">
+                {products.map((product) => (
+                  <div
+                    key={product.id}
+                    className="rounded-xl border border-zinc-800 bg-zinc-800/30 px-5 py-4 flex items-center justify-between transition-all hover:bg-zinc-800/50"
+                  >
+                    <div>
+                      <h3 className="font-dm-sans font-medium text-zinc-200">{product.name}</h3>
+                      <p className="font-dm-sans text-sm text-emerald-400 mt-1">
+                        {product.price} FCFA / {product.unit}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setEditingProduct(product);
+                          setFormData({
+                            name: product.name,
+                            price: product.price.toString(),
+                            unit: product.unit || "pièce",
+                          });
+                          setShowForm(true);
+                        }}
+                        className="p-2 text-zinc-500 hover:text-emerald-400 transition-colors"
+                      >
+                        <Edit size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(product.id)}
+                        className="p-2 text-zinc-500 hover:text-red-400 transition-colors"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <p className="font-dm-sans text-sm text-zinc-500">
+                  Aucun produit. Ajoute ton premier produit.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

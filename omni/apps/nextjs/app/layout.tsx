@@ -1,22 +1,18 @@
-import type { Metadata } from "next"
-import { Inter } from "next/font/google"
-import "./globals.css"
-
-const inter = Inter({ subsets: ["latin"] })
+import type { Metadata } from 'next'
+import './globals.css'
 
 export const metadata: Metadata = {
-  title: "Omni Marketplace",
-  description: "Local vendor marketplace"
+  title: 'Omni — Trouvez tout près de chez vous',
+  description: 'Omni vous connecte aux vendeurs de votre quartier en temps réel.',
+  icons: { icon: '/favicon.svg' },
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className={inter.className}>{children}</body>
+    <html lang="fr">
+      <body className="font-sans bg-neutral-50 text-neutral-900 antialiased">
+        {children}
+      </body>
     </html>
   )
 }
