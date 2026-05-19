@@ -18,6 +18,10 @@ export async function loader({ params }: Route.LoaderArgs) {
   };
 }
 
+export async function action() {
+  return Response.json({ error: 'Not Found' }, { status: 404 });
+}
+
 interface ParentSitemap {
   webPages?: Array<{
     id: string;
