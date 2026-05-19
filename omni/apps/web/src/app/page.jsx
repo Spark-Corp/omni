@@ -38,6 +38,8 @@ function Globe3D({ phase = 0 }) {
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     } catch (e) { setWebglOk(false); return; }
     renderer.setSize(W, H); renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x08080f, 1);
+    renderer.domElement.style.backgroundColor = '#08080f';
     renderer.domElement.style.outline = 'none';
     renderer.domElement.style.display = 'block';
     container.appendChild(renderer.domElement);
@@ -302,12 +304,12 @@ function Globe3D({ phase = 0 }) {
 
   if (!webglOk) {
     return (
-      <div className="w-full h-full min-h-[300px] sm:min-h-[400px] flex items-center justify-center">
+      <div className="w-full h-full min-h-[300px] sm:min-h-[400px] flex items-center justify-center bg-[#08080f]">
         <Globe size={48} className="text-emerald-400/30" />
       </div>
     );
   }
-  return <div ref={containerRef} className="w-full h-full min-h-[300px] sm:min-h-[400px]" style={{ outline: 'none' }} />;
+  return <div ref={containerRef} className="w-full h-full min-h-[300px] sm:min-h-[400px] bg-[#08080f]" style={{ outline: 'none' }} />;
 }
 
 // Full-page CSS stars — no visible boundary, feels infinite
@@ -366,7 +368,7 @@ function ScrollDemo({ onPhaseChange }) {
   return (
     <section ref={sectionRef} className="relative" style={{ height: '300vh' }}>
       {/* Sticky container — pinned while its parent scrolls */}
-      <div className="sticky top-0 h-dvh overflow-hidden">
+      <div className="sticky top-0 h-dvh">
         <div className="w-full h-full flex flex-col pt-14 relative">
         {/* Background glow + stars */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
