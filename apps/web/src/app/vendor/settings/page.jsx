@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
-import { Loader2, Store, MapPin, Trash2, Settings, ChevronRight } from "lucide-react";
+import { Loader2, Store, MapPin, Trash2, Settings, ChevronRight, Plus, Globe, Power, PowerOff } from "lucide-react";
 
 export default function VendorSettingsPage() {
   const [vendor, setVendor] = useState(null);
@@ -142,6 +142,9 @@ export default function VendorSettingsPage() {
     <div className="p-6 md:p-8">
       <div className="max-w-2xl">
         <div className="flex items-center gap-3 mb-8">
+          <button onClick={() => window.history.back()} className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all">
+            <ChevronRight size={14} className="text-white/50 rotate-180" />
+          </button>
           <Settings size={20} className="text-emerald-400" />
           <div>
             <h1 className="font-space-grotesk text-xl md:text-2xl font-bold text-white">Paramètres boutique</h1>
@@ -188,7 +191,7 @@ export default function VendorSettingsPage() {
             </div>
 
             {/* Phone + Email */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="font-dm-sans block text-sm text-zinc-400 mb-2">Téléphone</label>
                 <div className="rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-3 transition-all focus-within:border-emerald-500/50">
@@ -206,7 +209,7 @@ export default function VendorSettingsPage() {
             </div>
 
             {/* Address + Neighborhood */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="font-dm-sans block text-sm text-zinc-400 mb-2">Adresse</label>
                 <div className="rounded-xl border border-zinc-700 bg-zinc-800/50 px-4 py-3 transition-all focus-within:border-emerald-500/50">
@@ -276,6 +279,49 @@ export default function VendorSettingsPage() {
                   </button>
                 </div>
               </div>
+            )}
+          </div>
+
+          {/* Facilities Management */}
+          <div className="rounded-2xl border border-white/10 bg-zinc-900/60 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-space-grotesk text-base font-bold text-white">Mes activités (facilities)</h2>
+              <Link
+                to="/vendor/onboarding?addFacility=1"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-medium transition-all"
+              >
+                <Plus size={14} />
+                Ajouter
+              </Link>
+            </div>
+
+            {vendor.facilities?.length > 0 ? (
+              <div className="space-y-2">
+                {vendor.facilities.map((facility) => (
+                  <div key={facility.id} className="rounded-xl border border-zinc-800 bg-zinc-800/30 px-4 py-3 flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-dm-sans font-medium text-zinc-200 text-sm truncate">{facility.facility_name}</h3>
+                        {facility.type === 'mobile' && <Globe size={12} className="text-purple-400" />}
+                      </div>
+                      <p className="font-dm-sans text-xs text-zinc-500 mt-0.5">
+                        {facility.category} · {facility.product_count} produit{facility.product_count > 1 ? 's' : ''}
+                        {facility.address && ` · ${facility.address}`}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 ml-3">
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] ${
+                        facility.is_online ? 'bg-emerald-500/10 text-emerald-400' : 'bg-zinc-800 text-zinc-500'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${facility.is_online ? 'bg-emerald-400' : 'bg-zinc-500'}`} />
+                        {facility.is_online ? 'En ligne' : 'Hors ligne'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="font-dm-sans text-sm text-zinc-500 text-center py-4">Aucune activité</p>
             )}
           </div>
         </div>

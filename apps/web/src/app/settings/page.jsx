@@ -102,8 +102,11 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-[#08080f]">
-      <div className="max-w-lg mx-auto px-4 py-12">
+      <div className="max-w-lg mx-auto px-6 py-12">
         <div className="flex items-center gap-3 mb-8">
+          <button onClick={() => window.history.back()} className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all">
+            <ChevronRight size={14} className="text-white/50 rotate-180" />
+          </button>
           <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
             <User size={20} className="text-emerald-400" />
           </div>
