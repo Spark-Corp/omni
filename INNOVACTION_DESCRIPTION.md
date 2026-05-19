@@ -1,22 +1,23 @@
 # Innov'Action — Description de la solution (300 mots)
 
-## Omni — Le moteur de recherche du commerce de quartier
+## Omni — Cartographie exhaustive du commerce de quartier
 
-**Problème :** 80%+ du commerce en Afrique est informel : vendeurs de rue, marchés, artisans, services de quartier. Ces commerces sont invisibles en ligne (pas sur Google Maps, pas de site, pas de réseaux sociaux). L'acheteur ne peut pas savoir ce qui est disponible autour de lui. Le vendeur perd des clients qu'il ne sait pas atteindre.
+**Problème :** 80%+ du commerce en Afrique est informel : vendeurs de rue, marchés, artisans, services. Invisibles en ligne (pas sur Google Maps, pas de site). L'acheteur ne sait pas ce qui est disponible autour de lui. Le vendeur perd des clients.
 
-**Solution :** Omni cartographie ces vendeurs sur le terrain et les rend visibles sur une carte interactive. L'acheteur ouvre l'application, cherche un produit ("tomates", "réparateur téléphone") et voit instantanément tous les vendeurs autour de lui qui l'ont, avec le prix, la distance et la disponibilité en temps réel.
+**Notre approche :** Omni n'est pas une app de plus. On ne se limite pas aux commerces déjà numérisés. On cartographie TOUS les vendeurs, physiquement, quartier par quartier. Notre objectif : au moins 80% des facilités existantes dans chaque zone couverte.
 
-**Comment ça marche :**
-- Équipe terrain rencontre les vendeurs, enregistre leurs produits et services
-- Carte interactive avec recherche texte/voix
-- L'acheteur envoie une demande, le vendeur répond OUI/NON
-- Livraison crowd optionnelle (livreurs du quartier)
-- Zéro effort pour le vendeur : pas d'inscription, pas de catalogue à gérer
+**Comment :**
+- Équipe terrain rencontre les vendeurs, enregistre produits et services
+- Carte interactive + recherche texte/voix
+- L'acheteur envoie une demande, le vendeur répond OUI/NON (même sans savoir lire : notifications vocales)
+- Livraison crowd et escrow sécurisé
 
-**MVP existant (fonctionnel) :** Carte interactive, recherche, profils vendeurs, messagerie, système de disponibilité, dashboard vendeur, livraison crowd, portefeuille/escrow, abonnements premium, API REST complète — le tout sur une architecture 100% open source (React, Node, PostgreSQL/PostGIS, déploiement zéro coût).
+**Escrow & APIs télécom :** Notre système de paiement sécurisé (l'acheteur paie à la confirmation, le vendeur reçoit quand le service est rendu) nécessite l'accès aux APIs mobile money (YAS, Moov Money, Togocom). Impossible pour une startup seule — réalisable avec l'appui institutionnel du programme.
 
-**Marché :** Lomé (Bè) comme quartier test, puis ouest-africain. 800+ milliards $ de commerce informel, 100+ millions de vendeurs non répertoriés, 500+ millions d'acheteurs.
+**MVP existant :** 100% fonctionnel — carte interactive, recherche, profils vendeurs, messagerie, disponibilité, dashboard vendeur, livraison crowd, portefeuille/escrow, abonnements premium, API REST complète. Architecture open source (React, Node, PostgreSQL/PostGIS).
 
-**Business model :** Gratuit pour l'acheteur et le vendeur (visibilité de base). Abonnement premium (2 500 FCFA/mois) pour les vendeurs qui veulent être mis en avant. Achat/livraison sans commission — on vend de la visibilité, comme Google.
+**Marché :** Lomé (Bè) comme quartier test, puis ouest-africain. 800+ milliards $ de commerce informel.
 
-**Demande :** Accompagnement Innov'Action pour structurer le scale terrain (recrutement cartographes, logistique quartier, connexions télécom) et financer les 3 premiers mois de déploiement terrain.
+**Business model :** Gratuit pour l'acheteur et le vendeur (visibilité de base). Abonnement premium (2 500 FCFA/mois) pour les vendeurs qui veulent être mis en avant. On vend de la visibilité, pas de commission — comme Google.
+
+**Demande :** Accompagnement Innov'Action pour accès aux APIs télécom, accréditation terrain, et financement des 3 premiers mois de cartographie exhaustive.
