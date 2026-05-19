@@ -516,7 +516,6 @@ export default function LandingPage() {
   const { user, loading } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [demoPhase, setDemoPhase] = useState(0);
-  const handleExploreClick = (e) => { if (!user) { e.preventDefault(); setShowAuthModal(true); } };
 
   return (
     <div className="min-h-screen bg-[#08080f] text-white">
@@ -645,7 +644,7 @@ export default function LandingPage() {
               <h2 className="font-space-grotesk text-3xl md:text-5xl font-bold tracking-tight mb-6">Trouve, vends ou livre. Là, autour de toi.</h2>
               <p className="font-dm-sans text-white/50 text-base mb-10 max-w-lg mx-auto">Des facilités, des produits, des trajets. Tout est près de chez toi.</p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <a href={user ? "/map" : "/auth"}
+                <a href="/map"
                   className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-lg transition-all">
                   Trouver un produit
                   <ChevronRight size={20} />
