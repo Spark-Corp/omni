@@ -9,6 +9,33 @@ import {
 import * as THREE from "three";
 import useAuth from "@/utils/useAuth";
 
+// --- Splash screen shown while Three.js initializes ---
+function Splash() {
+  return (
+    <motion.div
+      initial={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.6, ease: 'easeOut' }}
+      className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-[#08080f]"
+    >
+      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center mb-4">
+        <Globe className="text-white" size={20} />
+      </div>
+      <span className="font-space-grotesk text-lg font-semibold text-white/80">Omni</span>
+      <div className="mt-6 flex gap-1.5">
+        {[0, 1, 2].map(i => (
+          <motion.div
+            key={i}
+            className="w-2 h-2 rounded-full bg-emerald-400"
+            animate={{ opacity: [0.2, 1, 0.2] }}
+            transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2 }}
+          />
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
 // --- 3D Globe with interaction ---
 function Globe3D({ phase = 0 }) {
   const containerRef = useRef(null);
@@ -539,9 +566,17 @@ export default function LandingPage() {
   const { user, loading } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [demoPhase, setDemoPhase] = useState(0);
+  const [splashDone, setSplashDone] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setSplashDone(true), 1000);
+    return () => clearTimeout(t);
+  }, []);
 
   return (
-    <div className="min-h-screen bg-[#08080f] text-white">
+    <>
+      <AnimatePresence>{!splashDone && <Splash />}</AnimatePresence>
+      <div className="min-h-screen bg-[#08080f] text-white" style={{ visibility: splashDone ? 'visible' : 'hidden' }}>
       {/* NAV — sticky: starts as site head, becomes overlay on scroll */}
       <nav className="sticky top-0 z-50 h-14">
         {/* Background layer — fades out as scroll progresses */}
@@ -730,5 +765,6 @@ export default function LandingPage() {
         )}
       </AnimatePresence>
     </div>
+    </>
   );
 }
