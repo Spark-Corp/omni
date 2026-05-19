@@ -9,6 +9,7 @@ import {
   useRouteError,
 } from 'react-router';
 
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { useButton } from '@react-aria/button';
 import {
   type CSSProperties,
@@ -21,6 +22,7 @@ import {
   useState,
 } from 'react';
 import './global.css';
+import GlobalNav from "@/components/GlobalNav";
 
 // Polyfill for crypto.randomUUID
 if (typeof window !== 'undefined' && !window.crypto) {
@@ -493,7 +495,7 @@ export function Layout({ children }: { children: ReactNode }) {
   useHandleScreenshotRequest();
   useDevServerHeartbeat();
 
-  const isMobile = typeof window !== 'undefined' ? window.innerWidth < 768 : false;
+  const isMobile = useIsMobile();
   return (
     <html lang="en">
       <head>
@@ -520,6 +522,7 @@ export default function App() {
   return (
     <>
       <NavigationHandler />
+      <GlobalNav />
       <Outlet />
     </>
   );
