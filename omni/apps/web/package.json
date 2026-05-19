@@ -107,7 +107,10 @@
 			"argon2",
 			"esbuild",
 			"sharp"
-		]
+		],
+		"patchedDependencies": {
+			"react-router-hono-server@2.25.2": "patches/react-router-hono-server@2.25.2.patch"
+		}
 	},
 	"overrides": {
 		"next-themes": "^0.3.0"

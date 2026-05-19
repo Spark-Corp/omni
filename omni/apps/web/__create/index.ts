@@ -92,11 +92,6 @@ app.all('/api/*', (c) => {
 });
 
 const requestHandler = createRequestHandler(reactRouterBuild);
-
-// Use all('/*') instead of mount('/') so Hono processes more specific routes first
-app.all('/*', async (c) => {
-	const response = await requestHandler(c.req.raw);
-	return response;
-});
+app.mount('/', (request) => requestHandler(request));
 
 export default app;

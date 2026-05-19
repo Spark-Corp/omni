@@ -13,8 +13,17 @@
       "page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
       "account/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
       "auth/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "cart/history/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "dashboard/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "delivery/dashboard/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "delivery/history/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "delivery/onboarding/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "delivery/settings/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "delivery/trips/new/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
       "map/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "onboarding/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
       "settings/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "subscriptions/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
       "user/profile/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
       "vendor/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
       "vendor/dashboard/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -23,6 +32,7 @@
       "vendor/products/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
       "vendor/requests/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
       "vendor/settings/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "wallet/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
       "__create/not-found": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0"
     },
     "routes": {
@@ -59,6 +69,69 @@
           "runtime": "nodejs"
         }
       },
+      "cart/history/page": {
+        "id": "cart/history/page",
+        "parentId": "root",
+        "file": "src/app/cart/history/page.jsx",
+        "path": "cart/history",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "dashboard/page": {
+        "id": "dashboard/page",
+        "parentId": "root",
+        "file": "src/app/dashboard/page.jsx",
+        "path": "dashboard",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "delivery/dashboard/page": {
+        "id": "delivery/dashboard/page",
+        "parentId": "root",
+        "file": "src/app/delivery/dashboard/page.jsx",
+        "path": "delivery/dashboard",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "delivery/history/page": {
+        "id": "delivery/history/page",
+        "parentId": "root",
+        "file": "src/app/delivery/history/page.jsx",
+        "path": "delivery/history",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "delivery/onboarding/page": {
+        "id": "delivery/onboarding/page",
+        "parentId": "root",
+        "file": "src/app/delivery/onboarding/page.jsx",
+        "path": "delivery/onboarding",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "delivery/settings/page": {
+        "id": "delivery/settings/page",
+        "parentId": "root",
+        "file": "src/app/delivery/settings/page.jsx",
+        "path": "delivery/settings",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "delivery/trips/new/page": {
+        "id": "delivery/trips/new/page",
+        "parentId": "root",
+        "file": "src/app/delivery/trips/new/page.jsx",
+        "path": "delivery/trips/new",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
       "map/page": {
         "id": "map/page",
         "parentId": "root",
@@ -68,11 +141,29 @@
           "runtime": "nodejs"
         }
       },
+      "onboarding/page": {
+        "id": "onboarding/page",
+        "parentId": "root",
+        "file": "src/app/onboarding/page.jsx",
+        "path": "onboarding",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
       "settings/page": {
         "id": "settings/page",
         "parentId": "root",
         "file": "src/app/settings/page.jsx",
         "path": "settings",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "subscriptions/page": {
+        "id": "subscriptions/page",
+        "parentId": "root",
+        "file": "src/app/subscriptions/page.jsx",
+        "path": "subscriptions",
         "config": {
           "runtime": "nodejs"
         }
@@ -149,6 +240,15 @@
           "runtime": "nodejs"
         }
       },
+      "wallet/page": {
+        "id": "wallet/page",
+        "parentId": "root",
+        "file": "src/app/wallet/page.jsx",
+        "path": "wallet",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
       "__create/not-found": {
         "id": "__create/not-found",
         "parentId": "root",
@@ -198,17 +298,71 @@
         "file": "./auth/page.jsx",
         "path": "auth"
       },
+      "cart/history/page": {
+        "id": "cart/history/page",
+        "parentId": "root",
+        "file": "./cart/history/page.jsx",
+        "path": "cart/history"
+      },
+      "dashboard/page": {
+        "id": "dashboard/page",
+        "parentId": "root",
+        "file": "./dashboard/page.jsx",
+        "path": "dashboard"
+      },
+      "delivery/dashboard/page": {
+        "id": "delivery/dashboard/page",
+        "parentId": "root",
+        "file": "./delivery/dashboard/page.jsx",
+        "path": "delivery/dashboard"
+      },
+      "delivery/history/page": {
+        "id": "delivery/history/page",
+        "parentId": "root",
+        "file": "./delivery/history/page.jsx",
+        "path": "delivery/history"
+      },
+      "delivery/onboarding/page": {
+        "id": "delivery/onboarding/page",
+        "parentId": "root",
+        "file": "./delivery/onboarding/page.jsx",
+        "path": "delivery/onboarding"
+      },
+      "delivery/settings/page": {
+        "id": "delivery/settings/page",
+        "parentId": "root",
+        "file": "./delivery/settings/page.jsx",
+        "path": "delivery/settings"
+      },
+      "delivery/trips/new/page": {
+        "id": "delivery/trips/new/page",
+        "parentId": "root",
+        "file": "./delivery/trips/new/page.jsx",
+        "path": "delivery/trips/new"
+      },
       "map/page": {
         "id": "map/page",
         "parentId": "root",
         "file": "./map/page.jsx",
         "path": "map"
       },
+      "onboarding/page": {
+        "id": "onboarding/page",
+        "parentId": "root",
+        "file": "./onboarding/page.jsx",
+        "path": "onboarding"
+      },
       "settings/page": {
         "id": "settings/page",
         "parentId": "root",
         "file": "./settings/page.jsx",
         "path": "settings"
+      },
+      "subscriptions/page": {
+        "id": "subscriptions/page",
+        "parentId": "root",
+        "file": "./subscriptions/page.jsx",
+        "path": "subscriptions"
       },
       "user/profile/page": {
         "id": "user/profile/page",
@@ -258,6 +412,12 @@
         "file": "./vendor/settings/page.jsx",
         "path": "vendor/settings"
       },
+      "wallet/page": {
+        "id": "wallet/page",
+        "parentId": "root",
+        "file": "./wallet/page.jsx",
+        "path": "wallet"
+      },
       "__create/not-found": {
         "id": "__create/not-found",
         "parentId": "root",
@@ -292,12 +452,48 @@
             "path": "auth"
           },
           {
+            "file": "./cart/history/page.jsx",
+            "path": "cart/history"
+          },
+          {
+            "file": "./dashboard/page.jsx",
+            "path": "dashboard"
+          },
+          {
+            "file": "./delivery/dashboard/page.jsx",
+            "path": "delivery/dashboard"
+          },
+          {
+            "file": "./delivery/history/page.jsx",
+            "path": "delivery/history"
+          },
+          {
+            "file": "./delivery/onboarding/page.jsx",
+            "path": "delivery/onboarding"
+          },
+          {
+            "file": "./delivery/settings/page.jsx",
+            "path": "delivery/settings"
+          },
+          {
+            "file": "./delivery/trips/new/page.jsx",
+            "path": "delivery/trips/new"
+          },
+          {
             "file": "./map/page.jsx",
             "path": "map"
           },
           {
+            "file": "./onboarding/page.jsx",
+            "path": "onboarding"
+          },
+          {
             "file": "./settings/page.jsx",
             "path": "settings"
+          },
+          {
+            "file": "./subscriptions/page.jsx",
+            "path": "subscriptions"
           },
           {
             "file": "./user/profile/page.jsx",
@@ -330,6 +526,10 @@
           {
             "file": "./vendor/settings/page.jsx",
             "path": "vendor/settings"
+          },
+          {
+            "file": "./wallet/page.jsx",
+            "path": "wallet"
           },
           {
             "file": "./__create/not-found.tsx",
