@@ -1,36 +1,30 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useNavigate, useLocation } from "react-router";
 import { Loader2 } from "lucide-react";
 
 export function AuthGuard({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
-    const checkAuth = async () => {
+    const stored = localStorage.getItem("omni_user");
+    if (stored) {
       try {
-        const response = await fetch("/api/auth/session");
-        if (response.ok) {
-          const data = await response.json();
-          if (data.user) {
-            setIsAuthenticated(true);
-          } else {
-            window.location.href = "/account/signin";
-          }
-        } else {
-          window.location.href = "/account/signin";
+        const user = JSON.parse(stored);
+        if (user.id) {
+          setIsAuthenticated(true);
+          setIsLoading(false);
+          return;
         }
-      } catch (error) {
-        console.error("Auth check failed:", error);
-        window.location.href = "/account/signin";
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkAuth();
-  }, []);
+      } catch {}
+    }
+    const callback = encodeURIComponent(location.pathname + location.search);
+    navigate(`/auth?callbackUrl=${callback}`, { replace: true });
+  }, [navigate, location]);
 
   if (isLoading) {
     return (

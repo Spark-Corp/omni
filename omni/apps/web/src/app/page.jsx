@@ -281,9 +281,11 @@ function Globe3D({ phase = 0 }) {
     };
     animate();
 
-    const onResize = () => { camera.aspect = container.clientWidth / container.clientHeight; camera.updateProjectionMatrix(); renderer.setSize(container.clientWidth, container.clientHeight); };
+    const onResize = () => { if (!container.clientWidth || !container.clientHeight) return; camera.aspect = container.clientWidth / container.clientHeight; camera.updateProjectionMatrix(); renderer.setSize(container.clientWidth, container.clientHeight); };
     window.addEventListener("resize", onResize);
-    return () => { cancelAnimationFrame(animId); window.removeEventListener("resize", onResize); container.removeChild(renderer.domElement); renderer.dispose(); };
+    const ro = new ResizeObserver(() => onResize());
+    ro.observe(container);
+    return () => { cancelAnimationFrame(animId); window.removeEventListener("resize", onResize); ro.disconnect(); container.removeChild(renderer.domElement); renderer.dispose(); };
   }, []);
 
   return <div ref={containerRef} className="w-full h-full min-h-[300px] sm:min-h-[400px]" style={{ outline: 'none' }} />;
@@ -303,13 +305,14 @@ function ScrollDemo({ onPhaseChange }) {
   const [progress, setProgress] = useState(0);
 
   // Track scroll progress through the section (continuous 0→1)
+  const [initVH] = useState(() => typeof window !== 'undefined' ? window.innerHeight : 0);
   useEffect(() => {
     const onScroll = () => {
       const el = sectionRef.current;
-      if (!el) return;
+      if (!el || !initVH) return;
       const rect = el.getBoundingClientRect();
       const sectionTop = rect.top + window.scrollY;
-      const scrollable = el.offsetHeight - window.innerHeight;
+      const scrollable = el.offsetHeight - initVH;
       if (scrollable <= 0) return;
       const scrolled = window.scrollY - sectionTop;
       setProgress(Math.max(0, Math.min(1, scrolled / scrollable)));
@@ -317,7 +320,7 @@ function ScrollDemo({ onPhaseChange }) {
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
     return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  }, [initVH]);
 
   // Derive phase + phase progress from continuous scroll
   const totalPhases = 4;
@@ -344,7 +347,7 @@ function ScrollDemo({ onPhaseChange }) {
   return (
     <section ref={sectionRef} className="relative" style={{ height: '300vh' }}>
       {/* Sticky container — pinned while its parent scrolls */}
-      <div className="sticky top-0 h-screen">
+      <div className="sticky top-0 h-dvh overflow-hidden">
         <div className="w-full h-full flex flex-col pt-14 relative">
         {/* Background glow + stars */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
@@ -363,7 +366,6 @@ function ScrollDemo({ onPhaseChange }) {
           <div className="relative flex-1 w-full overflow-visible"
             style={{
               transform: `scale(${1 - phase * 0.06}) translateY(${-phase * 3}%)`,
-              transition: 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
             }}
           >
             <div className="relative w-full h-full">

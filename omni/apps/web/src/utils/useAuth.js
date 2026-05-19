@@ -9,15 +9,16 @@ function useAuth() {
   useEffect(() => {
     const checkSession = async () => {
       try {
-        // Dynamic import to avoid SSR issues
         const { getSession } = await import('@/lib/auth-client');
         const session = await getSession();
-        setUser(session?.user || null);
-      } catch {
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
+        if (session?.user) {
+          setUser(session.user);
+          setLoading(false);
+          return;
+        }
+      } catch {}
+      setUser(null);
+      setLoading(false);
     };
     checkSession();
   }, []);

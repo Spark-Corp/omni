@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { X, Send } from "lucide-react";
+import { X, Send, LogIn } from "lucide-react";
 import { toast } from "sonner";
+import useAuth from "@/utils/useAuth";
 
 export default function ChatModal({
   requestId,
@@ -10,18 +11,18 @@ export default function ChatModal({
   vendorName,
   onClose,
 }) {
+  const { user, loading: authLoading } = useAuth();
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
-    if (requestId || vendorId) {
-      loadMessages();
-      const interval = setInterval(loadMessages, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [requestId, vendorId]);
+    if (!user || !(requestId || vendorId)) return;
+    loadMessages();
+    const interval = setInterval(loadMessages, 5000);
+    return () => clearInterval(interval);
+  }, [requestId, vendorId, user]);
 
   useEffect(() => {
     scrollToBottom();
@@ -36,7 +37,9 @@ export default function ChatModal({
       const params = requestId
         ? `requestId=${requestId}`
         : `vendorId=${vendorId}`;
-      const response = await fetch(`/api/chat/messages?${params}`);
+      const response = await fetch(`/api/chat/messages?${params}`, {
+        headers: user ? { 'x-user-id': user.id } : {},
+      });
       if (!response.ok) throw new Error("Failed to load messages");
 
       const data = await response.json();
@@ -50,11 +53,14 @@ export default function ChatModal({
     e.preventDefault();
     if (!newMessage.trim()) return;
 
-    setLoading(true);
+    setSending(true);
     try {
       const response = await fetch("/api/chat/messages", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(user ? { 'x-user-id': user.id } : {}),
+        },
         body: JSON.stringify({
           requestId: requestId || null,
           vendorId: vendorId || null,
@@ -70,7 +76,7 @@ export default function ChatModal({
       console.error(err);
       toast("Erreur lors de l'envoi du message");
     } finally {
-      setLoading(false);
+      setSending(false);
     }
   };
 
@@ -96,37 +102,52 @@ export default function ChatModal({
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
-          {messages.length === 0 && (
+          {!user ? (
+            <div className="text-center py-12">
+              <div className="w-14 h-14 rounded-2xl bg-white/[0.04] flex items-center justify-center mx-auto mb-4">
+                <LogIn size={24} className="text-emerald-400" />
+              </div>
+              <p className="text-white/60 font-semibold mb-2">Connecte-toi pour chatter</p>
+              <p className="text-white/40 text-sm">Tu dois être connecté pour envoyer et recevoir des messages.</p>
+              <a href="/auth"
+                className="inline-flex items-center gap-2 mt-6 px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm transition-colors"
+              >
+                Se connecter
+                <LogIn size={16} />
+              </a>
+            </div>
+          ) : messages.length === 0 ? (
             <div className="text-center text-white/40 py-8">
               <p>Aucun message pour le moment</p>
               <p className="text-sm">Commencez la conversation !</p>
             </div>
-          )}
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${message.is_mine ? "justify-end" : "justify-start"}`}
-            >
+          ) : (
+            messages.map((message) => (
               <div
-                className={`max-w-[85%] sm:max-w-[70%] rounded-lg px-4 py-2 ${
-                  message.is_mine
-                    ? "bg-emerald-600 text-white"
-                    : "bg-white/[0.06] text-white/80"
-                }`}
+                key={message.id}
+                className={`flex ${message.is_mine ? "justify-end" : "justify-start"}`}
               >
-                <p className="text-sm font-semibold mb-1 text-white/60">
-                  {message.sender_name}
-                </p>
-                <p>{message.content}</p>
-                <p className="text-xs mt-1 text-white/40">
-                  {new Date(message.created_at).toLocaleTimeString("fr-FR", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </p>
+                <div
+                  className={`max-w-[85%] sm:max-w-[70%] rounded-lg px-4 py-2 ${
+                    message.is_mine
+                      ? "bg-emerald-600 text-white"
+                      : "bg-white/[0.06] text-white/80"
+                  }`}
+                >
+                  <p className="text-sm font-semibold mb-1 text-white/60">
+                    {message.sender_name}
+                  </p>
+                  <p>{message.content}</p>
+                  <p className="text-xs mt-1 text-white/40">
+                    {new Date(message.created_at).toLocaleTimeString("fr-FR", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
           <div ref={messagesEndRef} />
         </div>
 
@@ -138,11 +159,12 @@ export default function ChatModal({
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               placeholder="Écrivez votre message..."
-              className="flex-1 px-4 py-3 bg-white/[0.06] border border-white/[0.06] rounded-lg outline-none text-white/80 placeholder-white/30 focus:border-emerald-500/50 text-sm"
+              disabled={!user}
+              className="flex-1 px-4 py-3 bg-white/[0.06] border border-white/[0.06] rounded-lg outline-none text-white/80 placeholder-white/30 focus:border-emerald-500/50 text-sm disabled:opacity-40"
             />
             <button
               type="submit"
-              disabled={loading || !newMessage.trim()}
+              disabled={!user || sending || !newMessage.trim()}
               className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 sm:px-6 py-3 rounded-lg font-semibold flex items-center gap-2 transition-colors disabled:opacity-50 shrink-0"
             >
               <Send size={20} />

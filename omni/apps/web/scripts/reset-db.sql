@@ -110,6 +110,8 @@ CREATE TABLE IF NOT EXISTS messages (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     sender_id UUID NOT NULL REFERENCES auth_users(id) ON DELETE CASCADE,
     receiver_id UUID NOT NULL REFERENCES auth_users(id) ON DELETE CASCADE,
+    vendor_id UUID REFERENCES vendors(id) ON DELETE CASCADE,
+    request_id UUID REFERENCES availability_requests(id) ON DELETE SET NULL,
     content TEXT NOT NULL,
     product_id UUID REFERENCES products(id) ON DELETE SET NULL,
     is_read BOOLEAN DEFAULT false,
@@ -122,11 +124,12 @@ CREATE TABLE IF NOT EXISTS availability_requests (
     buyer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     vendor_id UUID NOT NULL REFERENCES vendors(id) ON DELETE CASCADE,
     product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
-    quantity_requested INTEGER NOT NULL,
-    status TEXT DEFAULT 'pending',
-    response TEXT,
+    quantity_requested DECIMAL(10, 2) NOT NULL,
+    quantity_confirmed DECIMAL(10, 2),
+    status TEXT NOT NULL DEFAULT 'queued' CHECK (status IN ('queued', 'pending', 'confirmed', 'denied')),
+    expires_at TIMESTAMP DEFAULT (CURRENT_TIMESTAMP + INTERVAL '5 minutes'),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    responded_at TIMESTAMP
 );
 
 -- Index

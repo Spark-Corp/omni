@@ -7,9 +7,9 @@ import {
   useAsyncError,
   useLocation,
   useRouteError,
+  Navigate,
 } from 'react-router';
 
-import { useIsMobile } from "@/hooks/useIsMobile";
 import { useButton } from '@react-aria/button';
 import {
   type CSSProperties,
@@ -22,13 +22,14 @@ import {
   useState,
 } from 'react';
 import './global.css';
+import GlobalNav from "@/components/GlobalNav";
 
 // Polyfill for crypto.randomUUID
 if (typeof window !== 'undefined' && !window.crypto) {
-  window.crypto = {};
+  window.crypto = {} as Crypto;
 }
 if (typeof window !== 'undefined' && window.crypto && !window.crypto.randomUUID) {
-  window.crypto.randomUUID = () => {
+  (window.crypto as any).randomUUID = () => {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
       const r = Math.random() * 16 | 0;
       const v = c === 'x' ? r : (r & 0x3 | 0x8);
@@ -67,6 +68,7 @@ function SafeSessionProvider({ children }: { children: ReactNode }) {
 }
 import { toPng } from 'html-to-image';
 import { useNavigate } from 'react-router';
+import { Loader2 } from "lucide-react";
 import { serializeError } from 'serialize-error';
 import { Toaster, toast } from 'sonner';
 import { useDevServerHeartbeat } from '../__create/useDevServerHeartbeat';
@@ -494,7 +496,7 @@ export function Layout({ children }: { children: ReactNode }) {
   useHandleScreenshotRequest();
   useDevServerHeartbeat();
 
-  const isMobile = useIsMobile();
+  const isMobile = typeof window !== 'undefined' ? window.innerWidth < 768 : false;
   return (
     <html lang="en">
       <head>
@@ -517,11 +519,52 @@ export function Layout({ children }: { children: ReactNode }) {
   );
 }
 
+function RouteGuard({ children }: { children: ReactNode }) {
+  const location = useLocation();
+  const pathname = location.pathname;
+  const [authed, setAuthed] = useState(false);
+  const [checking, setChecking] = useState(true);
+
+  const publicRoutes = ["/map", "/auth", "/", "/onboarding"];
+  const isPublic = publicRoutes.some((route) => pathname === route || pathname.startsWith("/auth") || pathname.startsWith("/onboarding"));
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("omni_user");
+      if (stored) {
+        const user = JSON.parse(stored);
+        if (user.id) { setAuthed(true); setChecking(false); return; }
+      }
+    } catch {}
+    setChecking(false);
+  }, []);
+
+  if (isPublic) return <>{children}</>;
+
+  if (checking) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-[#050510]">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-500 mx-auto mb-4" />
+      </div>
+    );
+  }
+
+  if (!authed) {
+    const callback = encodeURIComponent(pathname);
+    return <Navigate to={`/auth?callbackUrl=${callback}`} replace />;
+  }
+
+  return <>{children}</>;
+}
+
 export default function App() {
   return (
     <>
       <NavigationHandler />
-      <Outlet />
+      <GlobalNav />
+      <RouteGuard>
+        <Outlet />
+      </RouteGuard>
     </>
   );
 }

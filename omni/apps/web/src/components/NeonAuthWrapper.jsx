@@ -12,13 +12,17 @@ export function NeonAuthWrapper({ redirectUrl = "/map" }) {
   const [name, setName] = useState("");
 
   const checkVendorAndRedirect = async (user) => {
-    // Store user in localStorage immediately
     localStorage.setItem("omni_user", JSON.stringify(user));
-    
+
+    if (!localStorage.getItem("onboarding_done")) {
+      navigate("/onboarding");
+      return;
+    }
+
     try {
       const response = await fetch("/api/vendors/my-vendor");
       const data = await response.json();
-      
+
       if (data.vendor) {
         navigate("/vendor/dashboard");
       } else {

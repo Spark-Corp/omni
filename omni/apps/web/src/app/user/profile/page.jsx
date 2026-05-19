@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
-import { Heart, MapPin, Loader2, LogOut } from "lucide-react";
+import { Heart, MapPin, Loader2, LogOut, ArrowLeft } from "lucide-react";
 
 export default function UserProfilePage() {
   const navigate = useNavigate();
@@ -45,6 +45,13 @@ export default function UserProfilePage() {
   return (
     <div className="min-h-screen bg-[#08080f]">
       <div className="max-w-2xl mx-auto px-6 py-8">
+        <button
+          onClick={() => navigate("/map")}
+          className="flex items-center gap-2 text-white/40 hover:text-white/70 transition-colors mb-6"
+        >
+          <ArrowLeft size={18} />
+          <span className="text-sm">Retour à la carte</span>
+        </button>
         <div className="bg-[#0e0e18] rounded-xl border border-white/[0.06] p-6 mb-6">
           <h1 className="text-2xl font-bold text-white/90 mb-4">Mon Profil</h1>
           <div className="space-y-3">

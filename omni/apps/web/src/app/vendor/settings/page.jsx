@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
-import { Loader2, Store, MapPin, Trash2, Settings, ChevronRight } from "lucide-react";
+import { Loader2, Store, MapPin, Trash2, Settings, ChevronRight, Plus, Globe, Power, PowerOff, Edit, X, Check } from "lucide-react";
 
 export default function VendorSettingsPage() {
   const [vendor, setVendor] = useState(null);
@@ -12,6 +12,11 @@ export default function VendorSettingsPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [editingFacility, setEditingFacility] = useState(null);
+  const [savingFacility, setSavingFacility] = useState(false);
+  const [facilityForm, setFacilityForm] = useState({
+    name: "", category: "", type: "fixed", description: "", address: "",
+  });
 
   const [form, setForm] = useState({
     name: "", category: "", description: "", phone: "", email: "",
@@ -115,6 +120,48 @@ export default function VendorSettingsPage() {
     }
   };
 
+  const toggleFacilityStatus = async (facilityId, isOnline) => {
+    try {
+      const userId = JSON.parse(localStorage.getItem("omni_user")).id;
+      await fetch("/api/facilities/toggle-status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-user-id": userId },
+        body: JSON.stringify({ facilityId, isOnline: !isOnline }),
+      });
+      await loadVendor();
+    } catch {}
+  };
+
+  const startEditFacility = (facility) => {
+    setEditingFacility(facility.id);
+    setFacilityForm({
+      name: facility.facility_name || "",
+      category: facility.category || "",
+      type: facility.type || "fixed",
+      description: facility.description || "",
+      address: facility.address || "",
+    });
+  };
+
+  const handleSaveFacility = async (facilityId) => {
+    setSavingFacility(true);
+    try {
+      const userId = JSON.parse(localStorage.getItem("omni_user")).id;
+      const res = await fetch(`/api/facilities/${facilityId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "x-user-id": userId },
+        body: JSON.stringify(facilityForm),
+      });
+      if (!res.ok) throw new Error("Erreur");
+      setEditingFacility(null);
+      await loadVendor();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSavingFacility(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -142,6 +189,9 @@ export default function VendorSettingsPage() {
     <div className="p-6 md:p-8">
       <div className="max-w-2xl">
         <div className="flex items-center gap-3 mb-8">
+          <button onClick={() => window.history.back()} className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all">
+            <ChevronRight size={14} className="text-white/50 rotate-180" />
+          </button>
           <Settings size={20} className="text-emerald-400" />
           <div>
             <h1 className="font-space-grotesk text-xl md:text-2xl font-bold text-white">Paramètres boutique</h1>
@@ -276,6 +326,126 @@ export default function VendorSettingsPage() {
                   </button>
                 </div>
               </div>
+            )}
+          </div>
+
+          {/* Facilities Management */}
+          <div className="rounded-2xl border border-white/10 bg-zinc-900/60 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-space-grotesk text-base font-bold text-white">Mes activités (facilities)</h2>
+              <Link
+                to="/vendor/onboarding?addFacility=1"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-medium transition-all"
+              >
+                <Plus size={14} />
+                Ajouter
+              </Link>
+            </div>
+
+            {vendor.facilities?.length > 0 ? (
+              <div className="space-y-2">
+                {vendor.facilities.map((facility) => (
+                  <div key={facility.id}>
+                    <div className="rounded-xl border border-zinc-800 bg-zinc-800/30 px-4 py-3 flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-dm-sans font-medium text-zinc-200 text-sm truncate">{facility.facility_name}</h3>
+                          {facility.type === 'mobile' && <Globe size={12} className="text-purple-400" />}
+                        </div>
+                        <p className="font-dm-sans text-xs text-zinc-500 mt-0.5">
+                          {facility.category} · {facility.product_count} produit{facility.product_count > 1 ? 's' : ''}
+                          {facility.address && ` · ${facility.address}`}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0 ml-3">
+                        <button
+                          onClick={() => toggleFacilityStatus(facility.id, facility.is_online)}
+                          className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] transition-all ${
+                            facility.is_online
+                              ? 'bg-emerald-500/10 text-emerald-400'
+                              : 'bg-zinc-800 text-zinc-500'
+                          }`}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${facility.is_online ? 'bg-emerald-400' : 'bg-zinc-500'}`} />
+                          {facility.is_online ? 'En ligne' : 'Hors ligne'}
+                        </button>
+                        <button
+                          onClick={() => startEditFacility(facility)}
+                          className="p-1.5 rounded-lg hover:bg-white/5 text-zinc-400 hover:text-white transition-all"
+                        >
+                          <Edit size={14} />
+                        </button>
+                      </div>
+                    </div>
+                    {editingFacility === facility.id && (
+                      <div className="mt-2 rounded-xl border border-emerald-500/20 bg-zinc-800/50 p-4 space-y-3">
+                        <div>
+                          <label className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1 block">Nom</label>
+                          <input type="text" value={facilityForm.name}
+                            onChange={(e) => setFacilityForm({ ...facilityForm, name: e.target.value })}
+                            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 outline-none focus:border-emerald-500/50"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1 block">Catégorie</label>
+                            <select value={facilityForm.category}
+                              onChange={(e) => setFacilityForm({ ...facilityForm, category: e.target.value })}
+                              className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 outline-none focus:border-emerald-500/50"
+                            >
+                              <option value="Alimentation">Alimentation</option>
+                              <option value="Services">Services</option>
+                              <option value="Artisanat">Artisanat</option>
+                              <option value="Mode">Mode</option>
+                              <option value="Maison">Maison</option>
+                              <option value="Transport">Transport</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1 block">Type</label>
+                            <select value={facilityForm.type}
+                              onChange={(e) => setFacilityForm({ ...facilityForm, type: e.target.value })}
+                              className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-300 outline-none focus:border-emerald-500/50"
+                            >
+                              <option value="fixed">Fixe</option>
+                              <option value="mobile">Mobile</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1 block">Adresse</label>
+                          <input type="text" value={facilityForm.address}
+                            onChange={(e) => setFacilityForm({ ...facilityForm, address: e.target.value })}
+                            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 outline-none focus:border-emerald-500/50"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1 block">Description</label>
+                          <textarea value={facilityForm.description}
+                            onChange={(e) => setFacilityForm({ ...facilityForm, description: e.target.value })}
+                            rows={2}
+                            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 outline-none focus:border-emerald-500/50 resize-none"
+                          />
+                        </div>
+                        <div className="flex gap-2 justify-end">
+                          <button onClick={() => setEditingFacility(null)}
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-zinc-700 text-zinc-400 text-xs hover:bg-zinc-800 transition-all"
+                          >
+                            <X size={12} /> Annuler
+                          </button>
+                          <button onClick={() => handleSaveFacility(facility.id)} disabled={savingFacility}
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-500 text-black text-xs font-medium hover:bg-emerald-400 transition-all disabled:opacity-50"
+                          >
+                            {savingFacility ? "..." : <><Check size={12} /> Enregistrer</>}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="font-dm-sans text-sm text-zinc-500 text-center py-4">Aucune activité</p>
             )}
           </div>
         </div>

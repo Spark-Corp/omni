@@ -1,14 +1,44 @@
 import sql from "@/app/api/utils/sql";
-import { authClient } from "@/lib/auth";
+import { getServerSession } from "@/lib/auth";
 
 export async function GET(request) {
   try {
-    const session = await authClient.getSession();
-    if (!session?.data?.user?.id) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    let userId;
+    const headerUserId = request.headers.get("x-user-id");
+    if (headerUserId) {
+      userId = headerUserId;
+    } else {
+      const session = await getServerSession(request);
+      if (!session?.data?.user?.id) {
+        return Response.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      userId = session.data.user.id;
     }
 
-    const userId = session.data.user.id;
+    // Auto-expire requests past their deadline
+    await sql`
+      UPDATE availability_requests
+      SET status = 'denied'
+      WHERE status = 'pending' AND expires_at IS NOT NULL AND expires_at < CURRENT_TIMESTAMP
+    `;
+
+    // Promote queued requests for vendors with open slots (< 3 pending)
+    await sql`
+      UPDATE availability_requests
+      SET status = 'pending'
+      WHERE id IN (
+        SELECT q.id FROM availability_requests q
+        WHERE q.status = 'queued'
+          AND q.expires_at > CURRENT_TIMESTAMP
+          AND (
+            SELECT COUNT(*) FROM availability_requests a
+            WHERE a.vendor_id = q.vendor_id
+              AND a.status = 'pending'
+              AND a.expires_at > CURRENT_TIMESTAMP
+          ) < 3
+        ORDER BY q.created_at ASC
+      )
+    `;
 
     // Get all availability requests for this vendor
     const requests = await sql`

@@ -20,10 +20,37 @@ type Pages = {
   "/auth": {
     params: {};
   };
+  "/cart/history": {
+    params: {};
+  };
+  "/dashboard": {
+    params: {};
+  };
+  "/delivery/dashboard": {
+    params: {};
+  };
+  "/delivery/history": {
+    params: {};
+  };
+  "/delivery/onboarding": {
+    params: {};
+  };
+  "/delivery/settings": {
+    params: {};
+  };
+  "/delivery/trips/new": {
+    params: {};
+  };
   "/map": {
     params: {};
   };
+  "/onboarding": {
+    params: {};
+  };
   "/settings": {
+    params: {};
+  };
+  "/subscriptions": {
     params: {};
   };
   "/user/profile": {
@@ -50,6 +77,9 @@ type Pages = {
   "/vendor/settings": {
     params: {};
   };
+  "/wallet": {
+    params: {};
+  };
   "/*": {
     params: {
       "*": string;
@@ -60,7 +90,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/account" | "/auth" | "/map" | "/settings" | "/user/profile" | "/vendor" | "/vendor/dashboard" | "/vendor/messages" | "/vendor/onboarding" | "/vendor/products" | "/vendor/requests" | "/vendor/settings" | "/*";
+    page: "/" | "/account" | "/auth" | "/cart/history" | "/dashboard" | "/delivery/dashboard" | "/delivery/history" | "/delivery/onboarding" | "/delivery/settings" | "/delivery/trips/new" | "/map" | "/onboarding" | "/settings" | "/subscriptions" | "/user/profile" | "/vendor" | "/vendor/dashboard" | "/vendor/messages" | "/vendor/onboarding" | "/vendor/products" | "/vendor/requests" | "/vendor/settings" | "/wallet" | "/*";
   };
   "./page.jsx": {
     id: "page";
@@ -74,13 +104,49 @@ type RouteFiles = {
     id: "auth/page";
     page: "/auth";
   };
+  "./cart/history/page.jsx": {
+    id: "cart/history/page";
+    page: "/cart/history";
+  };
+  "./dashboard/page.jsx": {
+    id: "dashboard/page";
+    page: "/dashboard";
+  };
+  "./delivery/dashboard/page.jsx": {
+    id: "delivery/dashboard/page";
+    page: "/delivery/dashboard";
+  };
+  "./delivery/history/page.jsx": {
+    id: "delivery/history/page";
+    page: "/delivery/history";
+  };
+  "./delivery/onboarding/page.jsx": {
+    id: "delivery/onboarding/page";
+    page: "/delivery/onboarding";
+  };
+  "./delivery/settings/page.jsx": {
+    id: "delivery/settings/page";
+    page: "/delivery/settings";
+  };
+  "./delivery/trips/new/page.jsx": {
+    id: "delivery/trips/new/page";
+    page: "/delivery/trips/new";
+  };
   "./map/page.jsx": {
     id: "map/page";
     page: "/map";
   };
+  "./onboarding/page.jsx": {
+    id: "onboarding/page";
+    page: "/onboarding";
+  };
   "./settings/page.jsx": {
     id: "settings/page";
     page: "/settings";
+  };
+  "./subscriptions/page.jsx": {
+    id: "subscriptions/page";
+    page: "/subscriptions";
   };
   "./user/profile/page.jsx": {
     id: "user/profile/page";
@@ -114,9 +180,13 @@ type RouteFiles = {
     id: "vendor/settings/page";
     page: "/vendor/settings";
   };
+  "./wallet/page.jsx": {
+    id: "wallet/page";
+    page: "/wallet";
+  };
   "./__create/not-found.tsx": {
     id: "__create/not-found";
-    page: "/" | "/*";
+    page: "/*";
   };
 };
 
@@ -125,8 +195,17 @@ type RouteModules = {
   "page": typeof import("./src/app/./page.jsx");
   "account/page": typeof import("./src/app/./account/page.jsx");
   "auth/page": typeof import("./src/app/./auth/page.jsx");
+  "cart/history/page": typeof import("./src/app/./cart/history/page.jsx");
+  "dashboard/page": typeof import("./src/app/./dashboard/page.jsx");
+  "delivery/dashboard/page": typeof import("./src/app/./delivery/dashboard/page.jsx");
+  "delivery/history/page": typeof import("./src/app/./delivery/history/page.jsx");
+  "delivery/onboarding/page": typeof import("./src/app/./delivery/onboarding/page.jsx");
+  "delivery/settings/page": typeof import("./src/app/./delivery/settings/page.jsx");
+  "delivery/trips/new/page": typeof import("./src/app/./delivery/trips/new/page.jsx");
   "map/page": typeof import("./src/app/./map/page.jsx");
+  "onboarding/page": typeof import("./src/app/./onboarding/page.jsx");
   "settings/page": typeof import("./src/app/./settings/page.jsx");
+  "subscriptions/page": typeof import("./src/app/./subscriptions/page.jsx");
   "user/profile/page": typeof import("./src/app/./user/profile/page.jsx");
   "vendor/page": typeof import("./src/app/./vendor/page.jsx");
   "vendor/dashboard/page": typeof import("./src/app/./vendor/dashboard/page.jsx");
@@ -135,5 +214,6 @@ type RouteModules = {
   "vendor/products/page": typeof import("./src/app/./vendor/products/page.jsx");
   "vendor/requests/page": typeof import("./src/app/./vendor/requests/page.jsx");
   "vendor/settings/page": typeof import("./src/app/./vendor/settings/page.jsx");
+  "wallet/page": typeof import("./src/app/./wallet/page.jsx");
   "__create/not-found": typeof import("./src/app/./__create/not-found.tsx");
 };
