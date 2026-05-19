@@ -12,9 +12,6 @@ export default function GlobalNav() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Don't render on map page (already has MobileNav in the header)
-  if (location.pathname === "/map") return null;
-
   useEffect(() => {
     const stored = localStorage.getItem("omni_user");
     if (stored) {
@@ -74,6 +71,9 @@ export default function GlobalNav() {
       navigate("/map");
     }
   };
+
+  // Don't render on map page (already has MobileNav in the header)
+  if (location.pathname === "/map") return null;
 
   return (
     <>
