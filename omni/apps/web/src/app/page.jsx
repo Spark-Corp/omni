@@ -14,16 +14,29 @@ function Globe3D({ phase = 0 }) {
   const containerRef = useRef(null);
   const phaseRef = useRef(phase);
   phaseRef.current = phase;
+  const [webglOk, setWebglOk] = useState(true);
 
   useEffect(() => {
     if (!containerRef.current) return;
     const container = containerRef.current;
     const W = container.clientWidth;
     const H = container.clientHeight;
+    if (!W || !H) return;
+    let renderer, animId, gl;
+    try {
+      const c = document.createElement('canvas');
+      gl = c.getContext('webgl') || c.getContext('experimental-webgl');
+      if (!gl) { setWebglOk(false); return; }
+      const hp = gl.getShaderPrecisionFormat(gl.VERTEX_SHADER, gl.HIGH_FLOAT);
+      if (!hp || !hp.precision) { setWebglOk(false); return; }
+      gl.getExtension('WEBGL_lose_context')?.loseContext();
+    } catch (e) { setWebglOk(false); return; }
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(45, W / H, 0.1, 1000);
     camera.position.z = 3.2;
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    } catch (e) { setWebglOk(false); return; }
     renderer.setSize(W, H); renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.domElement.style.outline = 'none';
     renderer.domElement.style.display = 'block';
@@ -219,7 +232,6 @@ function Globe3D({ phase = 0 }) {
       interactTimeout = setTimeout(() => { autoRotate = true; }, 3000);
     }, { passive: true });
 
-    let animId;
     const clock = new THREE.Clock();
     const animate = () => {
       animId = requestAnimationFrame(animate);
@@ -288,6 +300,13 @@ function Globe3D({ phase = 0 }) {
     return () => { cancelAnimationFrame(animId); window.removeEventListener("resize", onResize); ro.disconnect(); container.removeChild(renderer.domElement); renderer.dispose(); };
   }, []);
 
+  if (!webglOk) {
+    return (
+      <div className="w-full h-full min-h-[300px] sm:min-h-[400px] flex items-center justify-center">
+        <Globe size={48} className="text-emerald-400/30" />
+      </div>
+    );
+  }
   return <div ref={containerRef} className="w-full h-full min-h-[300px] sm:min-h-[400px]" style={{ outline: 'none' }} />;
 }
 
