@@ -1,18 +1,25 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { Search, MapPin, X, Navigation, Mic, Loader2, ArrowLeft, ChevronRight, Plus, Minus, MessageCircle, ShoppingBag, Utensils, Wrench, Truck, Shirt, Home, Store } from "lucide-react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { Search, MapPin, X, Navigation, Mic, Loader2, ArrowLeft, ChevronRight, Plus, Minus, MessageCircle, ShoppingBag, Utensils, Wrench, Truck, Shirt, Home, Store, Star } from "lucide-react";
 import { toast } from "sonner";
 import ImageSearch from "@/components/ImageSearch";
 import ChatModal from "@/components/ChatModal";
 import NotificationBell from "@/components/NotificationBell";
 import FavoriteButton from "@/components/FavoriteButton";
+import CartBadge from "@/components/CartBadge";
+import CartPanel from "@/components/CartPanel";
+import ReviewForm from "@/components/ReviewForm";
+import ReviewList from "@/components/ReviewList";
+import MobileNav from "@/components/MobileNav";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 export default function MapPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authChecking, setAuthChecking] = useState(true);
   const [userLocation, setUserLocation] = useState(null);
   const [vendors, setVendors] = useState([]);
+  const [sortBy, setSortBy] = useState("distance");
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
@@ -37,34 +44,110 @@ export default function MapPage() {
   const [routeSteps, setRouteSteps] = useState(null);
   const [showRoute, setShowRoute] = useState(false);
   const [announcedSteps, setAnnouncedSteps] = useState(new Set());
+  const isMobile = useIsMobile();
   const watchIdRef = useRef(null);
+  const [showCart, setShowCart] = useState(false);
+  const [cartItemCount, setCartItemCount] = useState(0);
+  const [showReviews, setShowReviews] = useState(false);
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [walletBalance, setWalletBalance] = useState(null);
+  const [facilityQuery, setFacilityQuery] = useState("");
+  const [facilityResults, setFacilityResults] = useState([]);
+  const [showFacilitySearch, setShowFacilitySearch] = useState(false);
+  const facilityDebounceRef = useRef(null);
+  const [highlightedFacilityId, setHighlightedFacilityId] = useState(null);
 
-  // Auth check
+  // Load cart count on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("omni_cart");
+      const cart = raw ? JSON.parse(raw) : { items: [] };
+      setCartItemCount(cart.items.length);
+    } catch {
+      setCartItemCount(0);
+    }
+  }, []);
+
+  const sortedVendors = useMemo(() => {
+    const sorted = [...vendors];
+    if (sortBy === "price") {
+      sorted.sort((a, b) => (a.avg_price || 0) - (b.avg_price || 0));
+    } else if (sortBy === "rating") {
+      sorted.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+    } else if (sortBy === "best_value") {
+      sorted.sort((a, b) => {
+        const va = (a.rating || 0) * (a.review_count || 1) / (a.distance || 1);
+        const vb = (b.rating || 0) * (b.review_count || 1) / (b.distance || 1);
+        return vb - va;
+      });
+    } else {
+      sorted.sort((a, b) => (a.distance || 0) - (b.distance || 0));
+    }
+    return sorted;
+  }, [vendors, sortBy]);
+
+  const addToCart = (product, facilityId, facilityName, vendorName, vendorId) => {
+    try {
+      const raw = localStorage.getItem("omni_cart");
+      const cart = raw ? JSON.parse(raw) : { items: [] };
+
+      // Check if item already in cart
+      const existingIdx = cart.items.findIndex(
+        (item) => item.productId === product.id && item.facilityId === facilityId
+      );
+
+      if (existingIdx >= 0) {
+        cart.items[existingIdx].quantity += 1;
+      } else {
+        cart.items.push({
+          _localId: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          productId: product.id,
+          productName: product.name,
+          price: product.price,
+          unit: product.unit || "pièce",
+          quantity: 1,
+          facilityId,
+          facilityName,
+          vendorName,
+          vendorId,
+        });
+      }
+
+      localStorage.setItem("omni_cart", JSON.stringify(cart));
+      setCartItemCount(cart.items.length);
+      toast(`"${product.name}" ajouté au panier`);
+    } catch (err) {
+      console.error("Cart error:", err);
+      toast("Erreur lors de l'ajout au panier");
+    }
+  };
+
+  const loadReviews = async (facilityId) => {
+    setReviewsLoading(true);
+    try {
+      const res = await fetch(`/api/reviews/facility/${facilityId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setReviews(data.reviews || []);
+      }
+    } catch {} finally {
+      setReviewsLoading(false);
+    }
+  };
+
+  // Auth check — allows guest browsing, no hard redirect
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const storedUser = localStorage.getItem("omni_user");
-        if (storedUser) {
-          setIsAuthenticated(true);
-          setAuthChecking(false);
-          return;
-        }
-
         const response = await fetch("/api/auth/session");
-        if (!response.ok) {
-          window.location.href = "/auth";
-          return;
-        }
         const data = await response.json();
-        if (data.user) {
+        if (data?.user) {
           localStorage.setItem("omni_user", JSON.stringify(data.user));
           setIsAuthenticated(true);
-        } else {
-          window.location.href = "/auth";
         }
       } catch (error) {
         console.error("Auth check failed:", error);
-        window.location.href = "/auth";
       } finally {
         setAuthChecking(false);
       }
@@ -77,11 +160,7 @@ export default function MapPage() {
     if (!isAuthenticated) return;
     const checkVendor = async () => {
       try {
-        const storedUser = localStorage.getItem("omni_user");
-        const userId = storedUser ? JSON.parse(storedUser).id : null;
-        const res = await fetch("/api/vendors/my-vendor", {
-          headers: userId ? { 'x-user-id': userId } : {},
-        });
+        const res = await fetch("/api/vendors/my-vendor");
         if (res.ok) {
           const data = await res.json();
           setHasVendor(!!data.vendor);
@@ -91,6 +170,18 @@ export default function MapPage() {
       }
     };
     checkVendor();
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const fetchBalance = async () => {
+      try {
+        const userId = JSON.parse(localStorage.getItem("omni_user")).id;
+        const res = await fetch("/api/wallet/balance", { headers: { "x-user-id": userId } });
+        if (res.ok) { const d = await res.json(); setWalletBalance(d.balance); }
+      } catch {}
+    };
+    fetchBalance();
   }, [isAuthenticated]);
 
   // Retry location function
@@ -185,29 +276,19 @@ export default function MapPage() {
     document.head.appendChild(script);
   }, []);
 
-  // Initialize map AFTER library is loaded AND location is available
-  useEffect(() => {
-    console.log('[Map] Init effect triggered:', { mapLibLoaded, userLocation: !!userLocation, mapExists: !!map.current, containerExists: !!mapContainer.current });
-    
-    if (
-      !mapLibLoaded ||
-      !userLocation ||
-      map.current ||
-      !mapContainer.current
-    ) {
-      console.log('[Map] Skipping init, conditions not met');
-      return;
-    }
+  // Map initialization ref — runs once via callback ref when container mounts
+  const mapInitCalled = useRef(false);
+  const initMap = useCallback((container) => {
+    if (mapInitCalled.current || !container || !window.maplibregl || !userLocation) return;
+    mapInitCalled.current = true;
 
     console.log('[Map] Starting map initialization...');
 
     try {
       const maplibregl = window.maplibregl;
-      console.log('[Map] MapLibre GL version:', maplibregl.version);
-      console.log('[Map] Container dimensions:', mapContainer.current.offsetWidth, 'x', mapContainer.current.offsetHeight);
 
       map.current = new maplibregl.Map({
-        container: mapContainer.current,
+        container,
         style: {
           version: 8,
           projection: { type: "globe" },
@@ -225,7 +306,6 @@ export default function MapPage() {
               minzoom: 0,
               maxzoom: 22
             },
-            // Fallback OSM tiles
             osm: {
               type: "raster",
               tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
@@ -251,25 +331,18 @@ export default function MapPage() {
                 "raster-brightness-max": 1.0
               }
             },
-            // OSM as fallback layer (initially hidden)
             {
               id: "osm-fallback",
               type: "raster",
               source: "osm",
               layout: { "visibility": "none" },
-              paint: {
-                "raster-opacity": 1
-              }
+              paint: { "raster-opacity": 1 }
             }
           ],
           sky: {
             "atmosphere-blend": [
-              "interpolate",
-              ["linear"],
-              ["zoom"],
-              0, 1,
-              5, 0.9,
-              12, 0
+              "interpolate", ["linear"], ["zoom"],
+              0, 1, 5, 0.9, 12, 0
             ]
           }
         },
@@ -307,28 +380,41 @@ export default function MapPage() {
       map.current.on("zoom", () => {
         setCurrentZoom(map.current.getZoom());
       });
-      
+
       map.current.on("error", (e) => {
         console.error("Map error:", e);
         setError("Erreur de chargement de la carte");
       });
-      
+
       map.current.on("styleimagemissing", (e) => {
         console.warn("Missing image:", e);
       });
-      
+
     } catch (err) {
       console.error("Error initializing map:", err);
       setError("Erreur lors de l'initialisation de la carte");
     }
+  }, [userLocation]);
 
+  // Trigger init once MapLibre loads
+  useEffect(() => {
+    if (mapLibLoaded && mapContainer.current) {
+      initMap(mapContainer.current);
+    }
+  }, [mapLibLoaded, initMap]);
+
+  // Cleanup map on unmount
+  useEffect(() => {
     return () => {
+      vendorMarkers.current.forEach(m => m.remove());
+      vendorMarkers.current = [];
       if (map.current) {
         map.current.remove();
         map.current = null;
       }
+      mapInitCalled.current = false;
     };
-  }, [mapLibLoaded, userLocation]);
+  }, []);
 
   // Load nearby vendors when user location is available
   useEffect(() => {
@@ -342,7 +428,7 @@ export default function MapPage() {
     if (!map.current || !mapReady || !window.maplibregl) return;
 
     // Get current map bounds for viewport filtering
-    let visibleVendors = vendors;
+    let visibleVendors = sortedVendors;
     if (map.current.getBounds) {
       const bounds = map.current.getBounds();
       const currentZoom = map.current.getZoom();
@@ -384,7 +470,8 @@ export default function MapPage() {
       el.style.width = "36px";
       el.style.height = "36px";
       el.style.borderRadius = "50%";
-      el.style.backgroundColor = vendor.is_online ? "rgba(16, 185, 129, 0.9)" : "rgba(107, 114, 128, 0.9)";
+      const isOnline = vendor.is_online !== undefined ? vendor.is_online : true;
+      el.style.backgroundColor = isOnline ? "rgba(16, 185, 129, 0.9)" : "rgba(107, 114, 128, 0.9)";
       el.style.border = "2px solid rgba(255, 255, 255, 0.8)";
       el.style.boxShadow = "0 4px 12px rgba(0,0,0,0.4), 0 0 0 4px rgba(16, 185, 129, 0.2)";
       el.style.cursor = "pointer";
@@ -392,17 +479,24 @@ export default function MapPage() {
       el.style.alignItems = "center";
       el.style.justifyContent = "center";
       el.style.transition = "box-shadow 0.2s ease";
+
+      // Mobile icon or inner dot based on type
+      if (vendor.type === 'mobile') {
+        const icon = document.createElement("span");
+        icon.textContent = '🛵';
+        icon.style.fontSize = '16px';
+        el.appendChild(icon);
+      } else {
+        const dot = document.createElement("div");
+        dot.style.width = "12px";
+        dot.style.height = "12px";
+        dot.style.borderRadius = "50%";
+        dot.style.backgroundColor = "white";
+        dot.style.boxShadow = "0 2px 4px rgba(0,0,0,0.2)";
+        el.appendChild(dot);
+      }
       
-      // Inner dot
-      const dot = document.createElement("div");
-      dot.style.width = "12px";
-      dot.style.height = "12px";
-      dot.style.borderRadius = "50%";
-      dot.style.backgroundColor = "white";
-      dot.style.boxShadow = "0 2px 4px rgba(0,0,0,0.2)";
-      el.appendChild(dot);
-      
-      // Hover effect — NO transform (MapLibre owns it for positioning)
+      // Hover effect
       el.addEventListener("mouseenter", () => {
         el.style.boxShadow = "0 6px 20px rgba(0,0,0,0.5), 0 0 0 6px rgba(16, 185, 129, 0.3)";
       });
@@ -412,7 +506,7 @@ export default function MapPage() {
 
       el.addEventListener("click", (e) => {
         e.stopPropagation();
-        console.log('[Map] Vendor clicked:', vendor.id, 'at', vendor.lon, vendor.lat);
+        console.log('[Map] Facility clicked:', vendor.id, 'at', vendor.lon, vendor.lat);
         handleVendorClick(vendor);
       });
 
@@ -421,8 +515,13 @@ export default function MapPage() {
         .addTo(map.current);
 
       vendorMarkers.current.push(marker);
+
+      if (highlightedFacilityId && vendor.id !== highlightedFacilityId) {
+        el.style.opacity = "0.3";
+        el.style.transform = "scale(0.7)";
+      }
     });
-  }, [vendors, mapReady]);
+  }, [sortedVendors, mapReady, highlightedFacilityId]);
 
   const loadNearbyVendors = async () => {
     // If offline, use cached vendors
@@ -437,8 +536,8 @@ export default function MapPage() {
     setError(null);
 
     try {
-      console.log('[Map] Loading nearby vendors for location:', userLocation);
-      const response = await fetch("/api/vendors/nearby", {
+      console.log('[Map] Loading nearby facilities for location:', userLocation);
+      const response = await fetch("/api/facilities/nearby", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -453,14 +552,14 @@ export default function MapPage() {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('[Map] API error response:', errorText);
-        throw new Error(`Failed to load vendors: ${response.status} ${errorText}`);
+        throw new Error(`Failed to load facilities: ${response.status} ${errorText}`);
       }
 
       const data = await response.json();
-      console.log('[Map] Received vendors:', data.vendors?.length || 0, data);
-      setVendors(data.vendors || []);
+      console.log('[Map] Received facilities:', data.facilities?.length || 0, data);
+      setVendors(data.facilities || []);
     } catch (err) {
-      console.error('[Map] Error loading vendors:', err);
+      console.error('[Map] Error loading facilities:', err);
       setError(`Impossible de charger les vendeurs: ${err.message}`);
     } finally {
       setLoading(false);
@@ -475,7 +574,7 @@ export default function MapPage() {
     setError(null);
 
     try {
-      const response = await fetch("/api/vendors/search", {
+      const response = await fetch("/api/facilities/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -493,9 +592,9 @@ export default function MapPage() {
       }
 
       const data = await response.json();
-      setVendors(data.vendors || []);
+      setVendors(data.facilities || []);
 
-      if (data.vendors.length === 0) {
+      if (data.facilities.length === 0) {
         setError("Aucun vendeur trouvé pour cette recherche");
       }
     } catch (err) {
@@ -535,14 +634,45 @@ export default function MapPage() {
     recognition.start();
   };
 
+  const handleFacilitySearch = (query) => {
+    setFacilityQuery(query);
+    clearTimeout(facilityDebounceRef.current);
+    if (!query.trim()) { setFacilityResults([]); return; }
+    facilityDebounceRef.current = setTimeout(() => {
+      const q = query.toLowerCase();
+      const filtered = sortedVendors.filter(
+        (v) =>
+          (v.facility_name || v.name || "").toLowerCase().includes(q) ||
+          (v.category || "").toLowerCase().includes(q)
+      );
+      setFacilityResults(filtered.slice(0, 8));
+    }, 200);
+  };
+
+  const selectFacility = (vendor) => {
+    setFacilityQuery(vendor.facility_name || vendor.name || "");
+    setFacilityResults([]);
+    setHighlightedFacilityId(vendor.id);
+    if (map.current) {
+      map.current.flyTo({ center: [vendor.lon, vendor.lat], zoom: 16, duration: 1000 });
+    }
+    setSelectedVendor(vendor);
+  };
+
   const handleVendorClick = async (vendor) => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/vendors/${vendor.id}`);
-      if (!response.ok) throw new Error("Failed to load vendor details");
+      const apiPath = vendor.facility_name ? `/api/facilities/${vendor.id}` : `/api/vendors/${vendor.id}`;
+      const response = await fetch(apiPath);
+      if (!response.ok) throw new Error("Failed to load details");
 
       const data = await response.json();
-      setSelectedVendor(data.vendor);
+      const detail = data.facility || data.vendor;
+      setSelectedVendor({
+        ...vendor,
+        ...detail,
+        id: vendor.id,
+      });
 
       // Fly to vendor location
       if (map.current && vendor.lon && vendor.lat) {
@@ -577,18 +707,19 @@ export default function MapPage() {
   };
 
   const requestAvailability = async (productId) => {
+    if (!isAuthenticated) {
+      window.location.href = "/auth";
+      return;
+    }
     try {
-      const storedUser = localStorage.getItem("omni_user");
-      const userId = storedUser ? JSON.parse(storedUser).id : null;
-
       const response = await fetch("/api/availability/request", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          ...(userId ? { 'x-user-id': userId } : {}),
         },
         body: JSON.stringify({
-          vendorId: selectedVendor.id,
+          vendorId: selectedVendor.vendor_id || selectedVendor.id,
+          facilityId: selectedVendor.id,
           productId,
           quantity,
         }),
@@ -766,16 +897,16 @@ export default function MapPage() {
       )}
 
       {/* Back Button - Minimal */}
-      <a href="/" className="absolute top-6 left-6 z-20">
+      <a href="/" className={`absolute ${isMobile ? "top-4 left-4" : "top-6 left-6"} z-20`}>
         <button className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center hover:bg-black/60 transition-all duration-300 group">
           <ArrowLeft size={18} className="text-white/70 group-hover:text-white transition-colors" />
         </button>
       </a>
 
       {/* Search Section */}
-      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20 w-full max-w-lg px-4">
+      <div className={`absolute ${isMobile ? "top-16" : "top-6"} left-1/2 -translate-x-1/2 z-20 w-full max-w-lg px-4`}>
         <div className="text-center mb-3">
-          <p className="text-white/80 text-sm font-light tracking-wide">
+          <p className={`text-white/80 text-sm font-light tracking-wide ${isMobile ? "hidden" : ""}`}>
              <span className="text-emerald-400 font-medium">Omni</span> — Partout avec toi
           </p>
         </div>
@@ -810,6 +941,39 @@ export default function MapPage() {
           </div>
         </form>
 
+        {/* Facility Filter Bar */}
+        <div className="relative mt-2">
+          <div className="flex items-center bg-black/40 backdrop-blur-xl rounded-xl border border-white/5 px-3 py-2">
+            <MapPin size={14} className="text-emerald-400/60 shrink-0 mr-2" />
+            <input
+              type="text"
+              value={facilityQuery}
+              onChange={(e) => handleFacilitySearch(e.target.value)}
+              onFocus={() => setShowFacilitySearch(true)}
+              placeholder="Filtrer les vendeurs par nom..."
+              className="flex-1 bg-transparent text-white/70 placeholder-white/30 text-xs outline-none"
+            />
+            {facilityQuery && (
+              <button onClick={() => { setFacilityQuery(""); setFacilityResults([]); setHighlightedFacilityId(null); }} className="text-white/30 hover:text-white/60">
+                <X size={12} />
+              </button>
+            )}
+          </div>
+          {showFacilitySearch && facilityResults.length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-1 bg-neutral-900/95 backdrop-blur-xl rounded-xl border border-white/10 shadow-2xl max-h-48 overflow-y-auto z-30">
+              {facilityResults.map((v) => (
+                <button key={v.id} onClick={() => { setShowFacilitySearch(false); selectFacility(v); }}
+                  className="w-full text-left px-3 py-2.5 text-xs text-white/60 hover:bg-white/5 hover:text-white transition-all border-b border-white/5 last:border-0 flex items-center gap-2"
+                >
+                  <Store size={12} className="text-emerald-400/60 shrink-0" />
+                  <span className="truncate">{v.facility_name || v.name}</span>
+                  <span className="text-[10px] text-white/20 shrink-0 ml-auto">{v.category}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* Quick Categories */}
         <div className="flex gap-2 mt-3 overflow-x-auto pb-1 scrollbar-hide">
           {[
@@ -836,35 +1000,59 @@ export default function MapPage() {
             );
           })}
         </div>
+
+        {/* Sort */}
+        <div className="mt-2">
+          <p className="text-[10px] text-white/30 uppercase tracking-widest mb-2">Trier par</p>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm appearance-none cursor-pointer focus:outline-none focus:border-emerald-500/50 transition-all"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23ffffff' viewBox='0 0 256 256'%3E%3Cpath d='M213.66,101.66a8,8,0,0,1-11.32,0L128,27.31,53.66,101.66a8,8,0,0,1-11.32-11.32l80-80a8,8,0,0,1,11.32,0l80,80A8,8,0,0,1,213.66,101.66Z'/%3E%3C/svg%3E")`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 12px center',
+              paddingRight: '36px'
+            }}
+          >
+            <option value="distance" className="bg-neutral-900">Proximité</option>
+            <option value="price" className="bg-neutral-900">Prix</option>
+            <option value="rating" className="bg-neutral-900">Note</option>
+            <option value="best_value" className="bg-neutral-900">Meilleur rapport</option>
+          </select>
+        </div>
       </div>
 
-      {/* Header Right */}
-      <div className="absolute top-6 right-6 z-20 flex items-center gap-3">
-        {/* Mode badge */}
-        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-          <span className="text-xs text-emerald-400 font-medium">Acheteur</span>
+      {/* Header Right — Modern Nav */}
+      <div className={`absolute ${isMobile ? "top-4 right-4" : "top-4 right-4"} z-20 flex items-center gap-2`}>
+        <MobileNav
+          isAuthenticated={isAuthenticated}
+          userName={(() => { try { const u = JSON.parse(localStorage.getItem("omni_user") || "{}"); return u.name; } catch { return null; }})()}
+          balance={walletBalance}
+        />
+        <div className="hidden sm:flex items-center gap-2">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+            <span className="text-xs text-emerald-400 font-medium">Acheteur</span>
+          </div>
+          {hasVendor && (
+            <a href="/vendor/dashboard"
+              className="px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/15 border border-white/10 text-white/70 hover:text-white text-xs transition-all"
+            >
+              Ma boutique
+            </a>
+          )}
         </div>
+        <CartBadge itemCount={cartItemCount} onClick={() => setShowCart(true)} />
         <NotificationBell />
-        {hasVendor && (
-          <a
-            href="/vendor/dashboard"
-            className="px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/15 border border-white/10 text-white/70 hover:text-white text-xs transition-all"
-          >
-            Ma boutique
-          </a>
-        )}
-        <a href="/user/profile" className="text-white/50 hover:text-emerald-400 text-sm transition-colors">
-          Mon compte
-        </a>
       </div>
 
       {/* Map Container */}
-      <div 
-        ref={mapContainer} 
-        className="absolute inset-0 z-0"
-        style={{ width: '100%', height: '100%', minHeight: '100vh' }}
-      />
+        <div 
+          ref={(el) => { mapContainer.current = el; if (el && mapLibLoaded && userLocation) initMap(el); }}
+          className="absolute inset-0 z-0"
+          style={{ width: '100%', height: '100%', minHeight: '100vh' }}
+        />
 
       {/* Locate Me Button - Premium */}
       <button
@@ -878,7 +1066,7 @@ export default function MapPage() {
             });
           }
         }}
-        className="absolute bottom-8 right-6 z-20 w-12 h-12 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center hover:bg-black/60 transition-all duration-300 group"
+        className={`absolute ${isMobile ? "bottom-4 right-4" : "bottom-8 right-6"} z-20 w-12 h-12 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center hover:bg-black/60 transition-all duration-300 group`}
       >
         <Navigation size={20} className="text-white/70 group-hover:text-white transition-colors" />
       </button>
@@ -906,7 +1094,7 @@ export default function MapPage() {
         </div>
       )}
 
-      {/* Bottom Sheet - Vendor Details */}
+      {/* Bottom Sheet - Facility/Vendor Details */}
       {selectedVendor && (
         <div className="absolute bottom-0 left-0 right-0 z-30 bg-neutral-900/95 backdrop-blur-xl rounded-t-3xl border-t border-white/10 shadow-2xl max-h-[75vh] overflow-y-auto animate-slide-up">
           <div className="p-5 pb-8">
@@ -919,19 +1107,34 @@ export default function MapPage() {
                 <Store size={22} className="text-emerald-400" />
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="text-lg font-medium text-white truncate">{selectedVendor.name}</h2>
+                <h2 className="text-lg font-medium text-white truncate">{selectedVendor.facility_name || selectedVendor.name}</h2>
                 <div className="flex items-center gap-2 text-white/40 text-sm mt-0.5">
+                  {selectedVendor.vendor_name && (
+                    <>
+                      <span className="text-white/50 text-xs">{selectedVendor.vendor_name}</span>
+                      <span className="text-white/20">·</span>
+                    </>
+                  )}
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
                   <span className="truncate">{selectedVendor.category}</span>
                   <span className="text-white/20">·</span>
                   <span className="shrink-0">{selectedVendor.distance ? `${Math.round(selectedVendor.distance)}m` : "À proximité"}</span>
                 </div>
+                {selectedVendor.type === 'mobile' && (
+                  <span className="inline-block mt-1 text-[10px] px-1.5 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20">Mobile</span>
+                )}
                 {selectedVendor.description && (
                   <p className="text-white/30 text-xs mt-1.5 line-clamp-2">{selectedVendor.description}</p>
                 )}
+                {selectedVendor.rating && (
+                  <div className="flex items-center gap-1 mt-1">
+                    <Star size={10} className="text-amber-400 fill-amber-400" />
+                    <span className="text-white/40 text-xs">{selectedVendor.rating.toFixed(1)}</span>
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <FavoriteButton vendorId={selectedVendor.id} />
+                <FavoriteButton vendorId={selectedVendor.vendor_id || selectedVendor.id} />
                 <button
                   onClick={() => setSelectedVendor(null)}
                   className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/15 border border-white/5 flex items-center justify-center transition-colors"
@@ -951,7 +1154,7 @@ export default function MapPage() {
                 Itinéraire
               </button>
               <button
-                onClick={() => setShowVendorChat(true)}
+                onClick={() => isAuthenticated ? setShowVendorChat(true) : window.location.href = "/auth"}
                 className="flex-1 py-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 text-sm font-medium transition-all flex items-center justify-center gap-2"
               >
                 <MessageCircle size={16} />
@@ -991,12 +1194,54 @@ export default function MapPage() {
                         <p className="text-white/20 text-xs mt-0.5">/{product.unit || 'pièce'}</p>
                       </div>
                     </div>
-                    <button
-                      onClick={() => requestAvailability(product.id)}
-                      className="w-full py-2.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400/90 hover:text-emerald-400 text-sm font-medium transition-all border border-emerald-500/10 hover:border-emerald-500/20"
-                    >
-                      Vérifier la disponibilité
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center bg-white/5 rounded-lg border border-white/10">
+                        <button
+                          onClick={() => {
+                            try {
+                              const raw = localStorage.getItem("omni_cart");
+                              const cart = raw ? JSON.parse(raw) : { items: [] };
+                              const idx = cart.items.findIndex(
+                                (it) => it.productId === product.id && it.facilityId === selectedVendor.id
+                              );
+                              if (idx >= 0 && cart.items[idx].quantity > 0) {
+                                cart.items[idx].quantity -= 1;
+                                if (cart.items[idx].quantity === 0) cart.items.splice(idx, 1);
+                                localStorage.setItem("omni_cart", JSON.stringify(cart));
+                                setCartItemCount(cart.items.length);
+                              }
+                            } catch {}
+                          }}
+                          className="w-8 h-8 flex items-center justify-center text-white/40 hover:text-white transition-colors"
+                        >
+                          <Minus size={12} />
+                        </button>
+                        <span className="text-white text-xs font-medium w-6 text-center">
+                          {(() => {
+                            try {
+                              const raw = localStorage.getItem("omni_cart");
+                              const cart = raw ? JSON.parse(raw) : { items: [] };
+                              const item = cart.items.find(
+                                (it) => it.productId === product.id && it.facilityId === selectedVendor.id
+                              );
+                              return item ? item.quantity : 0;
+                            } catch { return 0; }
+                          })()}
+                        </span>
+                        <button
+                          onClick={() => addToCart(product, selectedVendor.id, selectedVendor.facility_name, selectedVendor.vendor_name, selectedVendor.vendor_id)}
+                          className="w-8 h-8 flex items-center justify-center text-white/40 hover:text-white transition-colors"
+                        >
+                          <Plus size={12} />
+                        </button>
+                      </div>
+                      <button
+                        onClick={() => addToCart(product, selectedVendor.id, selectedVendor.facility_name, selectedVendor.vendor_name, selectedVendor.vendor_id)}
+                        className="flex-1 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-medium text-sm transition-all border border-emerald-500"
+                      >
+                        Ajouter au panier
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -1007,6 +1252,43 @@ export default function MapPage() {
                 <span>Contact : {selectedVendor.phone}</span>
               </div>
             )}
+
+            {/* Reviews Section */}
+            <div className="border-t border-white/[0.06] mt-5 pt-4">
+              <button
+                onClick={() => {
+                  setShowReviews(!showReviews);
+                  if (!showReviews && reviews.length === 0 && selectedVendor) loadReviews(selectedVendor.id);
+                }}
+                className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-white/[0.02] hover:bg-white/[0.04] transition-all"
+              >
+                <div className="flex items-center gap-2">
+                  <Star size={12} className="text-amber-400 fill-amber-400" />
+                  <span className="text-white/60 text-xs">
+                    {selectedVendor.rating ? `${selectedVendor.rating.toFixed(1)}` : "—"}
+                  </span>
+                  <span className="text-white/20 text-xs">
+                    ({selectedVendor.review_count || 0} avis)
+                  </span>
+                </div>
+                <span className="text-white/20 text-xs">{showReviews ? "Masquer" : "Voir les avis"}</span>
+              </button>
+              {showReviews && (
+                <div className="mt-3">
+                  <ReviewForm facilityId={selectedVendor.id} onSubmitted={() => {
+                    loadReviews(selectedVendor.id);
+                    loadNearbyVendors(); // refresh rating
+                  }} />
+                  <div className="mt-3">
+                    {reviewsLoading ? (
+                      <Loader2 size={14} className="animate-spin mx-auto text-white/20" />
+                    ) : (
+                      <ReviewList reviews={reviews} />
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -1029,6 +1311,13 @@ export default function MapPage() {
           onClose={() => setShowVendorChat(false)}
         />
       )}
+
+      {/* Cart Panel */}
+      <CartPanel
+        isOpen={showCart}
+        onClose={() => setShowCart(false)}
+        onItemCountChange={setCartItemCount}
+      />
 
       {/* Loading Overlay - Premium */}
       {loading && (
