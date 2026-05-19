@@ -37,11 +37,13 @@ function Splash() {
 }
 
 // --- 3D Globe with interaction ---
-function Globe3D({ phase = 0 }) {
+function Globe3D({ phase = 0, onReady }) {
   const containerRef = useRef(null);
   const phaseRef = useRef(phase);
   phaseRef.current = phase;
   const [webglOk, setWebglOk] = useState(true);
+  const onReadyRef = useRef(onReady);
+  onReadyRef.current = onReady;
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -53,17 +55,17 @@ function Globe3D({ phase = 0 }) {
     try {
       const c = document.createElement('canvas');
       gl = c.getContext('webgl') || c.getContext('experimental-webgl');
-      if (!gl) { setWebglOk(false); return; }
+      if (!gl) { setWebglOk(false); onReadyRef.current?.(); return; }
       const hp = gl.getShaderPrecisionFormat(gl.VERTEX_SHADER, gl.HIGH_FLOAT);
-      if (!hp || !hp.precision) { setWebglOk(false); return; }
+      if (!hp || !hp.precision) { setWebglOk(false); onReadyRef.current?.(); return; }
       gl.getExtension('WEBGL_lose_context')?.loseContext();
-    } catch (e) { setWebglOk(false); return; }
+    } catch (e) { setWebglOk(false); onReadyRef.current?.(); return; }
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(45, W / H, 0.1, 1000);
     camera.position.z = 3.2;
     try {
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    } catch (e) { setWebglOk(false); return; }
+    } catch (e) { setWebglOk(false); onReadyRef.current?.(); return; }
     renderer.setSize(W, H); renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setClearColor(0x08080f, 1);
     renderer.domElement.style.backgroundColor = '#08080f';
@@ -327,6 +329,7 @@ function Globe3D({ phase = 0 }) {
     const ro = new ResizeObserver(() => onResize());
     ro.observe(container);
     return () => { cancelAnimationFrame(animId); window.removeEventListener("resize", onResize); ro.disconnect(); container.removeChild(renderer.domElement); renderer.dispose(); };
+    onReadyRef.current?.();
   }, []);
 
   if (!webglOk) {
@@ -348,7 +351,7 @@ const starPositions = Array.from({ length: 300 }, () => ({
 }));
 
 // --- Scroll-driven demo: premium 300vh + sticky pin pattern ---
-function ScrollDemo({ onPhaseChange }) {
+function ScrollDemo({ onPhaseChange, onReady }) {
   const sectionRef = useRef(null);
   const [progress, setProgress] = useState(0);
 
@@ -417,7 +420,7 @@ function ScrollDemo({ onPhaseChange }) {
             }}
           >
             <div className="relative w-full h-full">
-              <Globe3D phase={globePhase} />
+              <Globe3D phase={globePhase} onReady={onReady} />
             </div>
 
           {/* Content — inside flex-1, moves with globe */}
@@ -568,11 +571,6 @@ export default function LandingPage() {
   const [demoPhase, setDemoPhase] = useState(0);
   const [splashDone, setSplashDone] = useState(false);
 
-  useEffect(() => {
-    const t = setTimeout(() => setSplashDone(true), 1000);
-    return () => clearTimeout(t);
-  }, []);
-
   return (
     <>
       <AnimatePresence>{!splashDone && <Splash />}</AnimatePresence>
@@ -634,7 +632,7 @@ export default function LandingPage() {
       </nav>
 
       {/* SCROLL DEMO — everything happens here */}
-      <ScrollDemo onPhaseChange={setDemoPhase} />
+      <ScrollDemo onPhaseChange={setDemoPhase} onReady={() => setSplashDone(true)} />
 
       {/* PROBLEM */}
       <section className="py-28 md:py-32 px-6 border-y border-white/[0.03]">
