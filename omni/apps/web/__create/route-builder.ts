@@ -1,65 +1,73 @@
 import { Hono } from 'hono';
 import type { Handler } from 'hono/types';
 import updatedFetch from '../src/__create/fetch';
+import { api } from './generated-routes';
 
 const API_BASENAME = '/api';
-const api = new Hono();
 
 if (globalThis.fetch) {
 	globalThis.fetch = updatedFetch;
 }
 
-// Build-time glob — works in both dev AND production (Vite bundles all matched modules)
-const routeGlob = import.meta.glob('../src/app/api/**/route.js', { eager: true }) as Record<string, Record<string, Function>>;
+// In dev, hot-reload routes by re-importing dynamically
+if (import.meta.env.DEV) {
+	import.meta.glob('../src/app/api/**/route.js', {});
+	async function registerRoutes() {
+		const { readdir, stat } = await import('node:fs/promises');
+		const { join } = await import('node:path');
+		const { fileURLToPath } = await import('node:url');
 
-function globKeyToHonoPath(globKey: string): string {
-	const normalized = globKey.replace(/\\/g, '/');
-	const apiIndex = normalized.indexOf('/api/');
-	if (apiIndex === -1) return '';
-	const relativePath = normalized.slice(apiIndex + 5).replace(/\/route\.(js|ts)$/, '');
-	if (!relativePath) return '';
+		const __dirname = join(fileURLToPath(new URL('.', import.meta.url)), '../src/app/api');
 
-	const segments = relativePath.split('/');
-	const transformed = segments.map((seg) => {
-		const match = seg.match(/^\[(\.{3})?([^\]]+)\]$/);
-		if (match) {
-			return match[1] === '...' ? `:${match[2]}{.+}` : `:${match[2]}`;
+		async function findRouteFiles(dir: string): Promise<string[]> {
+			const files = await readdir(dir);
+			let routes: string[] = [];
+			for (const file of files) {
+				const filePath = join(dir, file);
+				const statResult = await stat(filePath);
+				if (statResult.isDirectory()) {
+					routes = routes.concat(await findRouteFiles(filePath));
+				} else if (file === 'route.js') {
+					routes.push(filePath);
+				}
+			}
+			return routes;
 		}
-		return seg;
-	});
 
-	return '/' + transformed.join('/');
-}
+		api.routes = [];
+		const routeFiles = (await findRouteFiles(__dirname)).sort((a, b) => b.length - a.length);
 
-function registerRoutes() {
-	api.routes = [];
+		for (const routeFile of routeFiles) {
+			const normalizedPath = routeFile.replace(/\\/g, '/');
+			const fileUrl = normalizedPath.startsWith('/')
+				? `file://${normalizedPath}`
+				: `file:///${normalizedPath}`;
+			const route = await import(/* @vite-ignore */ `${fileUrl}?update=${Date.now()}`);
 
-	const entries = Object.entries(routeGlob).sort(([a], [b]) => b.length - a.length);
+			const relativePath = normalizedPath.replace(/\\/g, '/').replace(/^.*\/api\//, '').replace(/\/route\.js$/, '');
+			const segments = relativePath.split('/');
+			const honoPath = '/' + segments.map(s => {
+				const m = s.match(/^\[(\.{3})?([^\]]+)\]$/);
+				return m ? (m[1] === '...' ? `:${m[2]}{.+}` : `:${m[2]}`) : s;
+			}).join('/');
 
-	for (const [globKey, routeModule] of entries) {
-		const honoPath = globKeyToHonoPath(globKey);
-		if (!honoPath) continue;
-
-		for (const method of ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'] as const) {
-			const handlerFn = routeModule[method];
-			if (handlerFn) {
-				const handler: Handler = async (c) => {
-					return await handlerFn(c.req.raw, { params: c.req.param() });
-				};
-				(api as any)[method.toLowerCase()](honoPath, handler);
+			for (const method of ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'] as const) {
+				if (route[method]) {
+					const handler: Handler = async (c) => {
+						const updatedRoute = await import(/* @vite-ignore */ `${fileUrl}?update=${Date.now()}`);
+						return await updatedRoute[method](c.req.raw, { params: c.req.param() });
+					};
+					(api as any)[method.toLowerCase()](honoPath, handler);
+				}
 			}
 		}
 	}
-}
 
-registerRoutes();
-
-// Hot reload routes in development
-if (import.meta.env.DEV) {
-	import.meta.glob('../src/app/api/**/route.js', {});
 	if (import.meta.hot) {
 		import.meta.hot.accept((newSelf) => {
-			registerRoutes();
+			registerRoutes().catch((err) => {
+				console.error('Error reloading routes:', err);
+			});
 		});
 	}
 }

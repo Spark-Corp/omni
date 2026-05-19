@@ -3,8 +3,9 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"dev": "react-router dev",
-		"build": "react-router build",
+		"generate-routes": "node __create/generate-routes.mjs",
+		"dev": "node __create/generate-routes.mjs && react-router dev",
+		"build": "node __create/generate-routes.mjs && react-router build",
 		"typecheck": "react-router typegen && tsc --noEmit",
 		"test": "vitest",
 		"test:run": "vitest run",

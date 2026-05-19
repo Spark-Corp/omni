@@ -83,6 +83,11 @@ for (const method of ['post', 'put', 'patch'] as const) {
 
 app.route(API_BASENAME, api);
 
+// Return JSON for unmatched API requests (never reach React Router)
+app.all('/api/*', (c) => {
+	return c.json({ error: 'Not Found' }, 404);
+});
+
 const requestHandler = createRequestHandler(reactRouterBuild);
 app.mount('/', (request) => requestHandler(request));
 
