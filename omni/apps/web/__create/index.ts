@@ -83,12 +83,20 @@ for (const method of ['post', 'put', 'patch'] as const) {
 
 app.route(API_BASENAME, api);
 
+// Health check — proves Hono is handling API requests
+app.get('/api/__health', (c) => c.json({ ok: true, routes: api.routes.length }));
+
 // Return JSON for unmatched API requests (never reach React Router)
 app.all('/api/*', (c) => {
 	return c.json({ error: 'Not Found' }, 404);
 });
 
 const requestHandler = createRequestHandler(reactRouterBuild);
-app.mount('/', (request) => requestHandler(request));
+
+// Use all('/*') instead of mount('/') so Hono processes more specific routes first
+app.all('/*', async (c) => {
+	const response = await requestHandler(c.req.raw);
+	return response;
+});
 
 export default app;
