@@ -571,10 +571,15 @@ export default function LandingPage() {
   const [demoPhase, setDemoPhase] = useState(0);
   const [splashDone, setSplashDone] = useState(false);
 
+  useEffect(() => {
+    const t = setTimeout(() => setSplashDone(true), 2000);
+    return () => clearTimeout(t);
+  }, []);
+
   return (
     <>
       <AnimatePresence>{!splashDone && <Splash />}</AnimatePresence>
-      <div className="min-h-screen bg-[#08080f] text-white" style={{ visibility: splashDone ? 'visible' : 'hidden' }}>
+      <div className={`min-h-screen bg-[#08080f] text-white ${splashDone ? '' : 'invisible'}`}>
       {/* NAV — sticky: starts as site head, becomes overlay on scroll */}
       <nav className="sticky top-0 z-50 h-14">
         {/* Background layer — fades out as scroll progresses */}
