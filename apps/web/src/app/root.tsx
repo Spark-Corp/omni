@@ -7,6 +7,7 @@ import {
   useAsyncError,
   useLocation,
   useRouteError,
+  Navigate,
 } from 'react-router';
 
 import { useButton } from '@react-aria/button';
@@ -67,6 +68,7 @@ function SafeSessionProvider({ children }: { children: ReactNode }) {
 }
 import { toPng } from 'html-to-image';
 import { useNavigate } from 'react-router';
+import { Loader2 } from "lucide-react";
 import { serializeError } from 'serialize-error';
 import { Toaster, toast } from 'sonner';
 import { useDevServerHeartbeat } from '../__create/useDevServerHeartbeat';
@@ -517,12 +519,53 @@ export function Layout({ children }: { children: ReactNode }) {
   );
 }
 
+function RouteGuard({ children }: { children: ReactNode }) {
+  const location = useLocation();
+  const pathname = location.pathname;
+
+  const publicRoutes = ["/map", "/auth", "/", "/onboarding"];
+  const isPublic = publicRoutes.some((route) => pathname === route || pathname.startsWith("/auth") || pathname.startsWith("/onboarding"));
+
+  if (isPublic) return <>{children}</>;
+
+  const [authed, setAuthed] = useState(false);
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("omni_user");
+      if (stored) {
+        const user = JSON.parse(stored);
+        if (user.id) { setAuthed(true); setChecking(false); return; }
+      }
+    } catch {}
+    setChecking(false);
+  }, []);
+
+  if (checking) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-[#050510]">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-500 mx-auto mb-4" />
+      </div>
+    );
+  }
+
+  if (!authed) {
+    const callback = encodeURIComponent(pathname);
+    return <Navigate to={`/auth?callbackUrl=${callback}`} replace />;
+  }
+
+  return <>{children}</>;
+}
+
 export default function App() {
   return (
     <>
       <NavigationHandler />
       <GlobalNav />
-      <Outlet />
+      <RouteGuard>
+        <Outlet />
+      </RouteGuard>
     </>
   );
 }
