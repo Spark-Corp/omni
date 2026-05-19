@@ -8,7 +8,7 @@
 
 **Comment :** Des équipes terrain rencontrent chaque vendeur, enregistrent produits, services, localisation. L'acheteur cherche "tomates" ou "réparateur téléphone" et voit TOUS les résultats autour de lui — pas juste ceux qui ont payé. Demande → le vendeur répond OUI/NON (même sans savoir lire : notifications vocales). Livraison crowd par des livreurs du quartier.
 
-**Escrow & APIs télécom :** Paiement sécurisé (l'acheteur paie à confirmation, le vendeur reçoit à la livraison) nécessite les APIs YAS, Moov Money, Togocom. Inaccessible pour une startup seule. Possible avec l'appui du programme.
+**Escrow & APIs télécom :** Paiement sécurisé (l'acheteur paie à confirmation, le vendeur reçoit à la livraison) nécessite les APIs YAS, Moov Money. Inaccessible pour une startup seule. Possible avec l'appui du programme.
 
 **MVP 100% fonctionnel :** Carte interactive (MapLibre), recherche texte/voix, profils vendeurs, messagerie, disponibilité, dashboard vendeur, livraison crowd (rayon + trajet), portefeuille/escrow, abonnements premium, API REST. Open source (React, Node, PostgreSQL/PostGIS).
 
