@@ -124,3 +124,8 @@ omni/OMNI_PRD_v1.0.*
 omni/OMNI_Pitch_Deck_DjantaTech.*
 omni/PITCH_DECK_DJANTATECH.md
 **/PRD_AUTH_CONFIG.md
+
+# Internal docs (not for public repo)
+**/docs/
+**/PLAN.md
+**/TRACKING.md
