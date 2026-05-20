@@ -15,6 +15,11 @@ import { API_BASENAME, api } from './route-builder';
 // @ts-expect-error - virtual module provided by React Router at build time
 import * as reactRouterBuild from 'virtual:react-router/server-build';
 
+// Re-export React Router build data for Vercel runtime compatibility
+// eslint-disable-next-line
+const _build = reactRouterBuild as any;
+export const { serverManifest: assets, assetsBuildDirectory, basename, entry, future, isSpaMode, prerender, publicPath, routeDiscovery, routes, ssr, allowedActionOrigins } = _build;
+
 neonConfig.webSocketConstructor = ws;
 
 const als = new AsyncLocalStorage<{ requestId: string }>();
