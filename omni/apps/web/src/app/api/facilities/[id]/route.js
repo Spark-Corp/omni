@@ -1,9 +1,14 @@
 import sql from "@/app/api/utils/sql";
 import { getServerSession } from "@/lib/auth";
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function GET(request, { params }) {
   try {
     const { id } = params;
+    if (!UUID_RE.test(id)) {
+      return Response.json({ error: "Invalid facility ID" }, { status: 400 });
+    }
 
     const facilityQuery = `
       SELECT 
@@ -65,6 +70,9 @@ export async function PUT(request, { params }) {
       userId = session.data.user.id;
     }
     const { id } = params;
+    if (!UUID_RE.test(id)) {
+      return Response.json({ error: "Invalid facility ID" }, { status: 400 });
+    }
     const body = await request.json();
     const { name, category, type, description, address, neighborhood } = body;
 
@@ -113,6 +121,9 @@ export async function DELETE(request, { params }) {
       userId = session.data.user.id;
     }
     const { id } = params;
+    if (!UUID_RE.test(id)) {
+      return Response.json({ error: "Invalid facility ID" }, { status: 400 });
+    }
     const result = await sql`
       DELETE FROM facilities f
       USING vendors v

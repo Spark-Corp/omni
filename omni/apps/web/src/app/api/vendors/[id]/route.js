@@ -1,8 +1,13 @@
 import sql from "@/app/api/utils/sql";
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function GET(request, { params }) {
   try {
     const { id } = params;
+    if (!UUID_RE.test(id)) {
+      return Response.json({ error: "Invalid vendor ID" }, { status: 400 });
+    }
 
     const vendorQuery = `
       SELECT 
