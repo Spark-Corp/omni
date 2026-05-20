@@ -120,3 +120,6 @@ PITCH_DECK_DJANTATECH.md
 **/PRD_AUTH_CONFIG.md
 **/AUTH_SETUP.md
 TODO.md
+
+# Exposed credential file (removed from history)
+**/serve-test.js
