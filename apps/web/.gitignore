@@ -4,3 +4,6 @@
 # React Router
 /.react-router/
 /build/
+
+# Generated
+/__create/generated-routes.ts

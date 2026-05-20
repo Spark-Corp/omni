@@ -59,21 +59,32 @@ export async function POST(request) {
 
     const vendorId = insertResult[0].id;
 
+    // Create a default facility with the same info
+    const facilityResult = await sql`
+      INSERT INTO facilities (vendor_id, name, category, type, description, location)
+      VALUES (
+        ${vendorId}, ${name}, ${category}, 'fixed', ${description || null},
+        ST_SetSRID(ST_MakePoint(${lon}, ${lat}), 4326)
+      )
+      RETURNING id
+    `;
+    const facilityId = facilityResult[0].id;
+
     // Insert products if provided
     if (products && products.length > 0) {
       for (const product of products) {
         if (product.name && product.price) {
           await sql(
-            `INSERT INTO products (vendor_id, name, price, unit, is_available)
+            `INSERT INTO products (vendor_id, facility_id, name, price, unit, is_available)
              VALUES ($1, $2, $3, $4, true)`,
-            [vendorId, product.name, product.price, product.unit || 'pièce']
+            [vendorId, facilityId, product.name, product.price, product.unit || 'pièce']
           );
         }
       }
     }
 
     console.log('[Create Vendor] Success!');
-    return Response.json({ success: true, vendorId });
+    return Response.json({ success: true, vendorId, facilityId });
   } catch (error) {
     console.error("[Create Vendor] Error:", error);
     return Response.json({ 

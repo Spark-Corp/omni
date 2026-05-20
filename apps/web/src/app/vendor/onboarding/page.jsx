@@ -218,7 +218,7 @@ export default function VendorOnboardingPage() {
               </div>
 
               {/* Category + Phone */}
-              <div className="grid grid-cols-2 gap-4 mb-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
                 <div>
                   <label className="font-dm-sans block text-sm text-white/50 mb-2">Catégorie *</label>
                   <div className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 transition-all focus-within:border-emerald-500/50 focus-within:bg-white/[0.06]">

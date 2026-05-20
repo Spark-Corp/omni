@@ -26,10 +26,10 @@ import GlobalNav from "@/components/GlobalNav";
 
 // Polyfill for crypto.randomUUID
 if (typeof window !== 'undefined' && !window.crypto) {
-  window.crypto = {};
+  window.crypto = {} as Crypto;
 }
 if (typeof window !== 'undefined' && window.crypto && !window.crypto.randomUUID) {
-  window.crypto.randomUUID = () => {
+  (window.crypto as any).randomUUID = () => {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
       const r = Math.random() * 16 | 0;
       const v = c === 'x' ? r : (r & 0x3 | 0x8);
@@ -504,7 +504,7 @@ export function Layout({ children }: { children: ReactNode }) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
         <Links />
-        <script type="module" src="/src/__create/dev-error-overlay.js"></script>
+        {import.meta.env.DEV && <script type="module" src="/src/__create/dev-error-overlay.js"></script>}
         <link rel="icon" href="/src/__create/favicon.png" />
         {LoadFontsSSR ? <LoadFontsSSR /> : null}
       </head>
@@ -522,14 +522,11 @@ export function Layout({ children }: { children: ReactNode }) {
 function RouteGuard({ children }: { children: ReactNode }) {
   const location = useLocation();
   const pathname = location.pathname;
+  const [authed, setAuthed] = useState(false);
+  const [checking, setChecking] = useState(true);
 
   const publicRoutes = ["/map", "/auth", "/", "/onboarding"];
   const isPublic = publicRoutes.some((route) => pathname === route || pathname.startsWith("/auth") || pathname.startsWith("/onboarding"));
-
-  if (isPublic) return <>{children}</>;
-
-  const [authed, setAuthed] = useState(false);
-  const [checking, setChecking] = useState(true);
 
   useEffect(() => {
     try {
@@ -541,6 +538,8 @@ function RouteGuard({ children }: { children: ReactNode }) {
     } catch {}
     setChecking(false);
   }, []);
+
+  if (isPublic) return <>{children}</>;
 
   if (checking) {
     return (

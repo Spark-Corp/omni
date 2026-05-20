@@ -2,12 +2,14 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Bell, MessageCircle, Package } from "lucide-react";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 export default function NotificationBell() {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     loadNotifications();
@@ -66,7 +68,7 @@ export default function NotificationBell() {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setShowDropdown(!showDropdown)}
-        className="relative p-2 text-gray-600 hover:text-emerald-600 transition-colors"
+        className="relative p-2 text-white/40 hover:text-emerald-400 transition-colors"
       >
         <Bell size={24} />
         {unreadCount > 0 && (
@@ -77,13 +79,13 @@ export default function NotificationBell() {
       </button>
 
       {showDropdown && (
-        <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-gray-200 z-50">
-          <div className="p-4 border-b border-gray-100">
-            <h3 className="font-semibold">Notifications</h3>
+        <div className={`absolute ${isMobile ? "right-0 left-0 mx-auto" : "right-0"} mt-2 w-[90vw] max-w-sm bg-[#0e0e18] rounded-xl shadow-lg border border-white/[0.06] z-50`}>
+          <div className="p-4 border-b border-white/[0.06]">
+            <h3 className="font-semibold text-white/80">Notifications</h3>
           </div>
           <div className="max-h-96 overflow-y-auto">
             {notifications.length === 0 ? (
-              <p className="p-4 text-center text-gray-500">Aucune notification</p>
+              <p className="p-4 text-center text-white/40">Aucune notification</p>
             ) : (
               notifications.map((notif) => (
                 <div
@@ -92,18 +94,18 @@ export default function NotificationBell() {
                     if (!notif.is_read) markAsRead(notif.id);
                     if (notif.link) window.location.href = notif.link;
                   }}
-                  className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${
-                    !notif.is_read ? "bg-emerald-50" : ""
+                  className={`p-4 border-b border-white/[0.06] cursor-pointer hover:bg-white/[0.03] ${
+                    !notif.is_read ? "bg-emerald-500/10" : ""
                   }`}
                 >
                   <div className="flex items-start gap-3">
-                    <div className="text-gray-400 mt-1">
+                    <div className="text-white/30 mt-1">
                       {getIcon(notif.type)}
                     </div>
                     <div className="flex-1">
                       <p className="font-medium text-sm">{notif.title}</p>
                       {notif.message && (
-                        <p className="text-sm text-gray-500 mt-1">{notif.message}</p>
+                        <p className="text-sm text-white/40 mt-1">{notif.message}</p>
                       )}
                     </div>
                     {!notif.is_read && (

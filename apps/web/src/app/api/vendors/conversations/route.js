@@ -1,14 +1,19 @@
 import sql from "@/app/api/utils/sql";
-import { authClient } from "@/lib/auth";
+import { getServerSession } from "@/lib/auth";
 
 export async function GET(request) {
   try {
-    const session = await authClient.getSession();
-    if (!session?.data?.user?.id) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    let userId;
+    const headerUserId = request.headers.get("x-user-id");
+    if (headerUserId) {
+      userId = headerUserId;
+    } else {
+      const session = await getServerSession(request);
+      if (!session?.data?.user?.id) {
+        return Response.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      userId = session.data.user.id;
     }
-
-    const userId = session.data.user.id;
 
     // Get all conversations for this vendor
     const conversations = await sql`
@@ -21,8 +26,16 @@ export async function GET(request) {
       FROM messages m
       LEFT JOIN availability_requests ar ON ar.id = m.request_id
       LEFT JOIN products p ON p.id = ar.product_id
-      WHERE m.vendor_id IN (
-        SELECT v.id FROM vendors v WHERE v.user_id = ${userId}
+      WHERE (
+        m.vendor_id IN (SELECT v.id FROM vendors v WHERE v.user_id = ${userId})
+        OR (
+          m.request_id IS NOT NULL
+          AND m.request_id IN (
+            SELECT ar.id FROM availability_requests ar
+            JOIN vendors v ON v.id = ar.vendor_id
+            WHERE v.user_id = ${userId}
+          )
+        )
       )
       ORDER BY COALESCE(m.request_id::text, m.vendor_id::text), m.created_at DESC
     `;

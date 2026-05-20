@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { Search, MapPin, X, Navigation, Mic, Loader2, ArrowLeft, ChevronRight, Plus, Minus, MessageCircle, ShoppingBag, Utensils, Wrench, Truck, Shirt, Home, Store, Star } from "lucide-react";
+import { Search, MapPin, X, Navigation, Mic, Loader2, ArrowLeft, ChevronRight, Plus, Minus, MessageCircle, ShoppingBag, Utensils, Wrench, Truck, Shirt, Home, Store, Star, ArrowUpDown } from "lucide-react";
 import { toast } from "sonner";
 import ImageSearch from "@/components/ImageSearch";
 import ChatModal from "@/components/ChatModal";
@@ -35,6 +35,10 @@ export default function MapPage() {
   const [mapReady, setMapReady] = useState(false);
   const [mapLibLoaded, setMapLibLoaded] = useState(false);
   const [locationError, setLocationError] = useState(null);
+  const [showLocationPrompt, setShowLocationPrompt] = useState(false);
+  const [manualLocationMode, setManualLocationMode] = useState(false);
+  const [manualLat, setManualLat] = useState('');
+  const [manualLon, setManualLon] = useState('');
   const [locationLoading, setLocationLoading] = useState(true);
   const [isOffline, setIsOffline] = useState(false);
   const [cachedVendors, setCachedVendors] = useState([]);
@@ -52,9 +56,8 @@ export default function MapPage() {
   const [reviews, setReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [walletBalance, setWalletBalance] = useState(null);
-  const [facilityQuery, setFacilityQuery] = useState("");
-  const [facilityResults, setFacilityResults] = useState([]);
-  const [showFacilitySearch, setShowFacilitySearch] = useState(false);
+  const [showSortPicker, setShowSortPicker] = useState(false);
+  const [facilitySuggestions, setFacilitySuggestions] = useState([]);
   const facilityDebounceRef = useRef(null);
   const [highlightedFacilityId, setHighlightedFacilityId] = useState(null);
 
@@ -184,26 +187,16 @@ export default function MapPage() {
     fetchBalance();
   }, [isAuthenticated]);
 
-  // Retry location function
+  // Location handlers
   const retryLocation = () => {
     setLocationLoading(true);
     setLocationError(null);
-    
-    let timeoutId;
-    
-    const setDefaultLocation = () => {
-      console.log('[Map] Using fallback location: Lagos');
-      setUserLocation({ lat: 6.1319, lon: 1.2228 });
-      setLocationError('Using fallback: Lagos');
-      setLocationLoading(false);
-    };
-    
-    timeoutId = setTimeout(setDefaultLocation, 3000);
-    
+    setShowLocationPrompt(false);
+    setManualLocationMode(false);
+
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          clearTimeout(timeoutId);
           console.log('[Map] Got user location:', position.coords.latitude, position.coords.longitude);
           setUserLocation({
             lat: position.coords.latitude,
@@ -213,20 +206,44 @@ export default function MapPage() {
           setLocationLoading(false);
         },
         (error) => {
-          clearTimeout(timeoutId);
           console.error('Error getting location:', error);
-          setLocationError('Location unavailable - Using fallback: Lagos');
-          setDefaultLocation();
+          setLocationLoading(false);
+          if (error.code === error.PERMISSION_DENIED) {
+            setLocationError('Localisation désactivée. Activez-la pour trouver les vendeurs près de chez vous.');
+          } else {
+            setLocationError('Impossible d\'obtenir votre position.');
+          }
+          setShowLocationPrompt(true);
         },
-        { timeout: 5000, maximumAge: 60000 }
+        { timeout: 10000, maximumAge: 60000 }
       );
     } else {
-      clearTimeout(timeoutId);
-      setLocationError('Geolocation not supported - Using fallback: Lagos');
-      setDefaultLocation();
+      setLocationLoading(false);
+      setLocationError('La géolocalisation n\'est pas supportée par votre navigateur.');
+      setShowLocationPrompt(true);
     }
-    
-    return () => clearTimeout(timeoutId);
+  };
+
+  const useDefaultLocation = () => {
+    console.log('[Map] Using default location: Lagos');
+    setUserLocation({ lat: 6.1319, lon: 1.2228 });
+    setLocationError(null);
+    setShowLocationPrompt(false);
+    setManualLocationMode(false);
+  };
+
+  const submitManualLocation = () => {
+    const lat = parseFloat(manualLat);
+    const lon = parseFloat(manualLon);
+    if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+      toast("Coordonnées invalides");
+      return;
+    }
+    console.log('[Map] Using manual location:', lat, lon);
+    setUserLocation({ lat, lon });
+    setLocationError(null);
+    setShowLocationPrompt(false);
+    setManualLocationMode(false);
   };
 
   // Get user location
@@ -635,9 +652,8 @@ export default function MapPage() {
   };
 
   const handleFacilitySearch = (query) => {
-    setFacilityQuery(query);
     clearTimeout(facilityDebounceRef.current);
-    if (!query.trim()) { setFacilityResults([]); return; }
+    if (!query.trim()) { setFacilitySuggestions([]); return; }
     facilityDebounceRef.current = setTimeout(() => {
       const q = query.toLowerCase();
       const filtered = sortedVendors.filter(
@@ -645,13 +661,13 @@ export default function MapPage() {
           (v.facility_name || v.name || "").toLowerCase().includes(q) ||
           (v.category || "").toLowerCase().includes(q)
       );
-      setFacilityResults(filtered.slice(0, 8));
+      setFacilitySuggestions(filtered.slice(0, 8));
     }, 200);
   };
 
   const selectFacility = (vendor) => {
-    setFacilityQuery(vendor.facility_name || vendor.name || "");
-    setFacilityResults([]);
+    setSearchQuery(vendor.facility_name || vendor.name || "");
+    setFacilitySuggestions([]);
     setHighlightedFacilityId(vendor.id);
     if (map.current) {
       map.current.flyTo({ center: [vendor.lon, vendor.lat], zoom: 16, duration: 1000 });
@@ -859,7 +875,7 @@ export default function MapPage() {
     setShowVendorChat(true);
   };
 
-  if (authChecking || !userLocation) {
+  if (authChecking || (!userLocation && !showLocationPrompt)) {
     return (
       <div className="h-screen flex items-center justify-center bg-neutral-950">
         <div className="text-center">
@@ -871,6 +887,85 @@ export default function MapPage() {
       </div>
     );
   }
+
+  if (!userLocation && showLocationPrompt) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-neutral-950 p-6">
+        <div className="w-full max-w-sm text-center">
+          <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center mx-auto mb-6 border border-amber-500/20">
+            <MapPin size={28} className="text-amber-400" />
+          </div>
+          {manualLocationMode ? (
+            <>
+              <h3 className="text-white text-base font-medium mb-2">Saisir vos coordonnées</h3>
+              <p className="text-white/40 text-xs mb-5">Entrez votre latitude et longitude</p>
+              <div className="flex gap-3 mb-5">
+                <input
+                  type="text"
+                  value={manualLat}
+                  onChange={(e) => setManualLat(e.target.value)}
+                  placeholder="Latitude (ex: 6.1319)"
+                  className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white text-xs placeholder-white/30 outline-none focus:border-emerald-500/40 transition-colors"
+                />
+                <input
+                  type="text"
+                  value={manualLon}
+                  onChange={(e) => setManualLon(e.target.value)}
+                  placeholder="Longitude (ex: 1.2228)"
+                  className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white text-xs placeholder-white/30 outline-none focus:border-emerald-500/40 transition-colors"
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setManualLocationMode(false)}
+                  className="flex-1 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 text-sm transition-all"
+                >
+                  Retour
+                </button>
+                <button
+                  onClick={submitManualLocation}
+                  className="flex-1 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-sm font-medium transition-all"
+                >
+                  Valider
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <h3 className="text-white text-base font-medium mb-2">Activez votre localisation</h3>
+              <p className="text-white/40 text-xs mb-2">{locationError || "Pour trouver les vendeurs près de chez vous"}</p>
+              <p className="text-white/20 text-[10px] mb-6">Vous pouvez aussi saisir vos coordonnées manuellement ou utiliser une position par défaut.</p>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={retryLocation}
+                  className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-sm font-medium transition-all"
+                >
+                  Réessayer
+                </button>
+                <button
+                  onClick={() => setManualLocationMode(true)}
+                  className="w-full py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 text-sm transition-all"
+                >
+                  Saisir les coordonnées
+                </button>
+                <button
+                  onClick={useDefaultLocation}
+                  className="w-full py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/40 text-xs transition-all"
+                >
+                  Utiliser la position par défaut (Lagos)
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  const categories = ["Alimentation", "Services", "Artisanat", "Mode", "Maison", "Transport"];
+  const categorySuggestions = searchQuery.trim()
+    ? categories.filter(c => c.toLowerCase().includes(searchQuery.toLowerCase()))
+    : [];
 
   return (
     <div className="h-screen w-full relative bg-neutral-950 overflow-hidden">
@@ -903,20 +998,20 @@ export default function MapPage() {
         </button>
       </a>
 
-      {/* Search Section */}
+      {/* Search Section — Unified */}
       <div className={`absolute ${isMobile ? "top-16" : "top-6"} left-1/2 -translate-x-1/2 z-20 w-full max-w-lg px-4`}>
-        <div className="text-center mb-3">
-          <p className={`text-white/80 text-sm font-light tracking-wide ${isMobile ? "hidden" : ""}`}>
-             <span className="text-emerald-400 font-medium">Omni</span> — Partout avec toi
-          </p>
-        </div>
-        <form onSubmit={handleSearch} className="relative">
+        <div className="relative">
           <div className="flex items-center bg-black/60 backdrop-blur-xl rounded-2xl border border-white/10 px-4 py-3.5 shadow-2xl shadow-black/50">
+            <Search size={16} className="text-white/40 shrink-0 mr-2 cursor-pointer" onClick={handleSearch} />
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Ex: patates, réparation téléphone, pain..."
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                handleFacilitySearch(e.target.value);
+              }}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSearch(); } }}
+              placeholder="Chercher un produit, vendeur..."
               className="flex-1 bg-transparent text-white/90 placeholder-white/40 text-sm outline-none font-light"
             />
             <button
@@ -926,12 +1021,40 @@ export default function MapPage() {
             >
               <Mic size={16} className="text-white/50" />
             </button>
-            <button
-              type="submit"
-              className="p-1.5 hover:bg-emerald-500/20 rounded-full transition-colors"
-            >
-              <Search size={16} className="text-emerald-400" />
-            </button>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowSortPicker(!showSortPicker)}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-white/10 transition-colors text-xs text-white/40"
+              >
+                <ArrowUpDown size={12} />
+                <span className="hidden sm:inline">
+                  {{ distance: "Proximité", price: "Prix", rating: "Note", best_value: "Meilleur rapport" }[sortBy] || "Tri"}
+                </span>
+              </button>
+              {showSortPicker && (
+                <div className="absolute top-full right-0 mt-2 bg-neutral-900/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden z-30 min-w-[140px]">
+                  {[
+                    { value: "distance", label: "Proximité" },
+                    { value: "price", label: "Prix" },
+                    { value: "rating", label: "Note" },
+                    { value: "best_value", label: "Meilleur rapport" },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => { setSortBy(opt.value); setShowSortPicker(false); }}
+                      className={`w-full text-left px-3 py-2 text-xs transition-all ${
+                        sortBy === opt.value
+                          ? "text-emerald-400 bg-emerald-500/10"
+                          : "text-white/50 hover:bg-white/5"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <ImageSearch
               onSearchQuery={(query) => {
                 setSearchQuery(query);
@@ -939,30 +1062,13 @@ export default function MapPage() {
               }}
             />
           </div>
-        </form>
 
-        {/* Facility Filter Bar */}
-        <div className="relative mt-2">
-          <div className="flex items-center bg-black/40 backdrop-blur-xl rounded-xl border border-white/5 px-3 py-2">
-            <MapPin size={14} className="text-emerald-400/60 shrink-0 mr-2" />
-            <input
-              type="text"
-              value={facilityQuery}
-              onChange={(e) => handleFacilitySearch(e.target.value)}
-              onFocus={() => setShowFacilitySearch(true)}
-              placeholder="Filtrer les vendeurs par nom..."
-              className="flex-1 bg-transparent text-white/70 placeholder-white/30 text-xs outline-none"
-            />
-            {facilityQuery && (
-              <button onClick={() => { setFacilityQuery(""); setFacilityResults([]); setHighlightedFacilityId(null); }} className="text-white/30 hover:text-white/60">
-                <X size={12} />
-              </button>
-            )}
-          </div>
-          {showFacilitySearch && facilityResults.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-neutral-900/95 backdrop-blur-xl rounded-xl border border-white/10 shadow-2xl max-h-48 overflow-y-auto z-30">
-              {facilityResults.map((v) => (
-                <button key={v.id} onClick={() => { setShowFacilitySearch(false); selectFacility(v); }}
+          {/* Unified dropdown: facilities + categories */}
+          {searchQuery.trim() && (facilitySuggestions.length > 0 || categorySuggestions.length > 0) && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-neutral-900/95 backdrop-blur-xl rounded-xl border border-white/10 shadow-2xl max-h-60 overflow-y-auto z-30">
+              <p className="text-[10px] text-white/20 uppercase tracking-widest px-3 pt-2 pb-1">Vendeurs</p>
+              {facilitySuggestions.map((v) => (
+                <button key={v.id} onClick={() => selectFacility(v)}
                   className="w-full text-left px-3 py-2.5 text-xs text-white/60 hover:bg-white/5 hover:text-white transition-all border-b border-white/5 last:border-0 flex items-center gap-2"
                 >
                   <Store size={12} className="text-emerald-400/60 shrink-0" />
@@ -970,6 +1076,18 @@ export default function MapPage() {
                   <span className="text-[10px] text-white/20 shrink-0 ml-auto">{v.category}</span>
                 </button>
               ))}
+              {categorySuggestions.length > 0 && (
+                <>
+                  <p className="text-[10px] text-white/20 uppercase tracking-widest px-3 pt-2 pb-1">Catégories</p>
+                  {categorySuggestions.map((cat) => (
+                    <button key={cat} onClick={() => { setSearchQuery(cat); handleSearch(); }}
+                      className="w-full text-left px-3 py-2 text-xs text-white/50 hover:bg-white/5 hover:text-white transition-all flex items-center gap-2"
+                    >
+                      <span className="text-white/20">#</span> {cat}
+                    </button>
+                  ))}
+                </>
+              )}
             </div>
           )}
         </div>
@@ -999,27 +1117,6 @@ export default function MapPage() {
               </button>
             );
           })}
-        </div>
-
-        {/* Sort */}
-        <div className="mt-2">
-          <p className="text-[10px] text-white/30 uppercase tracking-widest mb-2">Trier par</p>
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm appearance-none cursor-pointer focus:outline-none focus:border-emerald-500/50 transition-all"
-            style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23ffffff' viewBox='0 0 256 256'%3E%3Cpath d='M213.66,101.66a8,8,0,0,1-11.32,0L128,27.31,53.66,101.66a8,8,0,0,1-11.32-11.32l80-80a8,8,0,0,1,11.32,0l80,80A8,8,0,0,1,213.66,101.66Z'/%3E%3C/svg%3E")`,
-              backgroundRepeat: 'no-repeat',
-              backgroundPosition: 'right 12px center',
-              paddingRight: '36px'
-            }}
-          >
-            <option value="distance" className="bg-neutral-900">Proximité</option>
-            <option value="price" className="bg-neutral-900">Prix</option>
-            <option value="rating" className="bg-neutral-900">Note</option>
-            <option value="best_value" className="bg-neutral-900">Meilleur rapport</option>
-          </select>
         </div>
       </div>
 

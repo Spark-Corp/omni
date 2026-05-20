@@ -1,12 +1,15 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { ArrowLeft, Navigation, Plus, Trash2, MapPin, Search, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function NewTrip() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editTripId = searchParams.get("editTripId");
+  const isEditing = !!editTripId;
   const mapContainer = useRef(null);
   const map = useRef(null);
   const mapInitCalled = useRef(false);
@@ -20,7 +23,13 @@ export default function NewTrip() {
   const [origin, setOrigin] = useState(null);
   const [destination, setDestination] = useState(null);
   const [waypoints, setWaypoints] = useState([]);
-  const [deviationKm, setDeviationKm] = useState(2);
+  const [deviationKm, setDeviationKm] = useState(() => {
+    try {
+      const raw = localStorage.getItem("delivery_prefs");
+      const prefs = raw ? JSON.parse(raw) : {};
+      return prefs.deviationKm || 2;
+    } catch { return 2; }
+  });
   const [sending, setSending] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -42,6 +51,27 @@ export default function NewTrip() {
     script.onload = () => setMapLibLoaded(true);
     document.head.appendChild(script);
   }, []);
+
+  // Load existing trip for editing
+  useEffect(() => {
+    if (!editTripId) return;
+    (async () => {
+      try {
+        const userId = JSON.parse(localStorage.getItem("omni_user")).id;
+        const res = await fetch(`/api/delivery/trips/${editTripId}`, {
+          headers: { "x-user-id": userId },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const t = data.trip;
+          setOrigin({ lat: parseFloat(t.origin_lat), lon: parseFloat(t.origin_lon), name: "Départ" });
+          setDestination({ lat: parseFloat(t.destination_lat), lon: parseFloat(t.destination_lon), name: "Arrivée" });
+          setWaypoints((t.waypoints || []).map((wp) => ({ lat: parseFloat(wp.lat), lon: parseFloat(wp.lon), name: wp.address || "" })));
+          setDeviationKm(parseFloat(t.deviation_km) || 2);
+        }
+      } catch {}
+    })();
+  }, [editTripId]);
 
   // Get user location
   useEffect(() => {
@@ -281,8 +311,10 @@ export default function NewTrip() {
       const wps = waypoints.filter((w) => w.lat != null && w.lon != null).map((w) => ({
         lat: w.lat, lon: w.lon, address: w.name || "",
       }));
-      const res = await fetch("/api/delivery/trips/create", {
-        method: "POST",
+      const url = isEditing ? `/api/delivery/trips/${editTripId}` : "/api/delivery/trips/create";
+      const method = isEditing ? "PUT" : "POST";
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json", "x-user-id": userId },
         body: JSON.stringify({
           originLat: origin.lat,
@@ -294,7 +326,7 @@ export default function NewTrip() {
         }),
       });
       if (!res.ok) throw new Error("Failed");
-      toast("Trajet créé !");
+      toast(isEditing ? "Trajet modifié !" : "Trajet créé !");
       navigate("/delivery/dashboard");
     } catch (err) {
       toast("Erreur lors de la création du trajet");
@@ -401,7 +433,7 @@ export default function NewTrip() {
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
               <Navigation size={16} className="text-emerald-400" />
-              <h2 className="text-white text-sm font-medium">Nouveau trajet</h2>
+              <h2 className="text-white text-sm font-medium">{isEditing ? "Modifier le trajet" : "Nouveau trajet"}</h2>
             </div>
             <button
               onClick={() => setShowSearch(!showSearch)}
@@ -440,7 +472,7 @@ export default function NewTrip() {
             className="w-full py-3 rounded-xl bg-emerald-500 text-black font-medium text-sm hover:bg-emerald-400 transition-all disabled:opacity-30 flex items-center justify-center gap-2"
           >
             {sending ? <Loader2 size={14} className="animate-spin" /> : null}
-            {sending ? "Création..." : "Activer ce trajet"}
+            {sending ? (isEditing ? "Modification..." : "Création...") : (isEditing ? "Enregistrer" : "Activer ce trajet")}
           </button>
         </div>
       </div>

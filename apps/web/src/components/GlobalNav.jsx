@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router";
-import { Menu, X, Store, Truck, Wallet, Crown, User, LogIn, Map } from "lucide-react";
+import { Menu, X, Store, Truck, Wallet, Crown, User, LogIn, Map, LayoutDashboard } from "lucide-react";
 
 export default function GlobalNav() {
   const [open, setOpen] = useState(false);
@@ -72,8 +72,12 @@ export default function GlobalNav() {
     }
   };
 
-  // Don't render on map page (already has MobileNav in the header)
-  if (location.pathname === "/map") return null;
+  // Don't render on pages that have their own navigation
+  if (location.pathname === "/map" ||
+      location.pathname === "/" ||
+      location.pathname.startsWith("/vendor/") ||
+      location.pathname.startsWith("/delivery/") ||
+      location.pathname.startsWith("/subscriptions")) return null;
 
   return (
     <>
@@ -135,6 +139,7 @@ export default function GlobalNav() {
               <p className="text-[10px] text-white/20 uppercase tracking-widest mb-3">Liens</p>
               <div className="space-y-1">
                 {[
+                  { label: "Tableau de bord", icon: LayoutDashboard, path: "/dashboard" },
                   { label: "Portefeuille", icon: Wallet, path: "/wallet", desc: balance != null ? `${balance.toLocaleString()} FCFA` : null },
                   { label: "Abonnements", icon: Crown, path: "/subscriptions" },
                   { label: "Mon compte", icon: User, path: "/user/profile" },

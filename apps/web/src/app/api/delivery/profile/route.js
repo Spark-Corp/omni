@@ -8,7 +8,7 @@ export async function PUT(request) {
     }
 
     const body = await request.json();
-    const { fullName, phone } = body;
+    const { fullName, phone, activeMode, activeRadiusKm, deviationKm } = body;
 
     const existing = await sql`
       SELECT id FROM delivery_profiles WHERE user_id = ${userId}
@@ -18,7 +18,13 @@ export async function PUT(request) {
     }
 
     await sql`
-      UPDATE delivery_profiles SET full_name = ${fullName}, phone = ${phone}, updated_at = CURRENT_TIMESTAMP
+      UPDATE delivery_profiles SET
+        full_name = COALESCE(${fullName}, full_name),
+        phone = COALESCE(${phone}, phone),
+        active_mode = COALESCE(${activeMode}, active_mode),
+        active_radius_km = COALESCE(${activeRadiusKm}, active_radius_km),
+        deviation_km = COALESCE(${deviationKm}, deviation_km),
+        updated_at = CURRENT_TIMESTAMP
       WHERE id = ${existing[0].id}
     `;
 

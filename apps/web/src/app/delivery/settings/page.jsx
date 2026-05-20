@@ -18,6 +18,17 @@ export default function DeliverySettings() {
   const [showAdd, setShowAdd] = useState(false);
 
   const [form, setForm] = useState({ fullName: "", phone: "" });
+  const [prefs, setPrefs] = useState(() => {
+    try {
+      const raw = localStorage.getItem("delivery_prefs");
+      return raw ? JSON.parse(raw) : { mode: "rayon", maxRadius: 5, deviationKm: 2 };
+    } catch { return { mode: "rayon", maxRadius: 5, deviationKm: 2 }; }
+  });
+
+  const savePrefs = (newPrefs) => {
+    setPrefs(newPrefs);
+    localStorage.setItem("delivery_prefs", JSON.stringify(newPrefs));
+  };
 
   const loadProfile = async () => {
     try {
@@ -161,8 +172,52 @@ export default function DeliverySettings() {
                       </button>
                     );
                   })}
-                </div>
+          </div>
+
+          {/* Delivery Preferences */}
+          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-4">
+            <h2 className="text-sm text-white/60 font-medium">Préférences de livraison</h2>
+            <div>
+              <label className="text-[10px] text-white/30 uppercase tracking-widest mb-2 block">Mode</label>
+              <div className="flex gap-2">
+                {["rayon", "route"].map((m) => (
+                  <button key={m} onClick={() => savePrefs({ ...prefs, mode: m })}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                      prefs.mode === m
+                        ? "bg-emerald-500 text-black"
+                        : "bg-white/5 text-white/40 hover:bg-white/10"
+                    }`}
+                  >
+                    {m === "rayon" ? "🎯 Rayon" : "🗺️ Trajet"}
+                  </button>
+                ))}
               </div>
+            </div>
+            {prefs.mode === "rayon" ? (
+              <div>
+                <label className="text-[10px] text-white/30 uppercase tracking-widest mb-2 flex justify-between">
+                  <span>Rayon max</span>
+                  <span className="text-emerald-400/60">{prefs.maxRadius} km</span>
+                </label>
+                <input type="range" min="1" max="20" step="0.5" value={prefs.maxRadius}
+                  onChange={(e) => savePrefs({ ...prefs, maxRadius: parseFloat(e.target.value) })}
+                  className="w-full accent-emerald-500 h-1"
+                />
+              </div>
+            ) : (
+              <div>
+                <label className="text-[10px] text-white/30 uppercase tracking-widest mb-2 flex justify-between">
+                  <span>Déviation max</span>
+                  <span className="text-emerald-400/60">{prefs.deviationKm} km</span>
+                </label>
+                <input type="range" min="0" max="10" step="0.5" value={prefs.deviationKm}
+                  onChange={(e) => savePrefs({ ...prefs, deviationKm: parseFloat(e.target.value) })}
+                  className="w-full accent-emerald-500 h-1"
+                />
+              </div>
+            )}
+          </div>
+        </div>
             )}
           </div>
         </div>

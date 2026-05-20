@@ -8,7 +8,7 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { vendorId, productId, quantity } = body;
+    const { vendorId, facilityId, productId, quantity } = body;
 
     if (!vendorId || !productId || !quantity) {
       return Response.json(
@@ -28,29 +28,54 @@ export async function POST(request) {
       return Response.json({ error: "Vendor not found" }, { status: 404 });
     }
 
-    // Create availability request
-    const result = await sql`
-      INSERT INTO availability_requests (buyer_id, vendor_id, product_id, quantity_requested, status)
-      VALUES (${buyerId}, ${vendorId}, ${productId}, ${quantity}, 'pending')
-      RETURNING id, buyer_id, vendor_id, product_id, quantity_requested, status, created_at
-    `;
-
-    // Create notification for vendor
+    // Get vendor user_id for notification
     const vendor = await sql`
       SELECT v.user_id FROM vendors v WHERE v.id = ${vendorId}
     `;
 
-    if (vendor.length > 0) {
-      await sql`
-        INSERT INTO notifications (user_id, type, title, message, link)
-        VALUES (
-          ${vendor[0].user_id},
-          'request',
-          'Nouvelle demande',
-          ${`Quelqu'un demande: ${quantity} articles`},
-          '/vendor/requests'
-        )
+    // Resolve facility_id from product if not provided
+    let resolvedFacilityId = facilityId;
+    if (!resolvedFacilityId) {
+      const prod = await sql`
+        SELECT facility_id FROM products WHERE id = ${productId}
       `;
+      if (prod.length > 0) resolvedFacilityId = prod[0].facility_id;
+    }
+
+    // Create request with 5-minute expiry, initially queued
+    const result = await sql`
+      INSERT INTO availability_requests (buyer_id, vendor_id, facility_id, product_id, quantity_requested, status, expires_at)
+      VALUES (${buyerId}, ${vendorId}, ${resolvedFacilityId}, ${productId}, ${quantity}, 'queued', CURRENT_TIMESTAMP + INTERVAL '5 minutes')
+      RETURNING id, buyer_id, vendor_id, facility_id, product_id, quantity_requested, status, created_at, expires_at
+    `;
+
+    // Try to promote: if vendor has < 3 pending, this becomes pending
+    const activeCount = await sql`
+      SELECT COUNT(*) as cnt FROM availability_requests
+      WHERE vendor_id = ${vendorId} AND status = 'pending' AND expires_at > CURRENT_TIMESTAMP
+    `;
+    const isPending = parseInt(activeCount[0].cnt) < 3;
+
+    if (isPending) {
+      await sql`
+        UPDATE availability_requests SET status = 'pending'
+        WHERE id = ${result[0].id}
+      `;
+      result[0].status = 'pending';
+
+      // Notify vendor
+      if (vendor.length > 0) {
+        await sql`
+          INSERT INTO notifications (user_id, type, title, message, link)
+          VALUES (
+            ${vendor[0].user_id},
+            'request',
+            'Nouvelle demande',
+            ${`Quelqu'un demande: ${quantity} articles`},
+            '/vendor/requests'
+          )
+        `;
+      }
     }
 
     return Response.json({ request: result[0], success: true });

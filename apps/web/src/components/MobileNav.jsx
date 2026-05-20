@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { Menu, X, Store, Truck, Wallet, Crown, User, LogIn, Map } from "lucide-react";
+import { Menu, X, Store, Truck, Wallet, Crown, User, LogIn, Map, ShoppingBag, LayoutDashboard } from "lucide-react";
 
 export default function MobileNav({ isAuthenticated, userName, balance }) {
   const [open, setOpen] = useState(false);
@@ -105,7 +105,9 @@ export default function MobileNav({ isAuthenticated, userName, balance }) {
               <p className="text-[10px] text-white/20 uppercase tracking-widest mb-3">Liens</p>
               <div className="space-y-1">
                 {[
+                  { label: "Tableau de bord", icon: LayoutDashboard, path: "/dashboard" },
                   { label: "Portefeuille", icon: Wallet, path: "/wallet", desc: balance != null ? `${balance.toLocaleString()} FCFA` : null },
+                  { label: "Mes commandes", icon: ShoppingBag, path: "/cart/history" },
                   { label: "Abonnements", icon: Crown, path: "/subscriptions" },
                   { label: "Mon compte", icon: User, path: "/user/profile" },
                 ].map((l) => {

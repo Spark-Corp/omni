@@ -74,11 +74,10 @@ describe('Vendor API Routes', () => {
     });
 
     it('should fail without lat/lon coordinates', async () => {
-      // Test validation logic
       const lat = null;
       const lon = undefined;
       
-      const hasValidCoords = lat && lon;
+      const hasValidCoords = !!(lat && lon);
       expect(hasValidCoords).toBe(false);
     });
   });
@@ -159,7 +158,7 @@ describe('Vendor API Routes', () => {
       const lat = undefined;
       const lon = null;
       
-      const hasValidCoords = lat && lon;
+      const hasValidCoords = !!(lat && lon);
       expect(hasValidCoords).toBe(false);
     });
 
