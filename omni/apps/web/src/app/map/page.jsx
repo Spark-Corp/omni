@@ -35,6 +35,10 @@ export default function MapPage() {
   const [mapReady, setMapReady] = useState(false);
   const [mapLibLoaded, setMapLibLoaded] = useState(false);
   const [locationError, setLocationError] = useState(null);
+  const [showLocationPrompt, setShowLocationPrompt] = useState(false);
+  const [manualLocationMode, setManualLocationMode] = useState(false);
+  const [manualLat, setManualLat] = useState('');
+  const [manualLon, setManualLon] = useState('');
   const [locationLoading, setLocationLoading] = useState(true);
   const [isOffline, setIsOffline] = useState(false);
   const [cachedVendors, setCachedVendors] = useState([]);
@@ -183,26 +187,16 @@ export default function MapPage() {
     fetchBalance();
   }, [isAuthenticated]);
 
-  // Retry location function
+  // Location handlers
   const retryLocation = () => {
     setLocationLoading(true);
     setLocationError(null);
-    
-    let timeoutId;
-    
-    const setDefaultLocation = () => {
-      console.log('[Map] Using fallback location: Lagos');
-      setUserLocation({ lat: 6.1319, lon: 1.2228 });
-      setLocationError('Using fallback: Lagos');
-      setLocationLoading(false);
-    };
-    
-    timeoutId = setTimeout(setDefaultLocation, 3000);
-    
+    setShowLocationPrompt(false);
+    setManualLocationMode(false);
+
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          clearTimeout(timeoutId);
           console.log('[Map] Got user location:', position.coords.latitude, position.coords.longitude);
           setUserLocation({
             lat: position.coords.latitude,
@@ -212,20 +206,44 @@ export default function MapPage() {
           setLocationLoading(false);
         },
         (error) => {
-          clearTimeout(timeoutId);
           console.error('Error getting location:', error);
-          setLocationError('Location unavailable - Using fallback: Lagos');
-          setDefaultLocation();
+          setLocationLoading(false);
+          if (error.code === error.PERMISSION_DENIED) {
+            setLocationError('Localisation désactivée. Activez-la pour trouver les vendeurs près de chez vous.');
+          } else {
+            setLocationError('Impossible d\'obtenir votre position.');
+          }
+          setShowLocationPrompt(true);
         },
-        { timeout: 5000, maximumAge: 60000 }
+        { timeout: 10000, maximumAge: 60000 }
       );
     } else {
-      clearTimeout(timeoutId);
-      setLocationError('Geolocation not supported - Using fallback: Lagos');
-      setDefaultLocation();
+      setLocationLoading(false);
+      setLocationError('La géolocalisation n\'est pas supportée par votre navigateur.');
+      setShowLocationPrompt(true);
     }
-    
-    return () => clearTimeout(timeoutId);
+  };
+
+  const useDefaultLocation = () => {
+    console.log('[Map] Using default location: Lagos');
+    setUserLocation({ lat: 6.5244, lon: 3.3792 });
+    setLocationError(null);
+    setShowLocationPrompt(false);
+    setManualLocationMode(false);
+  };
+
+  const submitManualLocation = () => {
+    const lat = parseFloat(manualLat);
+    const lon = parseFloat(manualLon);
+    if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+      toast("Coordonnées invalides");
+      return;
+    }
+    console.log('[Map] Using manual location:', lat, lon);
+    setUserLocation({ lat, lon });
+    setLocationError(null);
+    setShowLocationPrompt(false);
+    setManualLocationMode(false);
   };
 
   // Get user location
@@ -419,8 +437,21 @@ export default function MapPage() {
   useEffect(() => {
     if (userLocation) {
       loadNearbyVendors();
+      // Fly map to user location if already initialized
+      if (mapReady && map.current) {
+        map.current.flyTo({
+          center: [userLocation.lon, userLocation.lat],
+          zoom: 15,
+          pitch: 45,
+          duration: 2000,
+        });
+      }
+      // Update user marker position
+      if (userMarker.current) {
+        userMarker.current.setLngLat([userLocation.lon, userLocation.lat]);
+      }
     }
-  }, [userLocation]);
+  }, [userLocation, mapReady]);
 
   // Update vendor markers when vendors change - with viewport clustering/filtering
   useEffect(() => {
@@ -857,7 +888,7 @@ export default function MapPage() {
     setShowVendorChat(true);
   };
 
-  if (authChecking || !userLocation) {
+  if (authChecking || (!userLocation && !showLocationPrompt)) {
     return (
       <div className="h-screen flex items-center justify-center bg-neutral-950">
         <div className="text-center">
@@ -865,6 +896,80 @@ export default function MapPage() {
           <p className="text-white/60 text-sm font-light tracking-wide">
             {authChecking ? "Vérification..." : "Localisation..."}
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!userLocation && showLocationPrompt) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-neutral-950 p-6">
+        <div className="w-full max-w-sm text-center">
+          <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center mx-auto mb-6 border border-amber-500/20">
+            <MapPin size={28} className="text-amber-400" />
+          </div>
+          {manualLocationMode ? (
+            <>
+              <h3 className="text-white text-base font-medium mb-2">Saisir vos coordonnées</h3>
+              <p className="text-white/40 text-xs mb-5">Entrez votre latitude et longitude</p>
+              <div className="flex gap-3 mb-5">
+                <input
+                  type="text"
+                  value={manualLat}
+                  onChange={(e) => setManualLat(e.target.value)}
+                  placeholder="Latitude (ex: 6.1319)"
+                  className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white text-xs placeholder-white/30 outline-none focus:border-emerald-500/40 transition-colors"
+                />
+                <input
+                  type="text"
+                  value={manualLon}
+                  onChange={(e) => setManualLon(e.target.value)}
+                  placeholder="Longitude (ex: 1.2228)"
+                  className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white text-xs placeholder-white/30 outline-none focus:border-emerald-500/40 transition-colors"
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setManualLocationMode(false)}
+                  className="flex-1 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 text-sm transition-all"
+                >
+                  Retour
+                </button>
+                <button
+                  onClick={submitManualLocation}
+                  className="flex-1 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-sm font-medium transition-all"
+                >
+                  Valider
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <h3 className="text-white text-base font-medium mb-2">Activez votre localisation</h3>
+              <p className="text-white/40 text-xs mb-2">{locationError || "Pour trouver les vendeurs près de chez vous"}</p>
+              <p className="text-white/20 text-[10px] mb-6">Vous pouvez aussi saisir vos coordonnées manuellement ou utiliser une position par défaut.</p>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={retryLocation}
+                  className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-sm font-medium transition-all"
+                >
+                  Réessayer
+                </button>
+                <button
+                  onClick={() => setManualLocationMode(true)}
+                  className="w-full py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 text-sm transition-all"
+                >
+                  Saisir les coordonnées
+                </button>
+                <button
+                  onClick={useDefaultLocation}
+                  className="w-full py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/40 text-xs transition-all"
+                >
+                  Utiliser la position par défaut (Lagos)
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     );
