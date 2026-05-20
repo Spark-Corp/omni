@@ -12,6 +12,9 @@
     "routeIdToServerBundleId": {
       "page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
       "account/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "account/logout/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "account/signin/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
+      "account/signup/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
       "auth/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
       "cart/history/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
       "dashboard/page": "nodejs_eyJydW50aW1lIjoibm9kZWpzIn0",
@@ -56,6 +59,33 @@
         "parentId": "root",
         "file": "src/app/account/page.jsx",
         "path": "account",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "account/logout/page": {
+        "id": "account/logout/page",
+        "parentId": "root",
+        "file": "src/app/account/logout/page.jsx",
+        "path": "account/logout",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "account/signin/page": {
+        "id": "account/signin/page",
+        "parentId": "root",
+        "file": "src/app/account/signin/page.jsx",
+        "path": "account/signin",
+        "config": {
+          "runtime": "nodejs"
+        }
+      },
+      "account/signup/page": {
+        "id": "account/signup/page",
+        "parentId": "root",
+        "file": "src/app/account/signup/page.jsx",
+        "path": "account/signup",
         "config": {
           "runtime": "nodejs"
         }
@@ -292,6 +322,24 @@
         "file": "./account/page.jsx",
         "path": "account"
       },
+      "account/logout/page": {
+        "id": "account/logout/page",
+        "parentId": "root",
+        "file": "./account/logout/page.jsx",
+        "path": "account/logout"
+      },
+      "account/signin/page": {
+        "id": "account/signin/page",
+        "parentId": "root",
+        "file": "./account/signin/page.jsx",
+        "path": "account/signin"
+      },
+      "account/signup/page": {
+        "id": "account/signup/page",
+        "parentId": "root",
+        "file": "./account/signup/page.jsx",
+        "path": "account/signup"
+      },
       "auth/page": {
         "id": "auth/page",
         "parentId": "root",
@@ -446,6 +494,18 @@
           {
             "file": "./account/page.jsx",
             "path": "account"
+          },
+          {
+            "file": "./account/logout/page.jsx",
+            "path": "account/logout"
+          },
+          {
+            "file": "./account/signin/page.jsx",
+            "path": "account/signin"
+          },
+          {
+            "file": "./account/signup/page.jsx",
+            "path": "account/signup"
           },
           {
             "file": "./auth/page.jsx",
