@@ -438,14 +438,14 @@ function ScrollDemo({ onPhaseChange, onReady }) {
                 >
                   <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.03] border border-white/[0.06] mb-4">
                     <Sparkles size={12} className="text-emerald-400 shrink-0" />
-                    <span className="text-[10px] sm:text-xs xl:text-sm text-white/70">Les facilités de ton quartier, sur une carte</span>
+                    <span className="text-[10px] sm:text-xs xl:text-sm text-white/70">L'index de ton quartier</span>
                   </div>
                   <h2 className="font-space-grotesk text-2xl sm:text-4xl xl:text-6xl font-bold tracking-tight leading-snug sm:leading-tight">
                     <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">Omni</span>
-                    <span className="text-white/80 block mt-1">Trouve tout ce qui existe autour de toi.</span>
+                    <span className="text-white/80 block mt-1">L'index de tout ce qui existe autour de toi.</span>
                   </h2>
                   <p className="font-dm-sans text-white/50 text-xs sm:text-sm xl:text-base mt-2 sm:mt-3 max-w-md mx-auto lg:mx-0">
-                    Marchés, artisans, services. Partout où tu vas, en un clic.
+                    Marchés, boutiques, artisans. Ceux qui sont à côté de toi n'ont pas tous un site ou des pubs qui tournent, ou une présence assise sur les réseaux. Mais ils existent — Omni les indexe. Tu les trouves. Gratuitement.
                   </p>
                 </div>
 
@@ -548,7 +548,7 @@ function ScrollDemo({ onPhaseChange, onReady }) {
             <div className="text-center transition-all duration-500"
               style={{ opacity: 1 - Math.min(1, phase / 1.5) }}
             >
-              <p className="text-white/90 text-lg font-semibold font-space-grotesk">Trouve, vends, livre. Autour de toi.</p>
+              <p className="text-white/90 text-lg font-semibold font-space-grotesk">L'index de tout ce qui existe autour de toi. Gratuitement.</p>
               <p className="font-dm-sans text-white/40 text-xs mt-2">Scrolle pour découvrir</p>
             </div>
           </div>
@@ -639,59 +639,201 @@ export default function LandingPage() {
       {/* SCROLL DEMO — everything happens here */}
       <ScrollDemo onPhaseChange={setDemoPhase} onReady={() => setSplashDone(true)} />
 
-      {/* PROBLEM */}
+      {/* PROBLEM — 3 personas */}
       <section className="py-28 md:py-32 px-6 border-y border-white/[0.03]">
-        <div className="max-w-4xl mx-auto text-center">
-          <span className="text-emerald-400/80 text-[10px] sm:text-xs uppercase tracking-[0.25em] font-medium font-space-grotesk">Le vrai problème</span>
-          <h2 className="font-space-grotesk text-3xl md:text-5xl font-bold tracking-tight mt-6 mb-8 leading-tight">
-            Ton quartier a des facilités que tu ne vois pas.
+        <div className="max-w-4xl mx-auto">
+          <span className="text-emerald-400/80 text-[10px] sm:text-xs uppercase tracking-[0.25em] font-medium font-space-grotesk block text-center">LE PROBLÈME</span>
+          <h2 className="font-space-grotesk text-3xl md:text-5xl font-bold tracking-tight mt-6 mb-16 leading-tight text-center">
+            On cherche tous quelque chose. Sans toujours trouver ce qui existe vraiment proche de nous.
           </h2>
-          <p className="font-dm-sans text-white/50 text-base md:text-lg max-w-2xl mx-auto leading-relaxed">
-            Marché de Bè, boulangerie du quartier, boutique au coin de la rue… Dans chaque rue, des gens vendent.
-            Sans vitrine, sans pub, sans site.
-            <span className="text-emerald-400/80 block mt-2 font-medium">Omni les rend visibles. En 3 secondes.</span>
-          </p>
+          <div className="space-y-12">
+            <div className="flex gap-5">
+              <span className="text-emerald-400 font-space-grotesk text-2xl font-bold shrink-0 w-10">01</span>
+              <div>
+                <h3 className="font-space-grotesk text-xl font-semibold text-white mb-2">L'acheteur</h3>
+                <p className="font-dm-sans text-white/50 text-sm md:text-base leading-relaxed">
+                  Tu cherches un produit. Tu demandes à tes proches. Tu vas sur Google. Puis Facebook Marketplace. Puis TikTok. Ou carrément tu commandes sur Alibaba ou Amazon, mais pas forcément proche. Pas parce qu'il n'y a personne autour de toi — mais parce que les vendeurs locaux n'ont pas tous un site, des pubs qui tournent ou une présence assise sur les réseaux. Tu commandes à 10 000 km ce qui existe peut-être à quelques rues.
+                </p>
+                <p className="font-dm-sans text-white/60 text-sm md:text-base leading-relaxed mt-3">
+                  <span className="text-white/80">Résultat :</span> tu paies plus cher, tu attends plus longtemps, et l'économie locale en pâtit ou s'affaiblit.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-5">
+              <span className="text-emerald-400 font-space-grotesk text-2xl font-bold shrink-0 w-10">02</span>
+              <div>
+                <h3 className="font-space-grotesk text-xl font-semibold text-white mb-2">Le vendeur</h3>
+                <p className="font-dm-sans text-white/50 text-sm md:text-base leading-relaxed">
+                  Tu vends. Tu as des produits, un savoir-faire, une clientèle fidèle. Mais les nouveaux clients ? Ils ne te trouvent pas forcément. Pas de site, pas de budget Google, pas le temps de faire du contenu. Tes clients potentiels sont à quelques rues — mais leur téléphone les envoie ailleurs.
+                </p>
+                <p className="font-dm-sans text-white/60 text-sm md:text-base leading-relaxed mt-3">
+                  <span className="text-white/80">Résultat :</span> tu perds des ventes. Pas parce que tu n'es pas bon — parce que tu es invisible.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-5">
+              <span className="text-emerald-400 font-space-grotesk text-2xl font-bold shrink-0 w-10">03</span>
+              <div>
+                <h3 className="font-space-grotesk text-xl font-semibold text-white mb-2">Le livreur</h3>
+                <p className="font-dm-sans text-white/50 text-sm md:text-base leading-relaxed">
+                  Tu te déplaces chaque jour. Taxi, moto, pied, voiture. Tu passes devant des dizaines de boutiques. Pourtant, tes trajets ne te rapportent rien. Les plateformes de livraison exigent un statut, un dossier, une exclusivité. Toi, tu veux juste gagner un peu sur ton chemin.
+                </p>
+                <p className="font-dm-sans text-white/60 text-sm md:text-base leading-relaxed mt-3">
+                  <span className="text-white/80">Résultat :</span> tu laisses passer de l'argent que tu pourrais gagner sans changer tes habitudes.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="text-center mt-16">
+            <p className="font-dm-sans text-emerald-400/80 text-base md:text-lg font-medium">
+              Ces trois problèmes n'en sont qu'un : <span className="text-white">le monde physique autour de toi n'a jamais été indexé.</span> Omni le fait.
+            </p>
+          </div>
         </div>
       </section>
 
-      {/* TWO SIDES */}
+      {/* BUSINESS MODEL */}
+      <section className="py-28 md:py-32 px-6 bg-white/[0.01] border-y border-white/[0.04]">
+        <div className="max-w-5xl mx-auto text-center">
+          <span className="text-emerald-400/80 text-[10px] sm:text-xs uppercase tracking-[0.25em] font-medium font-space-grotesk">NOTRE MODÈLE</span>
+          <h2 className="font-space-grotesk text-3xl md:text-5xl font-bold tracking-tight mt-6 mb-12 leading-tight">
+            Pour les acheteurs, c'est gratuit. Pour les vendeurs et livreurs, ça commence à 0 FCFA — et ça monte si tu veux plus.
+          </h2>
+          <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto text-left">
+            <div className="p-8 rounded-2xl bg-white/[0.02] border border-white/[0.06] hover:-translate-y-0.5 transition-transform duration-300">
+              <Store size={20} className="text-emerald-400 mb-4" />
+              <h3 className="font-space-grotesk text-xl font-semibold text-white mb-1">Vendeur</h3>
+              <p className="text-white/30 text-xs mb-4">Free permanent ou Premium 5 000 FCFA/mois</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white/[0.02] rounded-xl p-4">
+                  <p className="text-white/40 text-[10px] uppercase tracking-wider mb-2">Free</p>
+                  <ul className="space-y-1.5">
+                    <li className="text-white/60 text-xs flex gap-2"><span className="text-emerald-400 shrink-0">✓</span> 1 facility</li>
+                    <li className="text-white/60 text-xs flex gap-2"><span className="text-emerald-400 shrink-0">✓</span> 5 produits max</li>
+                    <li className="text-white/60 text-xs flex gap-2"><span className="text-emerald-400 shrink-0">✓</span> Cash uniquement</li>
+                  </ul>
+                </div>
+                <div className="bg-emerald-500/[0.04] border border-emerald-500/10 rounded-xl p-4">
+                  <p className="text-emerald-400 text-[10px] uppercase tracking-wider mb-2">Premium</p>
+                  <ul className="space-y-1.5">
+                    <li className="text-white/70 text-xs flex gap-2"><span className="text-emerald-400 shrink-0">✓</span> Facilities illimitées</li>
+                    <li className="text-white/70 text-xs flex gap-2"><span className="text-emerald-400 shrink-0">✓</span> Produits illimités</li>
+                    <li className="text-white/70 text-xs flex gap-2"><span className="text-emerald-400 shrink-0">✓</span> Escrow wallet (1%)</li>
+                    <li className="text-white/70 text-xs flex gap-2"><span className="text-emerald-400 shrink-0">✓</span> Analytics dashboard</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div className="p-8 rounded-2xl bg-white/[0.02] border border-white/[0.06] hover:-translate-y-0.5 transition-transform duration-300">
+              <Navigation size={20} className="text-amber-400 mb-4" />
+              <h3 className="font-space-grotesk text-xl font-semibold text-white mb-1">Livreur</h3>
+              <p className="text-white/30 text-xs mb-4">Free permanent ou Premium 1 000 FCFA/mois</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white/[0.02] rounded-xl p-4">
+                  <p className="text-white/40 text-[10px] uppercase tracking-wider mb-2">Free</p>
+                  <ul className="space-y-1.5">
+                    <li className="text-white/60 text-xs flex gap-2"><span className="text-amber-400 shrink-0">✓</span> 3 livraisons/jour</li>
+                    <li className="text-white/60 text-xs flex gap-2"><span className="text-amber-400 shrink-0">✓</span> Rayon uniquement</li>
+                    <li className="text-white/60 text-xs flex gap-2"><span className="text-amber-400 shrink-0">✓</span> Pas de temps réel</li>
+                  </ul>
+                </div>
+                <div className="bg-amber-500/[0.04] border border-amber-500/10 rounded-xl p-4">
+                  <p className="text-amber-400 text-[10px] uppercase tracking-wider mb-2">Premium</p>
+                  <ul className="space-y-1.5">
+                    <li className="text-white/70 text-xs flex gap-2"><span className="text-amber-400 shrink-0">✓</span> Livraisons illimitées</li>
+                    <li className="text-white/70 text-xs flex gap-2"><span className="text-amber-400 shrink-0">✓</span> Trajets multi-stops</li>
+                    <li className="text-white/70 text-xs flex gap-2"><span className="text-amber-400 shrink-0">✓</span> Guidage vocal temps réel</li>
+                    <li className="text-white/70 text-xs flex gap-2"><span className="text-amber-400 shrink-0">✓</span> Suivi client</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p className="font-dm-sans text-white/30 text-xs mt-8 max-w-xl mx-auto">Paiement par wallet interne (Mobile Money / Crypto). Escrow 1% sur les transactions premium. Cash toujours accepté.</p>
+        </div>
+      </section>
+
+      {/* HOW IT WORKS — 3 personas */}
       <section className="py-28 md:py-32 px-6">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <span className="text-emerald-400/80 text-[10px] sm:text-xs uppercase tracking-[0.25em] font-medium font-space-grotesk">Pour tout le monde</span>
-            <h2 className="font-space-grotesk text-3xl md:text-5xl font-bold tracking-tight mt-6">Un outil. Trois façons de t'en servir.</h2>
+            <span className="text-emerald-400/80 text-[10px] sm:text-xs uppercase tracking-[0.25em] font-medium font-space-grotesk">Comment ça marche</span>
+            <h2 className="font-space-grotesk text-3xl md:text-5xl font-bold tracking-tight mt-6">Trouve, vends ou livre. Trois clics suffisent.</h2>
           </div>
           <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            <div className="p-8 md:p-10 rounded-3xl bg-gradient-to-br from-emerald-500/[0.04] to-transparent border border-emerald-500/10">
-              <ShoppingBag size={24} className="text-emerald-400 mb-4" />
-              <h3 className="font-space-grotesk text-xl md:text-2xl font-bold mb-4">Je cherche quelque chose</h3>
+            <div className="p-8 md:p-10 rounded-3xl bg-gradient-to-br from-emerald-500/[0.04] to-transparent border border-emerald-500/10 hover:-translate-y-0.5 transition-transform duration-300">
+              <span className="text-emerald-400 font-space-grotesk text-lg font-bold">1</span>
+              <h3 className="font-space-grotesk text-xl md:text-2xl font-bold mb-4 mt-2">Tu cherches</h3>
               <ul className="font-dm-sans space-y-3 text-white/50 text-sm leading-relaxed">
-                <li className="flex items-start gap-3"><span className="text-emerald-400 mt-0.5 font-medium">→</span> Tape ce que tu veux, on te dit qui l'a autour de toi</li>
-                <li className="flex items-start gap-3"><span className="text-emerald-400 mt-0.5 font-medium">→</span> Prix, distance, dispo en un coup d'œil</li>
-                <li className="flex items-start gap-3"><span className="text-emerald-400 mt-0.5 font-medium">→</span> Contacte le vendeur en direct</li>
-                <li className="flex items-start gap-3"><span className="text-emerald-400 mt-0.5 font-medium">→</span> Livraison crowd en 1 clic</li>
+                <li className="flex items-start gap-3"><span className="text-emerald-400 mt-0.5 font-medium">→</span> Ouvre la carte et tape ce que tu veux</li>
+                <li className="flex items-start gap-3"><span className="text-emerald-400 mt-0.5 font-medium">→</span> Tout ce qui existe autour de toi apparaît — prix, distance, dispo</li>
+                <li className="flex items-start gap-3"><span className="text-emerald-400 mt-0.5 font-medium">→</span> Contacte le vendeur ou fais livrer direct</li>
               </ul>
             </div>
-            <div className="p-8 md:p-10 rounded-3xl bg-gradient-to-br from-blue-500/[0.04] to-transparent border border-blue-500/10">
-              <Store size={24} className="text-blue-400 mb-4" />
-              <h3 className="font-space-grotesk text-xl md:text-2xl font-bold mb-4">Je vends quelque chose</h3>
+            <div className="p-8 md:p-10 rounded-3xl bg-gradient-to-br from-blue-500/[0.04] to-transparent border border-blue-500/10 hover:-translate-y-0.5 transition-transform duration-300">
+              <span className="text-blue-400 font-space-grotesk text-lg font-bold">2</span>
+              <h3 className="font-space-grotesk text-xl md:text-2xl font-bold mb-4 mt-2">Tu vends</h3>
               <ul className="font-dm-sans space-y-3 text-white/50 text-sm leading-relaxed">
-                <li className="flex items-start gap-3"><span className="text-blue-400 mt-0.5 font-medium">→</span> Sois visible pour ceux qui cherchent près de chez toi</li>
-                <li className="flex items-start gap-3"><span className="text-blue-400 mt-0.5 font-medium">→</span> Zéro pub, zéro site, zéro effort</li>
-                <li className="flex items-start gap-3"><span className="text-blue-400 mt-0.5 font-medium">→</span> Reçois les demandes des clients en direct</li>
-                <li className="flex items-start gap-3"><span className="text-blue-400 mt-0.5 font-medium">→</span> Réponds OUI ou NON, c'est tout</li>
+                <li className="flex items-start gap-3"><span className="text-blue-400 mt-0.5 font-medium">→</span> Crée ta fiche gratuite en 2 minutes — pas de site, pas de pub</li>
+                <li className="flex items-start gap-3"><span className="text-blue-400 mt-0.5 font-medium">→</span> Tes clients te trouvent en cherchant autour d'eux</li>
+                <li className="flex items-start gap-3"><span className="text-blue-400 mt-0.5 font-medium">→</span> Reçois les demandes, réponds OUI ou NON, c'est fini</li>
               </ul>
             </div>
-            <div className="p-8 md:p-10 rounded-3xl bg-gradient-to-br from-amber-500/[0.04] to-transparent border border-amber-500/10">
-              <Navigation size={24} className="text-amber-400 mb-4" />
-              <h3 className="font-space-grotesk text-xl md:text-2xl font-bold mb-4">Je livre</h3>
+            <div className="p-8 md:p-10 rounded-3xl bg-gradient-to-br from-amber-500/[0.04] to-transparent border border-amber-500/10 hover:-translate-y-0.5 transition-transform duration-300">
+              <span className="text-amber-400 font-space-grotesk text-lg font-bold">3</span>
+              <h3 className="font-space-grotesk text-xl md:text-2xl font-bold mb-4 mt-2">Tu livres</h3>
               <ul className="font-dm-sans space-y-3 text-white/50 text-sm leading-relaxed">
-                <li className="flex items-start gap-3"><span className="text-amber-400 mt-0.5 font-medium">→</span> Gagne de l'argent sur tes trajets quotidiens</li>
-                <li className="flex items-start gap-3"><span className="text-amber-400 mt-0.5 font-medium">→</span> Mode rayon ou trajet A→B, choisis ton rayon</li>
-                <li className="flex items-start gap-3"><span className="text-amber-400 mt-0.5 font-medium">→</span> Reçois les demandes près de chez toi</li>
-                <li className="flex items-start gap-3"><span className="text-amber-400 mt-0.5 font-medium">→</span> Multiplie tes gains avec le premium</li>
+                <li className="flex items-start gap-3"><span className="text-amber-400 mt-0.5 font-medium">→</span> Active la livraison sur ton trajet ou ton quartier</li>
+                <li className="flex items-start gap-3"><span className="text-amber-400 mt-0.5 font-medium">→</span> Reçois les demandes, accepte, livre, gagne</li>
+                <li className="flex items-start gap-3"><span className="text-amber-400 mt-0.5 font-medium">→</span> Pas de dossier, pas d'exclusivité — tout le monde peut livrer</li>
               </ul>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ — objections */}
+      <section className="py-28 md:py-32 px-6 bg-white/[0.01] border-y border-white/[0.04]">
+        <div className="max-w-3xl mx-auto">
+          <span className="text-emerald-400/80 text-[10px] sm:text-xs uppercase tracking-[0.25em] font-medium font-space-grotesk block text-center">T'es pas sûr ?</span>
+          <h2 className="font-space-grotesk text-3xl md:text-5xl font-bold tracking-tight mt-6 mb-12 text-center">Les questions qu'on nous pose.</h2>
+          <div className="space-y-6">
+            <details className="group p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06] open:bg-white/[0.04] transition-all">
+              <summary className="font-space-grotesk text-white font-semibold cursor-pointer list-none flex items-center justify-between">
+                Est-ce que ça marche dans mon quartier ?
+                <span className="text-white/30 group-open:rotate-180 transition-transform text-lg">▾</span>
+              </summary>
+              <p className="font-dm-sans text-white/50 text-sm mt-4 leading-relaxed">
+                On cartographie chaque zone progressivement. Si ton quartier n'est pas encore couvert, inscris-toi — on te prévient dès qu'il l'est.
+              </p>
+            </details>
+            <details className="group p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06] open:bg-white/[0.04] transition-all">
+              <summary className="font-space-grotesk text-white font-semibold cursor-pointer list-none flex items-center justify-between">
+                Combien ça coûte vraiment ?
+                <span className="text-white/30 group-open:rotate-180 transition-transform text-lg">▾</span>
+              </summary>
+              <p className="font-dm-sans text-white/50 text-sm mt-4 leading-relaxed">
+                Pour les acheteurs : zéro, gratuit, rien. Pour les vendeurs : une fiche gratuite permanente. Pour passer Premium (facilities illimitées, analytics, escrow), c'est 5 000 FCFA/mois. Livreurs : 1 000 FCFA/mois. Aucun abonnement forcé.
+              </p>
+            </details>
+            <details className="group p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06] open:bg-white/[0.04] transition-all">
+              <summary className="font-space-grotesk text-white font-semibold cursor-pointer list-none flex items-center justify-between">
+                Et si le vendeur ne répond pas ?
+                <span className="text-white/30 group-open:rotate-180 transition-transform text-lg">▾</span>
+              </summary>
+              <p className="font-dm-sans text-white/50 text-sm mt-4 leading-relaxed">
+                Le vendeur répond OUI ou NON en un clic. S'il ne répond pas sous 5 à 10 minutes, on te notifie et on t'envoie vers d'autres options. Un vendeur qui ne répond pas perd en visibilité — tout le monde a intérêt à répondre.
+              </p>
+            </details>
+            <details className="group p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06] open:bg-white/[0.04] transition-all">
+              <summary className="font-space-grotesk text-white font-semibold cursor-pointer list-none flex items-center justify-between">
+                Je livre déjà pour Uber / Glovo. Pourquoi Omni ?
+                <span className="text-white/30 group-open:rotate-180 transition-transform text-lg">▾</span>
+              </summary>
+              <p className="font-dm-sans text-white/50 text-sm mt-4 leading-relaxed">
+                Sur Omni, t'as pas besoin d'être un pro. Tu livres sur ton trajet quotidien — pas besoin de zone d'exclusivité. Tu choisis quand tu livres. Et tu gardes 100% de ce que tu gagnes.
+              </p>
+            </details>
           </div>
         </div>
       </section>
@@ -702,8 +844,8 @@ export default function LandingPage() {
           <div className="relative p-12 md:p-16 rounded-[2.5rem] bg-gradient-to-br from-emerald-500/10 via-white/5 to-blue-500/10 border border-white/10 overflow-hidden text-center">
             <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 to-transparent opacity-50 pointer-events-none" />
             <div className="relative z-10">
-              <h2 className="font-space-grotesk text-3xl md:text-5xl font-bold tracking-tight mb-6">Trouve, vends ou livre. Là, autour de toi.</h2>
-              <p className="font-dm-sans text-white/50 text-base mb-10 max-w-lg mx-auto">Des facilités, des produits, des trajets. Tout est près de chez toi.</p>
+              <h2 className="font-space-grotesk text-3xl md:text-5xl font-bold tracking-tight mb-6">Des vendeurs et prestataires de services existent partout autour de toi.</h2>
+              <p className="font-dm-sans text-white/50 text-base mb-10 max-w-lg mx-auto">Ce que tu cherches est peut-être à quelques rues. Gratuit. Sans pub. Sans attente.</p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <a href="/map"
                   className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-lg transition-all">
@@ -733,7 +875,7 @@ export default function LandingPage() {
             </div>
             <span className="font-semibold font-space-grotesk">Omni</span>
           </div>
-          <p className="font-dm-sans text-xs text-white/30">© 2026 Omni. Trouve, vends, livre — autour de toi.</p>
+          <p className="font-dm-sans text-xs text-white/30">© 2026 Omni. Indexer le réel.</p>
           <div className="flex items-center gap-6 text-sm text-white/35">
             <a href="#" className="hover:text-white/60 transition-colors">Confidentialité</a>
             <a href="#" className="hover:text-white/60 transition-colors">Conditions</a>
