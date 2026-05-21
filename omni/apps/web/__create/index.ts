@@ -99,4 +99,4 @@ app.all('/api/*', (c) => {
 const requestHandler = createRequestHandler(reactRouterBuild);
 app.mount('/', (request) => requestHandler(request));
 
-export default app;
+export default (request: Request) => app.fetch(request);
