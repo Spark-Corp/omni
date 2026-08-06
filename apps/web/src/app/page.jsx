@@ -9,22 +9,66 @@ import {
 import * as THREE from "three";
 import useAuth from "@/utils/useAuth";
 
+// --- Splash screen shown while Three.js initializes ---
+function Splash() {
+  return (
+    <motion.div
+      initial={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.6, ease: 'easeOut' }}
+      className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-[#08080f]"
+    >
+      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center mb-4">
+        <Globe className="text-white" size={20} />
+      </div>
+      <span className="font-space-grotesk text-lg font-semibold text-white/80">Omni</span>
+      <div className="mt-6 flex gap-1.5">
+        {[0, 1, 2].map(i => (
+          <motion.div
+            key={i}
+            className="w-2 h-2 rounded-full bg-emerald-400"
+            animate={{ opacity: [0.2, 1, 0.2] }}
+            transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2 }}
+          />
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
 // --- 3D Globe with interaction ---
-function Globe3D({ phase = 0 }) {
+function Globe3D({ phase = 0, onReady }) {
   const containerRef = useRef(null);
   const phaseRef = useRef(phase);
   phaseRef.current = phase;
+  const [webglOk, setWebglOk] = useState(true);
+  const onReadyRef = useRef(onReady);
+  onReadyRef.current = onReady;
 
   useEffect(() => {
     if (!containerRef.current) return;
     const container = containerRef.current;
     const W = container.clientWidth;
     const H = container.clientHeight;
+    if (!W || !H) return;
+    let renderer, animId, gl;
+    try {
+      const c = document.createElement('canvas');
+      gl = c.getContext('webgl') || c.getContext('experimental-webgl');
+      if (!gl) { setWebglOk(false); onReadyRef.current?.(); return; }
+      const hp = gl.getShaderPrecisionFormat(gl.VERTEX_SHADER, gl.HIGH_FLOAT);
+      if (!hp || !hp.precision) { setWebglOk(false); onReadyRef.current?.(); return; }
+      gl.getExtension('WEBGL_lose_context')?.loseContext();
+    } catch (e) { setWebglOk(false); onReadyRef.current?.(); return; }
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(45, W / H, 0.1, 1000);
     camera.position.z = 3.2;
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    } catch (e) { setWebglOk(false); onReadyRef.current?.(); return; }
     renderer.setSize(W, H); renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x08080f, 1);
+    renderer.domElement.style.backgroundColor = '#08080f';
     renderer.domElement.style.outline = 'none';
     renderer.domElement.style.display = 'block';
     container.appendChild(renderer.domElement);
@@ -38,7 +82,7 @@ function Globe3D({ phase = 0 }) {
     const texCanvas = document.createElement("canvas");
     texCanvas.width = 2048; texCanvas.height = 1024;
     const ctx = texCanvas.getContext("2d");
-    ctx.fillStyle = "#050510"; ctx.fillRect(0, 0, 2048, 1024);
+    ctx.fillStyle = "#08080f"; ctx.fillRect(0, 0, 2048, 1024);
     const continents = [
       { x: 0.5, y: 0.55, rx: 0.12, ry: 0.18, c: "#0d2a1a" },
       { x: 0.5, y: 0.55, rx: 0.10, ry: 0.16, c: "#103a22" },
@@ -132,17 +176,18 @@ function Globe3D({ phase = 0 }) {
     cityGroup.add(hlRing);
     rotGroup.add(cityGroup);
 
-    // Mock vendor pins — appear when phase >= 2, matching the 3 cards on the right
+    // Mock vendor pins — appear when phase >= 2, matching 6 continent-spanning cards
     const vendorsGroup = new THREE.Group();
     const mockVendorLocs = [
-      { lon: 1.2228, lat: 6.1319 },  // Marché de Bè, Lomé — primary (green)
-      { lon: -3.9900, lat: 5.3200 },  // Yopougon, Abidjan
-      { lon: -0.2000, lat: 5.5600 },  // Makola, Accra
-      { lon: 3.3800, lat: 6.4500 },   // Balogun, Lagos
-      { lon: 36.8200, lat: -1.2900 }, // Nairobi
+      { lon: 1.2228, lat: 6.1319 },   // Lomé, Afrique — primary (green)
+      { lon: -46.6333, lat: -23.5505 }, // São Paulo, Amériques
+      { lon: -74.0060, lat: 40.7128 },  // New York, Amériques
+      { lon: 2.3522, lat: 48.8566 },    // Paris, Europe
+      { lon: 139.6917, lat: 35.6895 },  // Tokyo, Asie
+      { lon: 151.2093, lat: -33.8688 }, // Sydney, Océanie
     ];
-    const vendorColors = [0x10b981, 0xf59e0b, 0xf59e0b, 0xf59e0b, 0xf59e0b];
-    const vendorSizes = [0.032, 0.022, 0.022, 0.022, 0.022];
+    const vendorColors = [0x10b981, 0xf59e0b, 0xf59e0b, 0xf59e0b, 0xf59e0b, 0xf59e0b];
+    const vendorSizes = [0.032, 0.022, 0.022, 0.022, 0.022, 0.022];
     const vendorDots = [];
     mockVendorLocs.forEach((v, i) => {
       const phi = (90 - v.lat) * Math.PI / 180, theta = (v.lon + 180) * Math.PI / 180;
@@ -218,7 +263,6 @@ function Globe3D({ phase = 0 }) {
       interactTimeout = setTimeout(() => { autoRotate = true; }, 3000);
     }, { passive: true });
 
-    let animId;
     const clock = new THREE.Clock();
     const animate = () => {
       animId = requestAnimationFrame(animate);
@@ -280,12 +324,22 @@ function Globe3D({ phase = 0 }) {
     };
     animate();
 
-    const onResize = () => { camera.aspect = container.clientWidth / container.clientHeight; camera.updateProjectionMatrix(); renderer.setSize(container.clientWidth, container.clientHeight); };
+    const onResize = () => { if (!container.clientWidth || !container.clientHeight) return; camera.aspect = container.clientWidth / container.clientHeight; camera.updateProjectionMatrix(); renderer.setSize(container.clientWidth, container.clientHeight); };
     window.addEventListener("resize", onResize);
-    return () => { cancelAnimationFrame(animId); window.removeEventListener("resize", onResize); container.removeChild(renderer.domElement); renderer.dispose(); };
+    const ro = new ResizeObserver(() => onResize());
+    ro.observe(container);
+    return () => { cancelAnimationFrame(animId); window.removeEventListener("resize", onResize); ro.disconnect(); container.removeChild(renderer.domElement); renderer.dispose(); };
+    onReadyRef.current?.();
   }, []);
 
-  return <div ref={containerRef} className="w-full h-full" style={{ outline: 'none' }} />;
+  if (!webglOk) {
+    return (
+      <div className="w-full h-full min-h-[300px] sm:min-h-[400px] flex items-center justify-center bg-[#08080f]">
+        <Globe size={48} className="text-emerald-400/30" />
+      </div>
+    );
+  }
+  return <div ref={containerRef} className="w-full h-full min-h-[300px] sm:min-h-[400px] bg-[#08080f]" style={{ outline: 'none' }} />;
 }
 
 // Full-page CSS stars — no visible boundary, feels infinite
@@ -296,19 +350,20 @@ const starPositions = Array.from({ length: 300 }, () => ({
   o: 0.1 + Math.random() * 0.3,
 }));
 
-// --- Scroll-driven demo: premium 400vh + sticky pin pattern ---
-function ScrollDemo({ onPhaseChange }) {
+// --- Scroll-driven demo: premium 300vh + sticky pin pattern ---
+function ScrollDemo({ onPhaseChange, onReady }) {
   const sectionRef = useRef(null);
   const [progress, setProgress] = useState(0);
 
   // Track scroll progress through the section (continuous 0→1)
+  const [initVH] = useState(() => typeof window !== 'undefined' ? window.innerHeight : 0);
   useEffect(() => {
     const onScroll = () => {
       const el = sectionRef.current;
-      if (!el) return;
+      if (!el || !initVH) return;
       const rect = el.getBoundingClientRect();
       const sectionTop = rect.top + window.scrollY;
-      const scrollable = el.offsetHeight - window.innerHeight;
+      const scrollable = el.offsetHeight - initVH;
       if (scrollable <= 0) return;
       const scrolled = window.scrollY - sectionTop;
       setProgress(Math.max(0, Math.min(1, scrolled / scrollable)));
@@ -316,7 +371,7 @@ function ScrollDemo({ onPhaseChange }) {
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
     return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  }, [initVH]);
 
   // Derive phase + phase progress from continuous scroll
   const totalPhases = 4;
@@ -328,22 +383,23 @@ function ScrollDemo({ onPhaseChange }) {
   const globePhase = Math.min(3, raw);
 
   // Typing
-  const searchText = "patates";
+  const searchText = "tomates";
   const typedLen = phase >= 1 ? Math.min(searchText.length, Math.floor(phaseProgress * searchText.length)) : 0;
   const typed = searchText.slice(0, typedLen);
 
   const searchOpacity = phase >= 1 ? Math.min(1, phaseProgress * 2) : 0;
-  const markersProgress = phase >= 2 ? Math.min(1, phaseProgress * 1.5) : 0;
-  const resultProgress = phase >= 3 ? Math.min(1, phaseProgress * 2) : 0;
+  const markersProgress = phase >= 2 ? Math.min(1, phaseProgress * 1.2) : 0;
+  const resultProgress = phase >= 3 ? Math.min(1, phaseProgress * 1.4) : 0;
 
+  // DIAGNOSTIC: Log positions
   // Notify parent (nav dots)
   useEffect(() => { onPhaseChange?.(phase); }, [phase, onPhaseChange]);
 
   return (
-    <section ref={sectionRef} className="relative" style={{ height: '400vh' }}>
+    <section ref={sectionRef} className="relative" style={{ height: '300vh' }}>
       {/* Sticky container — pinned while its parent scrolls */}
-      <div className="sticky top-12 sm:top-14 h-[calc(100vh-48px)] sm:h-[calc(100vh-56px)] overflow-hidden">
-        <div className="w-full h-full flex items-center justify-center">
+      <div className="sticky top-0 h-dvh">
+        <div className="w-full h-full flex flex-col pt-14 relative">
         {/* Background glow + stars */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           {starPositions.map((s, i) => (
@@ -358,121 +414,142 @@ function ScrollDemo({ onPhaseChange }) {
           <div className="absolute top-1/3 left-1/4 w-[80%] h-[60%] bg-emerald-600/[0.02] rounded-full blur-[150px]" />
         </div>
 
-        <div className="relative w-full h-full max-w-7xl mx-auto px-4 sm:px-6 flex items-center">
-          {/* LEFT: Globe */}
-          <div className="w-full lg:w-1/2 h-full flex items-center justify-center">
-            <div className="relative w-full h-full min-h-0 overflow-visible">
-              <Globe3D phase={globePhase} />
-              <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-[#050510] via-[#050510]/80 to-transparent pointer-events-none" />
-            </div>
-          </div>
-
-          {/* RIGHT: Content */}
-          <div className="hidden lg:flex lg:w-1/2 flex-col justify-center items-center text-center lg:pl-8 xl:pl-12">
-            <div className="mb-6 xl:mb-8">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 mb-4 xl:mb-5">
-                <Sparkles size={12} className="text-emerald-400" />
-                <span className="text-xs xl:text-sm text-white/70">Tu cherches un produit ou service autour de toi ?</span>
-              </div>
-              <h2 className="text-4xl xl:text-6xl font-bold leading-tight">
-                <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">Omni</span>
-                <span className="text-white/90 block mt-1">Tout près de chez toi.</span>
-              </h2>
-              <p className="text-white/40 text-sm xl:text-base mt-3 max-w-md mx-auto">
-                Omni est là pour te montrer les vendeurs et prestataires autour de toi.
-              </p>
+          <div className="relative flex-1 w-full overflow-visible"
+            style={{
+              transform: `scale(${1 - phase * 0.06}) translateY(${-phase * 3}%)`,
+            }}
+          >
+            <div className="relative w-full h-full">
+              <Globe3D phase={globePhase} onReady={onReady} />
             </div>
 
-            <div className="space-y-6">
-              {/* Phase 1: Search bar */}
-              <div
-                className="transition-all duration-500"
-                style={{
-                  opacity: searchOpacity,
-                  transform: `translateY(${(1 - searchOpacity) * 20}px)`,
-                }}
-              >
-                <div className="flex items-center bg-black/50 backdrop-blur-xl rounded-2xl border border-white/10 px-4 py-3.5 shadow-2xl">
-                  <Search size={16} className="text-emerald-400 mr-3 shrink-0" />
-                  <span className="flex-1 text-white/80 text-sm font-light tracking-wide">
-                    {typed}
-                    <span className={`animate-pulse text-emerald-400 ${typedLen >= searchText.length ? 'opacity-0' : ''}`}>|</span>
-                  </span>
-                  <Mic size={14} className="text-white/30 shrink-0" />
+          {/* Content — inside flex-1, moves with globe */}
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="w-full">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 w-full">
+              <div className="lg:pl-8 xl:pl-12 w-full text-center lg:text-left pt-4 sm:pt-8 xl:pt-16">
+                {/* Badge + heading — collapses at phase 2 */}
+                <div className="transition-all duration-700 overflow-hidden"
+                  style={{
+                    maxHeight: phase < 2 ? '250px' : '0px',
+                    opacity: phase < 2 ? 1 : Math.max(0, 1 - (phase - 2) * 1.5),
+                    marginBottom: phase < 2 ? '20px' : '0px',
+                  }}
+                >
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.03] border border-white/[0.06] mb-4">
+                    <Sparkles size={12} className="text-emerald-400 shrink-0" />
+                    <span className="text-[10px] sm:text-xs xl:text-sm text-white/70">Les facilités de ton quartier, sur une carte</span>
+                  </div>
+                  <h2 className="font-space-grotesk text-2xl sm:text-4xl xl:text-6xl font-bold tracking-tight leading-snug sm:leading-tight">
+                    <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">Omni</span>
+                    <span className="text-white/80 block mt-1">Trouve tout ce qui existe autour de toi.</span>
+                  </h2>
+                  <p className="font-dm-sans text-white/50 text-xs sm:text-sm xl:text-base mt-2 sm:mt-3 max-w-md mx-auto lg:mx-0">
+                    Marchés, artisans, services. Partout où tu vas, en un clic.
+                  </p>
                 </div>
-              </div>
 
-              {/* Phase 2: Markers */}
-              <div
-                className="transition-all duration-500"
-                style={{
-                  opacity: markersProgress,
-                  transform: `translateY(${(1 - markersProgress) * 20}px)`,
-                }}
-              >
-                <div className="space-y-3">
-                  {[
-                    { name: "Marché de Bè · Lomé", product: "Patates · 500 FCFA/kg", dist: "120m", delay: 0 },
-                    { name: "Yopougon · Abidjan", product: "Patates · 350 FCFA/kg", dist: "2 km", delay: 0.2 },
-                    { name: "Makola · Accra", product: "Patates · 450 FCFA/kg", dist: "5 km", delay: 0.4 },
-                    { name: "Balogun · Lagos", product: "Patates · 400 FCFA/kg", dist: "8 km", delay: 0.6 },
-                    { name: "Nairobi Centre", product: "Patates · 550 FCFA/kg", dist: "50 km", delay: 0.8 },
-                  ].map((m, i) => {
-                    const cardT = Math.max(0, Math.min(1, (markersProgress - m.delay) / 0.2));
-                    return (
-                    <div key={i}
-                      className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/5"
+                <div className="max-w-md mx-auto lg:mx-0">
+                  {/* Phase 1: Search bar — collapses when inactive */}
+                  <div className="transition-all duration-500 overflow-hidden"
+                    style={{ maxHeight: searchOpacity > 0 ? '80px' : '0px' }}
+                  >
+                    <div className="transition-all duration-500 pointer-events-auto pt-4"
                       style={{
-                        opacity: cardT,
-                        transform: `scale(${0.5 + cardT * 0.5}) translateY(${(1 - cardT) * 30}px)`,
-                        transition: 'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                        opacity: searchOpacity,
+                        transform: `translateY(${(1 - searchOpacity) * 20}px)`,
                       }}
                     >
-                      <div className={`w-8 h-8 rounded-full border-2 border-white/70 flex items-center justify-center ${i === 0 ? 'bg-emerald-500' : 'bg-emerald-500/70'}`}>
-                        <div className="w-2.5 h-2.5 rounded-full bg-white" />
+                      <div className="flex items-center bg-black/10 backdrop-blur-lg rounded-2xl border border-white/[0.04] px-4 py-3">
+                        <Search size={16} className="text-emerald-400 mr-3 shrink-0" />
+                        <span className="flex-1 text-white/80 text-sm font-light tracking-wide font-dm-sans">
+                          {typed}
+                          <span className={`animate-pulse text-emerald-400 ${typedLen >= searchText.length ? 'opacity-0' : ''}`}>|</span>
+                        </span>
+                        <Mic size={14} className="text-white/30 shrink-0" />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-white/90">{m.name}</p>
-                        <p className="text-xs text-white/40">{m.product}</p>
-                      </div>
-                      <span className="text-xs text-white/30 shrink-0">{m.dist}</span>
                     </div>
-                    );
-                  })}
-                </div>
-              </div>
+                  </div>
 
-              {/* Phase 3: Result */}
-              <div
-                className="transition-all duration-500"
-                style={{
-                  opacity: resultProgress,
-                  transform: `translateY(${(1 - resultProgress) * 20}px)`,
-                }}
-              >
-                <div className="p-5 rounded-xl bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/20">
-                  <p className="text-base font-medium text-white/90 mb-3">
-                    <span className="text-emerald-400 font-bold">4 vendeurs</span> trouvés
-                  </p>
-                  <p className="text-sm text-white/40 mb-4">Patates disponibles autour de toi. Prix, distance, disponibilité.</p>
-                  <a href="/map"
-                    className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black text-sm font-semibold transition-all"
+                  {/* Phase 2: Markers — collapses when inactive */}
+                  <div className="transition-all duration-500 overflow-hidden"
+                    style={{ maxHeight: markersProgress > 0 ? '400px' : '0px' }}
                   >
-                    Voir sur la carte
-                    <ArrowRight size={16} />
-                  </a>
+                    <div className="space-y-2 transition-all duration-500 pointer-events-auto pt-4"
+                      style={{
+                        opacity: markersProgress,
+                        transform: `translateY(${(1 - markersProgress) * 20}px)`,
+                      }}
+                    >
+                      {[
+                        { name: "Marché de Bè · Lomé", product: "Tomates · 300 FCFA/kg", dist: "120m", continent: "Quartier Bè", delay: 0 },
+                        { name: "Boulangerie Adidogomé", product: "Pain au chocolat · 250 FCFA", dist: "450m", continent: "Quartier Adidogomé", delay: 0.15 },
+                        { name: "Épicerie Doumasséssé", product: "Huile d'olive · 2 500 FCFA", dist: "800m", continent: "Quartier Doumasséssé", delay: 0.3 },
+                        { name: "Fruits & Légumes Hodzo", product: "Ananas · 1 000 FCFA", dist: "1,2 km", continent: "Quartier Hodzo", delay: 0.45 },
+                        { name: "Poissonnerie Kodjoviakopé", product: "Bar frais · 2 000 FCFA/pièce", dist: "1,8 km", continent: "Quartier Kodjoviakopé", delay: 0.6 },
+                        { name: "Marché des Cocos · Lomé", product: "Noix de coco · 200 FCFA", dist: "2,5 km", continent: "Quartier Cocos", delay: 0.75 },
+                      ].map((m, i) => {
+                        const cardT = Math.max(0, Math.min(1, (markersProgress - m.delay) / 0.2));
+                        return (
+                        <div key={i}
+                          className="flex items-center gap-2"
+                          style={{
+                            opacity: cardT,
+                            transform: `translateY(${(1 - cardT) * 20}px)`,
+                            transition: 'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                          }}
+                        >
+                          <div className={`w-2 h-2 rounded-full shrink-0 ${i === 0 ? 'bg-emerald-400' : 'bg-amber-400/70'}`} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-white/80 font-dm-sans">{m.name}</p>
+                            <p className="text-xs text-white/40 font-dm-sans">{m.product}</p>
+                          </div>
+                          <span className="text-xs text-white/30 shrink-0">{m.dist}</span>
+                        </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Phase 3: Result — collapses when inactive */}
+                  <div className="transition-all duration-500 overflow-hidden"
+                    style={{ maxHeight: resultProgress > 0 ? '180px' : '0px' }}
+                  >
+                    <div className="transition-all duration-500 pointer-events-auto pt-4"
+                      style={{
+                        opacity: resultProgress,
+                        transform: `translateY(${(1 - resultProgress) * 20}px)`,
+                      }}
+                    >
+                      <p className="font-space-grotesk text-base font-medium text-white/80 mb-1">
+                        <span className="text-emerald-400 font-bold">6 vendeurs</span> trouvés
+                      </p>
+                      <p className="font-dm-sans text-sm text-white/40 mb-2">Tomates, fruits, pains — dans ton quartier.</p>
+                      <a href="/map"
+                        className="inline-flex items-center gap-1.5 text-emerald-400 hover:text-emerald-300 text-sm font-medium transition-colors font-dm-sans"
+                      >
+                        Voir sur la carte
+                        <ArrowRight size={14} />
+                      </a>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
+            </div>
           </div>
+        </div>
+
+        {/* Gradient overlay — inside flex-1, fades globe into dark bg */}
+        <div className="absolute inset-x-0 bottom-0 h-1/4 bg-gradient-to-t from-[#08080f] via-[#08080f]/80 to-transparent pointer-events-none" />
 
           {/* Mobile overlay */}
-          <div className="lg:hidden absolute bottom-20 left-4 right-4 z-10 pointer-events-none">
+          <div className="lg:hidden absolute bottom-4 left-4 right-4 z-10 pointer-events-none">
             <div className="text-center transition-all duration-500"
               style={{ opacity: 1 - Math.min(1, phase / 1.5) }}
             >
-              <p className="text-white/90 text-lg font-semibold">Omni. Tout près de chez toi.</p>
-              <p className="text-white/40 text-xs mt-2">Scrolle pour voir comment ça marche</p>
+              <p className="text-white/90 text-lg font-semibold font-space-grotesk">Trouve, vends, livre. Autour de toi.</p>
+              <p className="font-dm-sans text-white/40 text-xs mt-2">Scrolle pour découvrir</p>
             </div>
           </div>
         </div>
@@ -480,10 +557,9 @@ function ScrollDemo({ onPhaseChange }) {
         {/* Scroll hint */}
         {phase < 3 && (
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10">
-            <span className="text-[10px] text-white/20 animate-bounce">↓ Scrolle</span>
+            <span className="font-dm-sans text-[10px] text-white/[0.15] animate-bounce">↓ Scrolle</span>
           </div>
         )}
-      </div>
       </div>
     </section>
   );
@@ -493,22 +569,47 @@ export default function LandingPage() {
   const { user, loading } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [demoPhase, setDemoPhase] = useState(0);
-  const handleExploreClick = (e) => { if (!user) { e.preventDefault(); setShowAuthModal(true); } };
+  const [splashDone, setSplashDone] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setSplashDone(true), 2000);
+    return () => clearTimeout(t);
+  }, []);
 
   return (
-    <div className="min-h-screen bg-[#050510] text-white">
+    <>
+      <AnimatePresence>{!splashDone && <Splash />}</AnimatePresence>
+      <div className={`min-h-screen bg-[#08080f] text-white ${splashDone ? '' : 'invisible'}`}>
       {/* NAV — sticky: starts as site head, becomes overlay on scroll */}
-      <nav className="sticky top-0 z-50 h-12 sm:h-14 bg-[#050510] border-b border-white/5">
+      <nav className="sticky top-0 z-50 h-14">
+        {/* Background layer — fades out as scroll progresses */}
+        <div className="absolute inset-0 transition-all duration-700 ease-out"
+          style={{
+            opacity: 1 - Math.min(1, demoPhase / 3),
+            backgroundColor: '#08080f',
+          }}
+        />
+        <div className="absolute inset-x-0 bottom-0 h-[1px] transition-all duration-700 ease-out"
+          style={{
+            opacity: 1 - Math.min(1, demoPhase / 2),
+            backgroundColor: 'rgba(255,255,255,0.04)',
+          }}
+        />
+        {/* Content layer — fades slightly into overlay */}
+        <div className="relative h-full transition-all duration-700 ease-out"
+          style={{ opacity: 1 - Math.min(1, demoPhase / 3) * 0.35 }}
+        >
         <div className="max-w-7xl mx-auto h-full px-3 sm:px-6 flex items-center justify-between gap-2">
           <a href="/" className="flex items-center gap-2 shrink-0">
             <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
               <Globe className="text-white" size={14} />
             </div>
-            <span className="text-sm sm:text-base font-semibold tracking-tight">Omni</span>
+            <span className="text-sm sm:text-base font-semibold tracking-tight font-space-grotesk">Omni</span>
           </a>
           <div className="hidden sm:flex items-center gap-6 text-xs sm:text-sm text-white/50">
-            <a href="/map" className="hover:text-white transition-colors">Explorer</a>
-            <a href="/vendor/onboarding" className="hover:text-white transition-colors">Je suis vendeur</a>
+            <a href="/map" className="hover:text-white/80 transition-colors">Explorer</a>
+            <a href="/vendor/onboarding" className="hover:text-white/80 transition-colors">Je vends</a>
+            <a href="/delivery/onboarding" className="hover:text-white/80 transition-colors">Je livre</a>
           </div>
           {/* Phase dots — in nav, not floating at bottom */}
           <div className="hidden sm:flex items-center gap-1.5 mr-2">
@@ -531,74 +632,64 @@ export default function LandingPage() {
               </>
             )}
           </div>
+          </div>
         </div>
       </nav>
 
       {/* SCROLL DEMO — everything happens here */}
-      <ScrollDemo onPhaseChange={setDemoPhase} />
+      <ScrollDemo onPhaseChange={setDemoPhase} onReady={() => setSplashDone(true)} />
 
       {/* PROBLEM */}
-      <section className="py-28 px-6">
+      <section className="py-28 md:py-32 px-6 border-y border-white/[0.03]">
         <div className="max-w-4xl mx-auto text-center">
-          <span className="text-emerald-400 text-sm uppercase tracking-[0.2em] font-medium">Le vrai problème</span>
-          <h2 className="text-3xl md:text-5xl font-bold mt-6 mb-8 leading-tight">
-            Autour de toi, des gens vendent des choses.<br />
-            Mais tu ne sais pas qu'ils existent.
+          <span className="text-emerald-400/80 text-[10px] sm:text-xs uppercase tracking-[0.25em] font-medium font-space-grotesk">Le vrai problème</span>
+          <h2 className="font-space-grotesk text-3xl md:text-5xl font-bold tracking-tight mt-6 mb-8 leading-tight">
+            Ton quartier a des facilités que tu ne vois pas.
           </h2>
-          <p className="text-white/50 text-lg max-w-2xl mx-auto leading-relaxed">
-            Pas de boutique en ligne. Pas d'enseigne. Pas de pub.
-            Pourtant, ils sont là, où que tu ailles.
-            <span className="text-emerald-400/80 block mt-2 font-medium">Omni est là pour te montrer ce qui existe autour de toi.</span>
+          <p className="font-dm-sans text-white/50 text-base md:text-lg max-w-2xl mx-auto leading-relaxed">
+            Marché de Bè, boulangerie du quartier, boutique au coin de la rue… Dans chaque rue, des gens vendent.
+            Sans vitrine, sans pub, sans site.
+            <span className="text-emerald-400/80 block mt-2 font-medium">Omni les rend visibles. En 3 secondes.</span>
           </p>
         </div>
       </section>
 
-      {/* MARKET */}
-      <section className="py-24 px-6 bg-white/[0.01] border-y border-white/5 overflow-x-hidden">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid md:grid-cols-3 gap-8 text-center">
-            <div className="p-10">
-              <p className="text-5xl md:text-6xl font-bold bg-gradient-to-br from-emerald-400 to-teal-300 bg-clip-text text-transparent">$800 Mrd</p>
-              <p className="text-white/50 mt-3">Commerce informel en Afrique</p>
-            </div>
-            <div className="p-10">
-              <p className="text-5xl md:text-6xl font-bold bg-gradient-to-br from-emerald-400 to-teal-300 bg-clip-text text-transparent">100M+</p>
-              <p className="text-white/50 mt-3">Vendeurs et prestataires invisibles</p>
-            </div>
-            <div className="p-10">
-              <p className="text-5xl md:text-6xl font-bold bg-gradient-to-br from-emerald-400 to-teal-300 bg-clip-text text-transparent">30s</p>
-              <p className="text-white/50 mt-3">Pour trouver un produit et contacter le vendeur</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* TWO SIDES */}
-      <section className="py-28 px-6">
+      <section className="py-28 md:py-32 px-6">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <span className="text-emerald-400 text-sm uppercase tracking-[0.2em] font-medium">Pour tout le monde</span>
-            <h2 className="text-3xl md:text-5xl font-bold mt-6">Un outil, deux façons de l'utiliser</h2>
+            <span className="text-emerald-400/80 text-[10px] sm:text-xs uppercase tracking-[0.25em] font-medium font-space-grotesk">Pour tout le monde</span>
+            <h2 className="font-space-grotesk text-3xl md:text-5xl font-bold tracking-tight mt-6">Un outil. Trois façons de t'en servir.</h2>
           </div>
-          <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-            <div className="p-8 md:p-10 rounded-3xl bg-gradient-to-br from-emerald-500/5 to-transparent border border-emerald-500/10">
-              <ShoppingBag size={28} className="text-emerald-400 mb-4" />
-              <h3 className="text-2xl font-bold mb-4">Je cherche quelque chose</h3>
-              <ul className="space-y-3 text-white/50 text-sm">
-                <li className="flex items-start gap-3"><span className="text-emerald-400 mt-0.5">→</span> Je tape ce que je veux, on me dit qui l'a</li>
-                <li className="flex items-start gap-3"><span className="text-emerald-400 mt-0.5">→</span> Je vois le prix et la distance</li>
-                <li className="flex items-start gap-3"><span className="text-emerald-400 mt-0.5">→</span> Je vérifie la disponibilité en 1 tap</li>
-                <li className="flex items-start gap-3"><span className="text-emerald-400 mt-0.5">→</span> La carte me guide avec la voix</li>
+          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            <div className="p-8 md:p-10 rounded-3xl bg-gradient-to-br from-emerald-500/[0.04] to-transparent border border-emerald-500/10">
+              <ShoppingBag size={24} className="text-emerald-400 mb-4" />
+              <h3 className="font-space-grotesk text-xl md:text-2xl font-bold mb-4">Je cherche quelque chose</h3>
+              <ul className="font-dm-sans space-y-3 text-white/50 text-sm leading-relaxed">
+                <li className="flex items-start gap-3"><span className="text-emerald-400 mt-0.5 font-medium">→</span> Tape ce que tu veux, on te dit qui l'a autour de toi</li>
+                <li className="flex items-start gap-3"><span className="text-emerald-400 mt-0.5 font-medium">→</span> Prix, distance, dispo en un coup d'œil</li>
+                <li className="flex items-start gap-3"><span className="text-emerald-400 mt-0.5 font-medium">→</span> Contacte le vendeur en direct</li>
+                <li className="flex items-start gap-3"><span className="text-emerald-400 mt-0.5 font-medium">→</span> Livraison crowd en 1 clic</li>
               </ul>
             </div>
-            <div className="p-8 md:p-10 rounded-3xl bg-gradient-to-br from-blue-500/5 to-transparent border border-blue-500/10">
-              <Store size={28} className="text-blue-400 mb-4" />
-              <h3 className="text-2xl font-bold mb-4">Je vends quelque chose</h3>
-              <ul className="space-y-3 text-white/50 text-sm">
-                <li className="flex items-start gap-3"><span className="text-blue-400 mt-0.5">→</span> On fait connaître ton commerce à ceux qui cherchent</li>
-                <li className="flex items-start gap-3"><span className="text-blue-400 mt-0.5">→</span> Zéro contenu à créer, on s'occupe de tout</li>
-                <li className="flex items-start gap-3"><span className="text-blue-400 mt-0.5">→</span> Reçois les demandes des clients en direct</li>
-                <li className="flex items-start gap-3"><span className="text-blue-400 mt-0.5">→</span> Réponds OUI ou NON, c'est tout</li>
+            <div className="p-8 md:p-10 rounded-3xl bg-gradient-to-br from-blue-500/[0.04] to-transparent border border-blue-500/10">
+              <Store size={24} className="text-blue-400 mb-4" />
+              <h3 className="font-space-grotesk text-xl md:text-2xl font-bold mb-4">Je vends quelque chose</h3>
+              <ul className="font-dm-sans space-y-3 text-white/50 text-sm leading-relaxed">
+                <li className="flex items-start gap-3"><span className="text-blue-400 mt-0.5 font-medium">→</span> Sois visible pour ceux qui cherchent près de chez toi</li>
+                <li className="flex items-start gap-3"><span className="text-blue-400 mt-0.5 font-medium">→</span> Zéro pub, zéro site, zéro effort</li>
+                <li className="flex items-start gap-3"><span className="text-blue-400 mt-0.5 font-medium">→</span> Reçois les demandes des clients en direct</li>
+                <li className="flex items-start gap-3"><span className="text-blue-400 mt-0.5 font-medium">→</span> Réponds OUI ou NON, c'est tout</li>
+              </ul>
+            </div>
+            <div className="p-8 md:p-10 rounded-3xl bg-gradient-to-br from-amber-500/[0.04] to-transparent border border-amber-500/10">
+              <Navigation size={24} className="text-amber-400 mb-4" />
+              <h3 className="font-space-grotesk text-xl md:text-2xl font-bold mb-4">Je livre</h3>
+              <ul className="font-dm-sans space-y-3 text-white/50 text-sm leading-relaxed">
+                <li className="flex items-start gap-3"><span className="text-amber-400 mt-0.5 font-medium">→</span> Gagne de l'argent sur tes trajets quotidiens</li>
+                <li className="flex items-start gap-3"><span className="text-amber-400 mt-0.5 font-medium">→</span> Mode rayon ou trajet A→B, choisis ton rayon</li>
+                <li className="flex items-start gap-3"><span className="text-amber-400 mt-0.5 font-medium">→</span> Reçois les demandes près de chez toi</li>
+                <li className="flex items-start gap-3"><span className="text-amber-400 mt-0.5 font-medium">→</span> Multiplie tes gains avec le premium</li>
               </ul>
             </div>
           </div>
@@ -606,22 +697,26 @@ export default function LandingPage() {
       </section>
 
       {/* CTA */}
-      <section className="py-28 px-6">
+      <section className="py-28 md:py-32 px-6">
         <div className="max-w-4xl mx-auto">
           <div className="relative p-12 md:p-16 rounded-[2.5rem] bg-gradient-to-br from-emerald-500/10 via-white/5 to-blue-500/10 border border-white/10 overflow-hidden text-center">
             <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 to-transparent opacity-50 pointer-events-none" />
             <div className="relative z-10">
-              <h2 className="text-3xl md:text-5xl font-bold mb-6">Prêt à découvrir ce qui existe autour de toi ?</h2>
-              <p className="text-white/50 mb-10 max-w-lg mx-auto">Omni est là pour te montrer ce qui existe autour de toi.</p>
+              <h2 className="font-space-grotesk text-3xl md:text-5xl font-bold tracking-tight mb-6">Trouve, vends ou livre. Là, autour de toi.</h2>
+              <p className="font-dm-sans text-white/50 text-base mb-10 max-w-lg mx-auto">Des facilités, des produits, des trajets. Tout est près de chez toi.</p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <a href={user ? "/map" : "/auth"}
+                <a href="/map"
                   className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-lg transition-all">
-                  {user ? "Ouvrir la carte" : "Créer un compte"}
+                  Trouver un produit
                   <ChevronRight size={20} />
                 </a>
                 <a href="/vendor/onboarding"
-                  className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold text-lg transition-all">
+                  className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-white/[0.04] hover:bg-white/10 border border-white/10 text-white font-semibold text-lg transition-all">
                   Devenir vendeur
+                </a>
+                <a href="/delivery/onboarding"
+                  className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-amber-500/[0.08] hover:bg-amber-500/20 border border-amber-500/20 text-amber-400 font-semibold text-lg transition-all">
+                  Devenir livreur
                 </a>
               </div>
             </div>
@@ -630,19 +725,19 @@ export default function LandingPage() {
       </section>
 
       {/* FOOTER */}
-      <footer className="py-12 px-6 border-t border-white/5">
+      <footer className="py-10 md:py-12 px-6 border-t border-white/[0.03]">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
               <Globe className="text-white" size={16} />
             </div>
-            <span className="font-semibold">Omni</span>
+            <span className="font-semibold font-space-grotesk">Omni</span>
           </div>
-          <p className="text-sm text-white/30">© 2026 Omni. On te montre les commerces près de chez toi.</p>
-          <div className="flex items-center gap-6 text-sm text-white/40">
-            <a href="#" className="hover:text-white transition-colors">Confidentialité</a>
-            <a href="#" className="hover:text-white transition-colors">Conditions</a>
-            <a href="#" className="hover:text-white transition-colors">Contact</a>
+          <p className="font-dm-sans text-xs text-white/30">© 2026 Omni. Trouve, vends, livre — autour de toi.</p>
+          <div className="flex items-center gap-6 text-sm text-white/35">
+            <a href="#" className="hover:text-white/60 transition-colors">Confidentialité</a>
+            <a href="#" className="hover:text-white/60 transition-colors">Conditions</a>
+            <a href="#" className="hover:text-white/60 transition-colors">Contact</a>
           </div>
         </div>
       </footer>
@@ -656,16 +751,16 @@ export default function LandingPage() {
           >
             <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }} onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-md p-8 rounded-3xl bg-[#0a0a1a] border border-white/10 text-center"
+              className="w-full max-w-md p-8 rounded-3xl bg-[#0f0f1a] border border-white/[0.06] text-center"
             >
               <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 flex items-center justify-center mx-auto mb-6">
                 <Shield size={32} className="text-emerald-400" />
               </div>
-              <h3 className="text-2xl font-bold mb-3">Connexion requise</h3>
-              <p className="text-white/50 mb-8">Crée un compte pour explorer la carte.</p>
+              <h3 className="font-space-grotesk text-2xl font-bold mb-3">Connexion requise</h3>
+              <p className="font-dm-sans text-white/50 mb-8">Crée un compte pour explorer la carte.</p>
               <div className="flex flex-col gap-3">
                 <a href="/auth" className="w-full py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black font-semibold transition-all">Se connecter</a>
-                <a href="/auth" className="w-full py-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold transition-all">Créer un compte</a>
+                <a href="/auth" className="w-full py-4 rounded-2xl bg-white/[0.04] hover:bg-white/10 border border-white/10 text-white font-semibold transition-all">Créer un compte</a>
               </div>
               <button onClick={() => setShowAuthModal(false)} className="mt-4 text-sm text-white/40 hover:text-white/60 transition-colors">Annuler</button>
             </motion.div>
@@ -673,5 +768,6 @@ export default function LandingPage() {
         )}
       </AnimatePresence>
     </div>
+    </>
   );
 }

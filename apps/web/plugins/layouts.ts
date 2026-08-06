@@ -136,39 +136,14 @@ export function layoutWrapperPlugin(userOpts: HierarchicalLayoutOptions = {}): P
     // import the actual page with a flag to skip re-wrapping
     imports.push(`import Page from ${JSON.stringify(pagePath + NO_LAYOUT_QUERY)};`);
 
-    if (routeParams.length > 0) {
-      imports.push(
-        `import { useParams${hasSpreadParams ? ', useLocation' : ''} } from 'react-router-dom';`
-      );
-    }
-
     /* ---------- module body ---------- */
     return `
 ${imports.join('\n')}
 
 export default function WrappedPage(props) {
-  ${routeParams.length > 0 ? 'const params = useParams();' : ''}
-  ${hasSpreadParams ? 'const location = useLocation();' : ''}
   return (
     ${opening.join('\n    ')}
-      <Page {...props}${
-        routeParams.length > 0
-          ? routeParams
-              .map((param) =>
-                pagePath.includes(`[...${param}]`)
-                  ? // collect the rest of the path for spread params
-                    `${param}={location.pathname
-                      .split('/')
-                      .slice(
-                        location.pathname
-                          .split('/')
-                          .findIndex(Boolean) + 1
-                      )}`
-                  : `${param}={params.${param}}`
-              )
-              .join(' ')
-          : ''
-      } />
+      <Page {...props} />
     ${closing.join('\n    ')}
   );
 }

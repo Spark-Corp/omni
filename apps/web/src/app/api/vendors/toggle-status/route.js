@@ -1,12 +1,13 @@
 import sql from "@/app/api/utils/sql";
-import { auth } from "@/auth";
+import { getAuthenticatedUser } from "@/lib/auth";
 
 export async function POST(request) {
   try {
-    const session = await auth();
-    if (!session || !session.user?.id) {
+    const user = await getAuthenticatedUser(request);
+    if (!user) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const userId = user.id;
 
     const body = await request.json();
     const { vendorId, isOnline } = body;
@@ -18,14 +19,12 @@ export async function POST(request) {
       );
     }
 
-    const userId = session.user.id;
-
     // Update vendor status (only if owned by this user)
     const result = await sql`
       UPDATE vendors
-      SET is_online = ${isOnline}, last_seen = NOW()
+      SET is_online = ${isOnline}, updated_at = CURRENT_TIMESTAMP
       WHERE id = ${vendorId} AND user_id = ${userId}
-      RETURNING id, is_online, last_seen
+      RETURNING id, is_online
     `;
 
     if (result.length === 0) {

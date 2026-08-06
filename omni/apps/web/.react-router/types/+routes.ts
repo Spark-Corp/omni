@@ -17,6 +17,15 @@ type Pages = {
   "/account": {
     params: {};
   };
+  "/account/logout": {
+    params: {};
+  };
+  "/account/signin": {
+    params: {};
+  };
+  "/account/signup": {
+    params: {};
+  };
   "/auth": {
     params: {};
   };
@@ -90,7 +99,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/account" | "/auth" | "/cart/history" | "/dashboard" | "/delivery/dashboard" | "/delivery/history" | "/delivery/onboarding" | "/delivery/settings" | "/delivery/trips/new" | "/map" | "/onboarding" | "/settings" | "/subscriptions" | "/user/profile" | "/vendor" | "/vendor/dashboard" | "/vendor/messages" | "/vendor/onboarding" | "/vendor/products" | "/vendor/requests" | "/vendor/settings" | "/wallet" | "/*";
+    page: "/" | "/account" | "/account/logout" | "/account/signin" | "/account/signup" | "/auth" | "/cart/history" | "/dashboard" | "/delivery/dashboard" | "/delivery/history" | "/delivery/onboarding" | "/delivery/settings" | "/delivery/trips/new" | "/map" | "/onboarding" | "/settings" | "/subscriptions" | "/user/profile" | "/vendor" | "/vendor/dashboard" | "/vendor/messages" | "/vendor/onboarding" | "/vendor/products" | "/vendor/requests" | "/vendor/settings" | "/wallet" | "/*";
   };
   "./page.jsx": {
     id: "page";
@@ -99,6 +108,18 @@ type RouteFiles = {
   "./account/page.jsx": {
     id: "account/page";
     page: "/account";
+  };
+  "./account/logout/page.jsx": {
+    id: "account/logout/page";
+    page: "/account/logout";
+  };
+  "./account/signin/page.jsx": {
+    id: "account/signin/page";
+    page: "/account/signin";
+  };
+  "./account/signup/page.jsx": {
+    id: "account/signup/page";
+    page: "/account/signup";
   };
   "./auth/page.jsx": {
     id: "auth/page";
@@ -194,6 +215,9 @@ type RouteModules = {
   "root": typeof import("./src/app/root.tsx");
   "page": typeof import("./src/app/./page.jsx");
   "account/page": typeof import("./src/app/./account/page.jsx");
+  "account/logout/page": typeof import("./src/app/./account/logout/page.jsx");
+  "account/signin/page": typeof import("./src/app/./account/signin/page.jsx");
+  "account/signup/page": typeof import("./src/app/./account/signup/page.jsx");
   "auth/page": typeof import("./src/app/./auth/page.jsx");
   "cart/history/page": typeof import("./src/app/./cart/history/page.jsx");
   "dashboard/page": typeof import("./src/app/./dashboard/page.jsx");

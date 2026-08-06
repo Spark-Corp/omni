@@ -1,39 +1,87 @@
 import sql from "@/app/api/utils/sql";
-import { auth } from "@/auth";
+import { getAuthenticatedUser } from "@/lib/auth";
 
 export async function GET(request) {
   try {
-    const session = await auth();
-    if (!session || !session.user?.id) {
+    const user = await getAuthenticatedUser(request);
+    if (!user) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const userId = user.id;
 
-    // Get all conversations for this vendor (both request-based and direct)
     const conversations = await sql`
-      WITH vendor_id AS (
-        SELECT v.id
-        FROM vendors v
-        JOIN users u ON u.id = v.user_id
-        WHERE u.id = ${session.user.id}::uuid
-        LIMIT 1
-      )
-      SELECT DISTINCT ON (COALESCE(m.request_id::text, m.vendor_id::text))
-        m.request_id,
-        m.vendor_id,
-        p.name as product_name,
-        m.content as last_message_preview,
-        m.created_at as last_message_time,
-        0 as unread_count
-      FROM messages m
-      LEFT JOIN availability_requests ar ON ar.id = m.request_id
-      LEFT JOIN products p ON p.id = ar.product_id
-      WHERE (
-        m.request_id IN (
-          SELECT ar2.id FROM availability_requests ar2 WHERE ar2.vendor_id = (SELECT id FROM vendor_id)
+      WITH scoped AS (
+        SELECT
+          m.id,
+          m.request_id,
+          m.vendor_id,
+          m.sender_id,
+          m.receiver_id,
+          m.content,
+          m.is_read,
+          m.created_at,
+          p.name AS product_name,
+          CASE
+            WHEN m.sender_id = ${userId} THEN m.receiver_id
+            ELSE m.sender_id
+          END AS peer_id
+        FROM messages m
+        LEFT JOIN availability_requests ar ON ar.id = m.request_id
+        LEFT JOIN products p ON p.id = ar.product_id
+        WHERE (
+          m.vendor_id IN (
+            SELECT v.id FROM vendors v WHERE v.user_id = ${userId}
+          )
+          OR m.request_id IN (
+            SELECT owned_request.id
+            FROM availability_requests owned_request
+            JOIN vendors v ON v.id = owned_request.vendor_id
+            WHERE v.user_id = ${userId}
+          )
         )
-        OR m.vendor_id = (SELECT id FROM vendor_id)
+          AND (
+            m.sender_id = ${userId}
+            OR m.receiver_id = ${userId}
+          )
+      ),
+      keyed AS (
+        SELECT
+          scoped.*,
+          COALESCE(
+            request_id::text,
+            vendor_id::text || ':' || peer_id::text
+          ) AS conversation_key
+        FROM scoped
+      ),
+      ranked AS (
+        SELECT
+          keyed.*,
+          ROW_NUMBER() OVER (
+            PARTITION BY conversation_key
+            ORDER BY created_at DESC, id DESC
+          ) AS row_number,
+          (
+            COUNT(*) FILTER (
+              WHERE receiver_id = ${userId} AND is_read = false
+            ) OVER (
+              PARTITION BY conversation_key
+            )
+          )::int AS unread_count
+        FROM keyed
       )
-      ORDER BY COALESCE(m.request_id::text, m.vendor_id::text), m.created_at DESC
+      SELECT
+        ranked.request_id,
+        ranked.vendor_id,
+        ranked.peer_id,
+        peer.name AS peer_name,
+        ranked.product_name,
+        ranked.content AS last_message_preview,
+        ranked.created_at AS last_message_time,
+        ranked.unread_count
+      FROM ranked
+      JOIN users peer ON peer.id = ranked.peer_id
+      WHERE ranked.row_number = 1
+      ORDER BY ranked.created_at DESC
     `;
 
     return Response.json({ conversations });

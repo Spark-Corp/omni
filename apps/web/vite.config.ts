@@ -2,7 +2,6 @@ import path from 'node:path';
 import { reactRouter } from '@react-router/dev/vite';
 import { reactRouterHonoServer } from 'react-router-hono-server/dev';
 import { defineConfig } from 'vite';
-import babel from 'vite-plugin-babel';
 import tsconfigPaths from 'vite-tsconfig-paths';
 import { addRenderIds } from './plugins/addRenderIds';
 import { aliases } from './plugins/aliases';
@@ -14,19 +13,19 @@ import { restart } from './plugins/restart';
 import { restartEnvFileChange } from './plugins/restartEnvFileChange';
 
 export default defineConfig({
+  build: {
+    target: 'es2022',
+  },
+  ssr: {
+    target: 'node',
+  },
   // Keep them available via import.meta.env.NEXT_PUBLIC_*
-  envPrefix: 'NEXT_PUBLIC_',
+  envPrefix: ['NEXT_PUBLIC_', 'VITE_'],
   optimizeDeps: {
     // Explicitly include fast-glob, since it gets dynamically imported and we
     // don't want that to cause a re-bundle.
     include: ['fast-glob', 'lucide-react'],
     exclude: [
-      '@hono/auth-js/react',
-      '@hono/auth-js',
-      '@auth/core',
-      '@hono/auth-js',
-      'hono/context-storage',
-      '@auth/core/errors',
       'fsevents',
       'lightningcss',
     ],
@@ -39,15 +38,7 @@ export default defineConfig({
       serverEntryPoint: './__create/index.ts',
       runtime: 'node',
     }),
-    babel({
-      include: ['src/**/*.{js,jsx,ts,tsx}'], // or RegExp: /src\/.*\.[tj]sx?$/
-      exclude: /node_modules/, // skip everything else
-      babelConfig: {
-        babelrc: false, // don’t merge other Babel files
-        configFile: false,
-        plugins: ['styled-jsx/babel'],
-      },
-    }),
+    reactRouter(),
     restart({
       restart: [
         'src/**/page.jsx',
@@ -61,7 +52,6 @@ export default defineConfig({
     consoleToParent(),
     loadFontsFromTailwindSource(),
     addRenderIds(),
-    reactRouter(),
     tsconfigPaths(),
     aliases(),
     layoutWrapperPlugin(),
@@ -71,9 +61,8 @@ export default defineConfig({
       lodash: 'lodash-es',
       'npm:stripe': 'stripe',
       stripe: path.resolve(__dirname, './src/__create/stripe'),
-      '@auth/create/react': '@hono/auth-js/react',
-      '@auth/create': path.resolve(__dirname, './src/__create/@auth/create'),
       '@': path.resolve(__dirname, 'src'),
+      'next/headers': path.resolve(__dirname, './src/__create/next/headers.js'),
     },
     dedupe: ['react', 'react-dom'],
   },
@@ -81,7 +70,8 @@ export default defineConfig({
   server: {
     allowedHosts: true,
     host: '0.0.0.0',
-    port: 4000,
+    port: 5173,
+    strictPort: true,
     hmr: {
       overlay: false,
     },

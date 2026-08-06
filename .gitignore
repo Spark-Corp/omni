@@ -32,11 +32,9 @@ web-build/
 .env.production.local
 .env.staging
 
-# IDE / Local agent config
+# IDE
 .vscode/
 .idea/
-.opencode/
-.superpowers/
 *.swp
 *.swo
 
@@ -74,6 +72,10 @@ temp/
 # Build outputs
 build/
 out/
+.vercel/
+.vitest/
+.react-router/
+coverage/
 
 # React Native
 .expo/
@@ -105,6 +107,14 @@ ios/Pods/Flipper-RSocket
 # Other apps / experiments
 apps/nextjs/
 
+# Legacy nested copy: local generated and secret files
+omni/apps/**/.env
+omni/apps/**/.env.*
+!omni/apps/**/.env.example
+omni/apps/**/.vercel/
+omni/apps/**/.vitest/
+omni/apps/**/.react-router/
+
 # Temp files
 dofix.js
 fixscript_temp.js
@@ -116,16 +126,12 @@ validate_temp.js
 .react-router/types/
 
 # Sensitive docs (keep locally, not on GitHub)
-/AGENTS.md
-/OMNI_PRD_v1.0.*
-/OMNI_Pitch_Deck_DjantaTech.*
-/PITCH_DECK_DJANTATECH.md
-omni/OMNI_PRD_v1.0.*
-omni/OMNI_Pitch_Deck_DjantaTech.*
-omni/PITCH_DECK_DJANTATECH.md
+OMNI_PRD_v1.0.*
+OMNI_Pitch_Deck_DjantaTech.*
+PITCH_DECK_DJANTATECH.md
 **/PRD_AUTH_CONFIG.md
+**/AUTH_SETUP.md
+TODO.md
 
-# Internal docs (not for public repo)
-**/docs/
-**/PLAN.md
-**/TRACKING.md
+# Exposed credential file (removed from history)
+**/serve-test.js

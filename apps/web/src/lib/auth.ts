@@ -1,0 +1,100 @@
+import { neon, neonConfig } from "@neondatabase/serverless";
+import ws from "ws";
+
+neonConfig.webSocketConstructor = ws;
+
+const dbUrl = process.env.DATABASE_URL;
+const sql = dbUrl ? neon(dbUrl) : null;
+
+function getAuthUrl() {
+  return (
+    (
+      process.env.NEON_AUTH_URL ||
+      import.meta.env.VITE_NEON_AUTH_URL ||
+      ""
+    ).replace(/\/+$/, "") || null
+  );
+}
+
+async function ensureAppUser(authUser) {
+  if (!sql) return;
+  try {
+    const email = authUser.email || `${authUser.id.replace(/-/g, "")}@omni.app`;
+    await sql`
+      INSERT INTO users (id, name, email)
+      VALUES (${authUser.id}::uuid, ${authUser.name || "Utilisateur"}, ${email})
+      ON CONFLICT (id) DO UPDATE
+        SET name = COALESCE(EXCLUDED.name, users.name),
+            email = COALESCE(EXCLUDED.email, users.email),
+            updated_at = CURRENT_TIMESTAMP
+    `;
+  } catch (error) {
+    console.error("[Auth] Failed to sync authenticated user");
+  }
+}
+
+function parseCookie(cookieHeader, name) {
+  if (!cookieHeader) return null;
+  for (const pair of cookieHeader.split(";")) {
+    const idx = pair.indexOf("=");
+    if (idx === -1) continue;
+    const key = pair.slice(0, idx).trim();
+    const value = pair.slice(idx + 1).trim();
+    if (key === name) return decodeURIComponent(value);
+  }
+  return null;
+}
+
+function extractBearerToken(authHeader) {
+  if (!authHeader) return null;
+  const match = /^Bearer\s+(.+)$/i.exec(authHeader.trim());
+  if (!match) return null;
+  const token = match[1].trim();
+  return token.length > 0 ? token : null;
+}
+
+export async function getServerSession(request) {
+  const authUrl = getAuthUrl();
+  const cookieHeader = request.headers.get("cookie");
+  const authHeader = request.headers.get("authorization");
+  const token = parseCookie(cookieHeader, "omni_session") || extractBearerToken(authHeader);
+
+  if (!authUrl || !token) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(`${authUrl}/get-session`, {
+      headers: {
+        accept: "application/json",
+        authorization: `Bearer ${token}`
+      },
+      cache: "no-store",
+      signal: AbortSignal.timeout(5000)
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+    if (!data?.user?.id) {
+      return null;
+    }
+
+    await ensureAppUser(data.user);
+    return {
+      data: {
+        user: data.user,
+        session: data.session || {}
+      }
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function getAuthenticatedUser(request) {
+  const session = await getServerSession(request);
+  return session?.data?.user || null;
+}

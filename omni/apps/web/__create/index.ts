@@ -15,6 +15,11 @@ import { API_BASENAME, api } from './route-builder';
 // @ts-expect-error - virtual module provided by React Router at build time
 import * as reactRouterBuild from 'virtual:react-router/server-build';
 
+// Re-export React Router build data for Vercel runtime compatibility
+// eslint-disable-next-line
+const _build = reactRouterBuild as any;
+export const { serverManifest: assets, assetsBuildDirectory, basename, entry, future, isSpaMode, prerender, publicPath, routeDiscovery, routes, ssr, allowedActionOrigins } = _build;
+
 neonConfig.webSocketConstructor = ws;
 
 const als = new AsyncLocalStorage<{ requestId: string }>();
@@ -83,7 +88,15 @@ for (const method of ['post', 'put', 'patch'] as const) {
 
 app.route(API_BASENAME, api);
 
+// Health check — proves Hono is handling API requests
+app.get('/api/__health', (c) => c.json({ ok: true, routes: api.routes.length }));
+
+// Return JSON for unmatched API requests (never reach React Router)
+app.all('/api/*', (c) => {
+	return c.json({ error: 'Not Found' }, 404);
+});
+
 const requestHandler = createRequestHandler(reactRouterBuild);
 app.mount('/', (request) => requestHandler(request));
 
-export default app;
+export default (request: Request) => app.fetch(request);
