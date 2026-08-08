@@ -627,7 +627,7 @@ export default function LandingPage() {
               <a href="/map" className="px-3 sm:px-4 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-medium text-xs sm:text-sm transition-all">Explorer</a>
             ) : (
               <>
-                <a href="/auth" className="px-2.5 sm:px-3 py-1.5 rounded-lg text-white/60 hover:text-white text-xs sm:text-sm transition-all">Connexion</a>
+                <a href="/auth" onClick={() => setShowAuthModal(true)} className="px-2.5 sm:px-3 py-1.5 rounded-lg text-white/60 hover:text-white text-xs sm:text-sm transition-all">Connexion</a>
                 <a href="/auth" className="px-3 sm:px-4 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs sm:text-sm transition-all border border-white/10">S'inscrire</a>
               </>
             )}
@@ -696,6 +696,37 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* COMMENT ÇA MARCHE */}
+      <section className="py-28 md:py-32 px-6 border-y border-white/[0.03]">
+        <div className="max-w-5xl mx-auto text-center">
+          <span className="text-emerald-400/80 text-[10px] sm:text-xs uppercase tracking-[0.25em] font-medium font-space-grotesk">Simple et rapide</span>
+          <h2 className="font-space-grotesk text-3xl md:text-5xl font-bold tracking-tight mt-6 mb-16">Comment ça marche</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-8">
+            <div className="flex flex-col items-center">
+              <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-5">
+                <Search size={28} className="text-emerald-400" />
+              </div>
+              <h3 className="font-space-grotesk text-xl font-bold text-white mb-2">Cherche</h3>
+              <p className="font-dm-sans text-white/50 text-sm leading-relaxed">Trouve les produits près de chez toi sur la carte</p>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-5">
+                <Store size={28} className="text-blue-400" />
+              </div>
+              <h3 className="font-space-grotesk text-xl font-bold text-white mb-2">Compare</h3>
+              <p className="font-dm-sans text-white/50 text-sm leading-relaxed">Vérifie la disponibilité et les prix en temps réel</p>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="w-16 h-16 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mb-5">
+                <ShoppingBag size={28} className="text-purple-400" />
+              </div>
+              <h3 className="font-space-grotesk text-xl font-bold text-white mb-2">Commande</h3>
+              <p className="font-dm-sans text-white/50 text-sm leading-relaxed">Passe ta commande et récupère sur place ou en livraison</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="py-28 md:py-32 px-6">
         <div className="max-w-4xl mx-auto">
@@ -720,6 +751,24 @@ export default function LandingPage() {
                 </a>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* STATS */}
+      <section className="py-16 px-6 border-t border-white/[0.03]">
+        <div className="max-w-4xl mx-auto flex flex-wrap justify-center gap-12 md:gap-16">
+          <div className="text-center">
+            <div className="font-space-grotesk text-3xl md:text-4xl font-bold text-emerald-400">13+</div>
+            <div className="font-dm-sans text-white/40 text-sm mt-1">Vendeurs actifs</div>
+          </div>
+          <div className="text-center">
+            <div className="font-space-grotesk text-3xl md:text-4xl font-bold text-blue-400">500+</div>
+            <div className="font-dm-sans text-white/40 text-sm mt-1">Produits</div>
+          </div>
+          <div className="text-center">
+            <div className="font-space-grotesk text-3xl md:text-4xl font-bold text-purple-400">Lomé</div>
+            <div className="font-dm-sans text-white/40 text-sm mt-1">Togo</div>
           </div>
         </div>
       </section>

@@ -88,6 +88,13 @@ export default function Dashboard() {
     { label: "Favoris", value: favorites.length, icon: Heart, color: "text-red-400" },
   ];
 
+  const totalSpent = carts.reduce((sum, c) => sum + (Number(c.total) || 0), 0);
+  const thisMonthOrders = carts.filter(c => {
+    const d = new Date(c.created_at);
+    const now = new Date();
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }).length;
+
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
       <div className="max-w-4xl mx-auto px-4 py-6">
@@ -123,6 +130,24 @@ export default function Dashboard() {
                   </div>
                 );
               })}
+            </div>
+
+            {/* Spending Summary */}
+            <div className="grid grid-cols-2 gap-3 mb-8">
+              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <ShoppingBag size={14} className="text-emerald-400" />
+                  <span className="text-[10px] text-white/30 uppercase tracking-wider">Dépensé ce mois</span>
+                </div>
+                <p className="text-2xl font-bold text-emerald-400">{totalSpent.toLocaleString()} FCFA</p>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Clock size={14} className="text-blue-400" />
+                  <span className="text-[10px] text-white/30 uppercase tracking-wider">Commandes ce mois</span>
+                </div>
+                <p className="text-2xl font-bold text-blue-400">{thisMonthOrders}</p>
+              </div>
             </div>
 
             {/* Active orders */}

@@ -20,6 +20,8 @@ import {
 import RespondModal from "@/components/RespondModal";
 import SubscriptionBadge from "@/components/SubscriptionBadge";
 import VerificationBadge from "@/components/VerificationBadge";
+import FreshnessBadge from "@/components/FreshnessBadge";
+import SponsorBadge from "@/components/SponsorBadge";
 
 export default function VendorDashboardPage() {
   const [vendor, setVendor] = useState(null);
@@ -220,8 +222,23 @@ export default function VendorDashboardPage() {
           {vendor.verification_status && (
             <VerificationBadge status={vendor.verification_status} compact />
           )}
+          <SponsorBadge tier={vendor.sponsor_tier || 'free'} />
         </div>
         <p className="font-dm-sans text-sm text-zinc-400 mt-1">{vendor.category}</p>
+      </div>
+
+      {/* Revenue Summary */}
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="rounded-2xl border border-white/10 bg-zinc-900/60 p-5">
+          <p className="font-dm-sans text-sm text-zinc-400">Revenus ce mois</p>
+          <p className="font-space-grotesk text-2xl font-bold text-white mt-1">0 FCFA</p>
+          <p className="font-dm-sans text-xs text-zinc-600 mt-1">Pendez votre première vente</p>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-zinc-900/60 p-5">
+          <p className="font-dm-sans text-sm text-zinc-400">Ventes terminées</p>
+          <p className="font-space-grotesk text-2xl font-bold text-white mt-1">0</p>
+          <p className="font-dm-sans text-xs text-zinc-600 mt-1">Aucune vente encore</p>
+        </div>
       </div>
 
       <div className="max-w-6xl mx-auto space-y-6">
@@ -262,7 +279,10 @@ export default function VendorDashboardPage() {
                         <MapPin size={12} className="text-emerald-400 shrink-0" />
                       )}
                     </div>
-                    <p className="font-dm-sans text-xs text-zinc-500 mt-0.5">{facility.category} · {facility.product_count} produit{facility.product_count > 1 ? 's' : ''}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <p className="font-dm-sans text-xs text-zinc-500">{facility.category} · {facility.product_count} produit{facility.product_count > 1 ? 's' : ''}</p>
+                      <FreshnessBadge lastConfirmedAt={facility.last_confirmed_at} />
+                    </div>
                   </div>
                   <button
                     onClick={() => toggleFacilityStatus(facility.id, facility.is_online)}

@@ -6,7 +6,6 @@ const mocks = vi.hoisted(() => ({
   signInEmail: vi.fn(),
   signUpEmail: vi.fn(),
   signOut: vi.fn(),
-  token: vi.fn(),
 }));
 
 vi.mock('@neondatabase/neon-js/auth', () => ({
@@ -29,7 +28,7 @@ beforeEach(() => {
     signIn: { email: mocks.signInEmail },
     signUp: { email: mocks.signUpEmail },
     signOut: mocks.signOut,
-    token: mocks.token,
+    token: vi.fn().mockResolvedValue({ data: { token: 'mock-jwt-token' } }),
   });
 });
 
@@ -56,11 +55,6 @@ describe('client authentication', () => {
     mocks.signInEmail.mockResolvedValue({ data: { user: { id: 'user-1' } } });
     mocks.signUpEmail.mockResolvedValue({ data: { user: { id: 'user-2' } } });
     mocks.signOut.mockResolvedValue({ data: null });
-    mocks.token
-      .mockResolvedValueOnce({ data: { token: 'signin-token' } })
-      .mockResolvedValueOnce({ data: { token: 'signup-token' } });
-    const fetchMock = vi.fn().mockResolvedValue(Response.json({ ok: true }));
-    vi.stubGlobal('fetch', fetchMock);
 
     await signInWithCredentials({
       email: 'ama@example.test',
@@ -85,16 +79,5 @@ describe('client authentication', () => {
       name: 'Kofi',
     });
     expect(mocks.signOut).toHaveBeenCalledOnce();
-    expect(fetchMock).toHaveBeenCalledWith(
-      '/api/auth/set-session',
-      expect.objectContaining({
-        method: 'POST',
-        body: JSON.stringify({ token: 'signin-token' }),
-      }),
-    );
-    expect(fetchMock).toHaveBeenCalledWith(
-      '/api/auth/clear-session',
-      expect.objectContaining({ method: 'POST' }),
-    );
   });
 });

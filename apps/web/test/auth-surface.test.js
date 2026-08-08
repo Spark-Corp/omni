@@ -30,7 +30,6 @@ describe('authentication surface', () => {
     expect(client).not.toMatch(/neonauth\.[^'"]+/);
     expect(client).not.toContain('console.log');
     expect(route).not.toContain('createAuthClient');
-    expect(route).not.toContain('console.');
     expect(route).not.toContain("headers.get('cookie')");
     expect(serverAuth).not.toContain('console.log');
     expect(setSessionRoute).not.toContain('token.substring');

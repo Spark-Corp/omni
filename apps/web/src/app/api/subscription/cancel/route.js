@@ -1,7 +1,7 @@
 export async function POST() {
   return Response.json(
     {
-      error: "La gestion des abonnements n’est pas encore disponible.",
+      error: "Les abonnements ne sont pas encore disponibles.",
       code: "SUBSCRIPTIONS_DISABLED",
     },
     {

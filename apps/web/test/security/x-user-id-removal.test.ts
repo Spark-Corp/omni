@@ -17,9 +17,24 @@ describe('x-user-id header removal', () => {
     expect(content).not.toContain('x-user-id');
   });
 
-  it('should not contain x-user-id header in any page.jsx file', () => {
-    const { execSync } = require('child_process');
-    const result = execSync(`grep -r "x-user-id" ${srcDir} --include="*.jsx" --include="*.tsx" --include="*.js" --include="*.ts" || true`, { encoding: 'utf-8' });
-    expect(result.trim()).toBe('');
+  it('should not contain x-user-id header in any source file', () => {
+    const { readdirSync, readFileSync: read } = require('fs');
+    const { join: j } = require('path');
+
+    function walkDir(dir) {
+      const files = [];
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = j(dir, entry.name);
+        if (entry.isDirectory()) files.push(...walkDir(full));
+        else if (/\.(jsx|tsx|js|ts)$/.test(entry.name)) files.push(full);
+      }
+      return files;
+    }
+
+    const allFiles = walkDir(srcDir);
+    for (const file of allFiles) {
+      const content = read(file, 'utf-8');
+      expect(content).not.toContain('x-user-id');
+    }
   });
 });

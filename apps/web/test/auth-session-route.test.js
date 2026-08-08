@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { GET, POST } from '@/app/api/auth/session/route';
+import { GET } from '@/app/api/auth/session/route';
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -49,10 +49,8 @@ describe('authentication session route', () => {
     });
   });
 
-  it('rejects server-side sign-out that cannot forward browser auth state', async () => {
-    const response = await POST();
-
-    expect(response.status).toBe(405);
-    expect(response.headers.get('allow')).toBe('GET');
+  it('does not export POST', async () => {
+    const mod = await import('@/app/api/auth/session/route');
+    expect(mod.POST).toBeUndefined();
   });
 });
