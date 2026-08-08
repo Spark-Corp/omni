@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { Map, Store, Truck, ChevronRight, Navigation } from "lucide-react";
 
