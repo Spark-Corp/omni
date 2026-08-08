@@ -30,8 +30,8 @@ async function handleNearby(request) {
         { status: 400 },
       );
     }
-    console.error("Error fetching nearby facilities:", error);
-    return Response.json({ error: "Internal server error" }, { status: 500 });
+    console.error("Error fetching nearby facilities:", error.message, error.code || "");
+    return Response.json({ error: "Internal server error", detail: error.message }, { status: 500 });
   }
 }
 
